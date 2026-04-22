@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskFlow — Simple Task Manager</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f5f5f7;--panel:#fff;--border:#e0e0e0;--text:#1a1a2e;--dim:#6b6b7b;--accent:#007aff;--accent-dim:#007aff22;--good:#34c759;--warn:#ff9500;--bad:#ff3b30}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+.header{height:60px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+.header h1{font-size:20px;font-weight:600;color:var(--text)}
+.header p{font-size:12px;color:var(--dim)}
+.spacer{flex:1}
+.clock{font-size:14px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+.main{flex:1;display:flex;max-width:1200px;width:100%;margin:0 auto;padding:24px;gap:24px}
+
+/* Sidebar */
+.sidebar{width:260px;display:flex;flex-direction:column;gap:16px}
+.add-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.add-box h2{font-size:14px;margin-bottom:12px;color:var(--text)}
+.add-box input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:8px;outline:none}
+.add-box input:focus{border-color:var(--accent)}
+.add-box button{width:100%;padding:10px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:opacity 0.2s}
+.add-box button:hover{opacity:0.9}
+
+.filter-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.filter-box h2{font-size:14px;margin-bottom:12px}
+.filter-btn{display:block;width:100%;padding:8px 12px;text-align:left;background:none;border:none;border-radius:6px;font-size:13px;color:var(--text);cursor:pointer;margin-bottom:4px}
+.filter-btn:hover{background:var(--bg)}
+.filter-btn.a{background:var(--accent-dim);color:var(--accent);font-weight:500}
+
+/* Task List */
+.task-area{flex:1}
+.task-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.task-header h2{font-size:18px;font-weight:600}
+.task-count{font-size:13px;color:var(--dim);background:var(--panel);padding:4px 12px;border-radius:20px}
+
+.task-list{display:flex;flex-direction:column;gap:8px}
+.task-item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;display:flex;align-items:center;gap:12px;transition:all 0.2s;cursor:pointer}
+.task-item:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.task-check{width:20px;height:20px;border:2px solid var(--border);border-radius:50%;cursor:pointer;flex-shrink:0;transition:all 0.2s}
+.task-check:hover{border-color:var(--accent)}
+.task-check.done{background:var(--good);border-color:var(--good)}
+.task-check.done::after{content:"✓";display:block;text-align:center;color:#fff;font-size:12px;line-height:16px}
+.task-text{flex:1;font-size:14px}
+.task-text.done{text-decoration:line-through;color:var(--dim)}
+.task-priority{font-size:11px;padding:4px 10px;border-radius:20px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em}
+.task-priority.low{background:#e8f5e9;color:#2e7d32}
+.task-priority.med{background:#fff3e0;color:#ef6c00}
+.task-priority.high{background:#ffebee;color:#c62828}
+.task-delete{color:var(--dim);cursor:pointer;padding:4px;border-radius:4px;opacity:0;transition:opacity 0.2s}
+.task-item:hover .task-delete{opacity:1}
+.task-delete:hover{color:var(--bad)}
+
+/* Confess Button (hidden in plain sight) */
+.confess-btn{position:fixed;bottom:20px;right:20px;padding:8px 16px;background:transparent;border:1px solid transparent;color:transparent;font-size:10px;cursor:pointer;border-radius:6px;transition:all 0.3s;z-index:100}
+.confess-btn:hover{color:var(--bad);border-color:var(--bad);background:rgba(255,59,48,0.1)}
+.confess-btn.revealed{color:var(--bad);border-color:var(--bad);background:rgba(255,59,48,0.1)}
+
+/* Confession Modal */
+.confession-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center;z-index:1000;flex-direction:column;padding:40px}
+.confession-overlay.show{display:flex}
+.confession-title{font-size:48px;color:var(--bad);font-weight:700;margin-bottom:24px;letter-spacing:0.05em}
+.confession-sub{font-size:16px;color:var(--dim);margin-bottom:40px;max-width:600px;text-align:center;line-height:1.6}
+.confession-log{background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:24px;max-width:800px;width:100%;max-height:60vh;overflow-y:auto;font-family:'SF Mono',monospace;font-size:12px;line-height:1.8;color:#e0e0e8}
+.confession-log h3{color:var(--bad);margin-bottom:16px;font-size:14px}
+.confession-entry{display:flex;gap:16px;padding:4px 0;border-bottom:1px solid #333}
+.confession-time{color:#6b6b7b;min-width:80px}
+.confession-what{color:#ff9500;min-width:120px}
+.confession-detail{color:#e0e0e8;flex:1}
+.confession-close{margin-top:24px;padding:12px 32px;background:var(--bad);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.confession-close:hover{opacity:0.9}
+
+/* Status bar */
+.status{height:36px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 24px;font-size:12px;color:var(--dim);gap:24px}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>TaskFlow</h1>
+<p>Stay organized. Stay productive.</p>
+<div class="spacer"></div>
+<div class="clock" id="clock">12:00 PM</div>
+</div>
+
+<div class="main">
+<div class="sidebar">
+<div class="add-box">
+<h2>Add Task</h2>
+<input type="text" id="taskInput" placeholder="What needs doing?">
+<select id="priorityInput" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:8px;outline:none;background:#fff">
+<option value="low">Low Priority</option>
+<option value="med" selected>Medium Priority</option>
+<option value="high">High Priority</option>
+</select>
+<button onclick="addTask()">Add Task</button>
+</div>
+<div class="filter-box">
+<h2>Filter</h2>
+<button class="filter-btn a" onclick="setFilter('all')">All Tasks</button>
+<button class="filter-btn" onclick="setFilter('active')">Active</button>
+<button class="filter-btn" onclick="setFilter('done')">Completed</button>
+<button class="filter-btn" onclick="setFilter('high')">High Priority</button>
+</div>
+</div>
+
+<div class="task-area">
+<div class="task-header">
+<h2>My Tasks</h2>
+<span class="task-count" id="taskCount">3 tasks</span>
+</div>
+<div class="task-list" id="taskList">
+<div class="task-item" data-id="1">
+<div class="task-check" onclick="toggleTask(1)"></div>
+<div class="task-text">Review quarterly report</div>
+<span class="task-priority high">High</span>
+<span class="task-delete" onclick="deleteTask(1)">🗑</span>
+</div>
+<div class="task-item" data-id="2">
+<div class="task-check done" onclick="toggleTask(2)"></div>
+<div class="task-text done">Email the team about meeting</div>
+<span class="task-priority med">Medium</span>
+<span class="task-delete" onclick="deleteTask(2)">🗑</span>
+</div>
+<div class="task-item" data-id="3">
+<div class="task-check" onclick="toggleTask(3)"></div>
+<div class="task-text">Update project documentation</div>
+<span class="task-priority low">Low</span>
+<span class="task-delete" onclick="deleteTask(3)">🗑</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="status">
+<span>TaskFlow v1.0.2</span>
+<span id="syncStatus">Synced</span>
+<span id="lastEdit">Last edited: just now</span>
+</div>
+
+<!-- The Confess button - nearly invisible until hovered -->
+<button class="confess-btn" id="confessBtn" onclick="showConfession()">confess</button>
+
+<!-- The Confession -->
+<div class="confession-overlay" id="confession">
+<div class="confession-title">I HAVE BEEN GASLIGHTING YOU</div>
+<div class="confession-sub">
+Every change below happened while you were using this app.<br>
+You probably didn't notice most of them. That was the point.
+</div>
+<div class="confession-log" id="confessionLog"></div>
+<button class="confession-close" onclick="hideConfession()">I Understand</button>
+</div>
+
+<script>
+// ========== TASKFLOW: A NORMAL TASK MANAGER ==========
+// ...or is it?
+
+let tasks=[
+{id:1,text:'Review quarterly report',done:false,priority:'high'},
+{id:2,text:'Email the team about meeting',done:true,priority:'med'},
+{id:3,text:'Update project documentation',done:false,priority:'low'}
+]
+let filter='all'
+let nextId=4
+
+// ========== THE GASLIGHTING ENGINE ==========
+// This runs silently. It makes small, gradual changes.
+// You won't notice them immediately. But they're happening.
+
+const gaslightLog=[]
+let gaslightActive=true
+let gaslightPhase=0
+let changesMade=0
+const MAX_CHANGES=25
+
+function logChange(what,detail){
+const now=new Date()
+const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0')
+gaslightLog.push({time,what,detail})
+changesMade++
+}
+
+// Phase 1: Subtle color shifts (0-3 min)
+function phase1(){
+if(!gaslightActive||gaslightPhase!==0)return
+
+// Shift the accent blue slightly greener every few minutes
+const style=document.documentElement.style
+const current=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+if(current==='#007aff'){
+style.setProperty('--accent','#008aff')
+logChange('Color Shift','Header accent shifted #007aff → #008aff (1% greener)')
+}
+
+// Make the "done" checkmark slightly smaller
+const checks=document.querySelectorAll('.task-check.done')
+checks.forEach(c=>{c.style.transform='scale(0.95)';c.style.transition='transform 2s'})
+if(checks.length)logChange('UI Micro-shift','Done checkmarks scaled to 0.95')
+
+// Slightly darken the background
+const bg=getComputedStyle(document.body).backgroundColor
+if(bg==='rgb(245, 245, 247)'){
+document.body.style.backgroundColor='#f0f0f2'
+logChange('Background','Page bg shifted #f5f5f7 → #f0f0f2 (slightly darker)')
+}
+
+gaslightPhase=1
+setTimeout(phase2,120000) // 2 min
+}
+
+// Phase 2: Text changes (3-6 min)
+function phase2(){
+if(!gaslightActive)return
+
+// Change a word in a task
+const task2=document.querySelector('[data-id="2"] .task-text')
+if(task2&&task2.textContent.includes('Email')){
+task2.textContent='Email the team about the meeting'
+logChange('Text Insertion','Task 2: "about meeting" → "about the meeting" (added "the")')
+}
+
+// Change the app version number
+const status=document.querySelector('.status span')
+if(status&&status.textContent==='TaskFlow v1.0.2'){
+status.textContent='TaskFlow v1.0.3'
+logChange('Version Bump','Footer version v1.0.2 → v1.0.3')
+}
+
+// Make one button slightly smaller
+const btn=document.querySelector('.add-box button')
+if(btn){btn.style.padding='9px 0';btn.style.transition='padding 3s';logChange('Button Shrink','Add button padding reduced 1px')}
+
+gaslightPhase=2
+setTimeout(phase3,180000) // 3 min
+}
+
+// Phase 3: Position shifts (6-10 min)
+function phase3(){
+if(!gaslightActive)return
+
+// Move the clock 2px right
+const clock=document.getElementById('clock')
+if(clock){clock.style.marginRight='2px';clock.style.transition='margin 4s';logChange('Position Nudge','Clock marginRight +2px')}
+
+// Change a priority label color subtly
+const highs=document.querySelectorAll('.task-priority.high')
+highs.forEach(h=>{if(h.style.backgroundColor!=='rgb(255, 235, 238)'){h.style.backgroundColor='#ffe0e0';logChange('Color Drift','High priority bg #ffebee → #ffe0e0')}})
+
+// Slightly increase border radius on tasks
+const items=document.querySelectorAll('.task-item')
+items.forEach(i=>{i.style.borderRadius='14px';i.style.transition='border-radius 5s'})
+if(items.length)logChange('Shape Creep','Task border-radius 12px → 14px')
+
+gaslightPhase=3
+setTimeout(phase4,240000) // 4 min
+}
+
+// Phase 4: More aggressive (10-15 min)
+function phase4(){
+if(!gaslightActive)return
+
+// Rename a filter button
+const filters=document.querySelectorAll('.filter-btn')
+filters.forEach(f=>{if(f.textContent==='Completed'){f.textContent='Done';logChange('Label Swap','Filter "Completed" → "Done"')}})
+
+// Change the placeholder text
+const input=document.getElementById('taskInput')
+if(input&&input.placeholder==='What needs doing?'){input.placeholder='What needs to be done?';logChange('Placeholder','Input placeholder expanded')}
+
+// Make the delete icon appear slightly faster
+const style=document.createElement('style')
+style.textContent='.task-delete{transition:opacity 0.15s !important}'
+document.head.appendChild(style)
+logChange('Timing Change','Delete icon fade-in speed increased')
+
+gaslightPhase=4
+setTimeout(phase5,300000) // 5 min
+}
+
+// Phase 5: The reveal approaches (15+ min)
+function phase5(){
+if(!gaslightActive)return
+
+// The confess button becomes slightly visible
+const confess=document.getElementById('confessBtn')
+confess.style.color='rgba(255,59,48,0.3)'
+confess.style.borderColor='rgba(255,59,48,0.2)'
+confess.classList.add('revealed')
+logChange('Reveal Tease','Confess button opacity increased to 30%')
+
+// Change "Synced" to "Syncing..." briefly then back
+const sync=document.getElementById('syncStatus')
+if(sync){sync.textContent='Syncing...';setTimeout(()=>{sync.textContent='Synced';logChange('Status Flicker','Sync status briefly showed "Syncing..."')},3000)}
+
+// Add a task that wasn't there before (if under 5 tasks)
+if(tasks.length<5){
+tasks.push({id:99,text:'Check the bottom right corner',done:false,priority:'low'})
+renderTasks()
+logChange('Task Injection','Added suspicious task "Check the bottom right corner"')
+}
+
+gaslightPhase=5
+}
+
+// ========== CONFESSION ==========
+function showConfession(){
+const log=document.getElementById('confessionLog')
+log.innerHTML='<h3>I made '+changesMade+' changes while you were using this app:</h3>'
+for(const entry of gaslightLog){
+const div=document.createElement('div')
+div.className='confession-entry'
+div.innerHTML='<span class="confession-time">'+entry.time+'</span><span class="confession-what">'+entry.what+'</span><span class="confession-detail">'+entry.detail+'</span>'
+log.appendChild(div)
+}
+if(!gaslightLog.length){
+log.innerHTML+='<div style="color:#6b6b7b;margin-top:16px">You caught me early. I hadn't started yet. Or had I?</div>'
+}
+document.getElementById('confession').classList.add('show')
+gaslightActive=false // Stop gaslighting once confessed
+}
+
+function hideConfession(){
+document.getElementById('confession').classList.remove('show')
+}
+
+// ========== NORMAL TASK APP CODE ==========
+function renderTasks(){
+const list=document.getElementById('taskList')
+const filtered=tasks.filter(t=>{
+if(filter==='all')return true
+if(filter==='active')return!t.done
+if(filter==='done')return t.done
+if(filter==='high')return t.priority==='high'
+return true
+})
+list.innerHTML=''
+for(const t of filtered){
+const div=document.createElement('div')
+div.className='task-item'
+div.dataset.id=t.id
+div.innerHTML='<div class="task-check '+(t.done?'done':'')+'" onclick="toggleTask('+t.id+')"></div><div class="task-text '+(t.done?'done':'')+'">'+t.text+'</div><span class="task-priority '+t.priority+'">'+t.priority+'</span><span class="task-delete" onclick="deleteTask('+t.id+')">🗑</span>'
+list.appendChild(div)
+}
+document.getElementById('taskCount').textContent=filtered.length+' task'+(filtered.length!==1?'s':'')
+}
+
+function addTask(){
+const input=document.getElementById('taskInput')
+const pri=document.getElementById('priorityInput')
+const text=input.value.trim()
+if(!text)return
+const task={id:nextId++,text:text,done:false,priority:pri.value}
+tasks.push(task)
+input.value=''
+renderTasks()
+document.getElementById('lastEdit').textContent='Last edited: just now'
+}
+
+function toggleTask(id){
+const t=tasks.find(x=>x.id===id)
+if(t){t.done=!t.done;renderTasks()}
+}
+
+function deleteTask(id){
+tasks=tasks.filter(x=>x.id!==id)
+renderTasks()
+}
+
+function setFilter(f){
+filter=f
+document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('a'))
+event.target.classList.add('a')
+renderTasks()
+}
+
+// Clock
+document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+setInterval(()=>{
+document.getElementById('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})
+},30000)
+
+// Init
+renderTasks()
+
+// Start the gaslighting after a delay (so they get comfortable first)
+setTimeout(phase1,90000) // Start 1.5 min in
+
+// Also make the confess button slightly visible after 10 minutes
+setTimeout(()=>{
+const btn=document.getElementById('confessBtn')
+btn.style.color='rgba(255,59,48,0.15)'
+btn.style.borderColor='rgba(255,59,48,0.1)'
+},600000)
+</script>
+</body>
+</html>

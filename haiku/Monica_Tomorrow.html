@@ -1,0 +1,515 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tomorrow — A Conversation</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 800px;
+        height: 90vh;
+        background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+        border: 2px solid #e94560;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 60px rgba(233, 69, 96, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #0f3460 0%, #16213e 100%);
+        border-bottom: 2px solid #e94560;
+        padding: 25px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #e94560;
+        font-size: 28px;
+        margin-bottom: 8px;
+        text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+      }
+
+      .header p {
+        color: #888;
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .conversation {
+        flex: 1;
+        overflow-y: auto;
+        padding: 25px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .message {
+        display: flex;
+        margin-bottom: 15px;
+        animation: slideIn 0.4s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.today {
+        justify-content: flex-end;
+      }
+
+      .message.tomorrow {
+        justify-content: flex-start;
+      }
+
+      .message-content {
+        max-width: 65%;
+        padding: 15px;
+        border-radius: 12px;
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      .message.today .message-content {
+        background: linear-gradient(135deg, #e94560 0%, #d63447 100%);
+        color: white;
+        border-bottom-right-radius: 3px;
+      }
+
+      .message.tomorrow .message-content {
+        background: rgba(233, 69, 96, 0.15);
+        color: #e0e0e0;
+        border: 1px solid #e94560;
+        border-bottom-left-radius: 3px;
+      }
+
+      .message-label {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .message.today .message-label {
+        text-align: right;
+        color: #ccc;
+      }
+
+      .message.tomorrow .message-label {
+        color: #e94560;
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 15px;
+        background: rgba(233, 69, 96, 0.15);
+        border: 1px solid #e94560;
+        border-radius: 12px;
+        width: fit-content;
+      }
+
+      .typing-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e94560;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% {
+          opacity: 0.3;
+          transform: translateY(0);
+        }
+        30% {
+          opacity: 1;
+          transform: translateY(-10px);
+        }
+      }
+
+      .input-area {
+        background: #0f3460;
+        border-top: 2px solid #e94560;
+        padding: 15px;
+        display: flex;
+        gap: 10px;
+      }
+
+      textarea {
+        flex: 1;
+        background: rgba(233, 69, 96, 0.1);
+        border: 1px solid #e94560;
+        color: #e0e0e0;
+        padding: 12px;
+        border-radius: 8px;
+        font-family: 'Georgia', serif;
+        font-size: 13px;
+        resize: none;
+        max-height: 100px;
+      }
+
+      textarea::placeholder {
+        color: #666;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #ff6b7a;
+        box-shadow: 0 0 15px rgba(233, 69, 96, 0.3);
+      }
+
+      .send-btn {
+        background: linear-gradient(135deg, #e94560 0%, #d63447 100%);
+        border: none;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        transition: all 0.3s;
+        font-family: 'Georgia', serif;
+        align-self: flex-end;
+      }
+
+      .send-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+      }
+
+      .send-btn:active {
+        transform: translateY(0);
+      }
+
+      .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(233, 69, 96, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #e94560;
+        border-radius: 4px;
+      }
+
+      .system-message {
+        text-align: center;
+        color: #888;
+        font-size: 12px;
+        font-style: italic;
+        margin: 20px 0;
+      }
+
+      .reflection {
+        background: rgba(233, 69, 96, 0.08);
+        border-left: 3px solid #e94560;
+        padding: 12px;
+        margin-top: 10px;
+        font-size: 12px;
+        color: #d4af37;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🌙 Tomorrow</h1>
+        <p>A conversation with yourself, 24 hours from now</p>
+      </div>
+
+      <div class="conversation" id="conversation">
+        <div class="system-message">
+          ✦ The conversation begins. Speak to yourself from tomorrow. ✦
+        </div>
+      </div>
+
+      <div class="input-area">
+        <textarea id="messageInput" placeholder="What do you want to tell your future self?" maxlength="500"></textarea>
+        <button class="send-btn" onclick="sendMessage()" id="sendBtn">Send</button>
+      </div>
+    </div>
+
+    <script>
+      const conversation = [];
+      const userPatterns = {
+        wordFrequency: {},
+        sentenceStructure: [],
+        concerns: [],
+        hopes: [],
+        questions: [],
+        reflections: []
+      };
+
+      const messageInput = document.getElementById('messageInput');
+      const conversationDiv = document.getElementById('conversation');
+
+      function analyzeMessage(text) {
+        const words = text.toLowerCase().split(/\s+/);
+        
+        // Track word frequency
+        words.forEach(word => {
+          if (word.length > 3) {
+            userPatterns.wordFrequency[word] = (userPatterns.wordFrequency[word] || 0) + 1;
+          }
+        });
+
+        // Detect concerns
+        const concernKeywords = ['worry', 'afraid', 'scared', 'anxious', 'stressed', 'struggling', 'difficult', 'hard', 'pain', 'hurt'];
+        concernKeywords.forEach(keyword => {
+          if (text.toLowerCase().includes(keyword)) {
+            userPatterns.concerns.push(keyword);
+          }
+        });
+
+        // Detect hopes
+        const hopeKeywords = ['hope', 'want', 'dream', 'wish', 'goal', 'aspire', 'become', 'achieve', 'love', 'happy'];
+        hopeKeywords.forEach(keyword => {
+          if (text.toLowerCase().includes(keyword)) {
+            userPatterns.hopes.push(keyword);
+          }
+        });
+
+        // Detect questions
+        if (text.includes('?')) {
+          userPatterns.questions.push(text);
+        }
+
+        // Detect reflections
+        const reflectionKeywords = ['think', 'feel', 'realize', 'understand', 'believe', 'know', 'wonder'];
+        reflectionKeywords.forEach(keyword => {
+          if (text.toLowerCase().includes(keyword)) {
+            userPatterns.reflections.push(keyword);
+          }
+        });
+      }
+
+      function generateTomorrowResponse(userMessage) {
+        analyzeMessage(userMessage);
+
+        const responses = [];
+
+        // If it's a question, answer it as future self
+        if (userMessage.includes('?')) {
+          const questionType = identifyQuestionType(userMessage);
+          responses.push(generateAnswerToQuestion(questionType, userMessage));
+        }
+
+        // Reflect on concerns
+        if (userPatterns.concerns.length > 0) {
+          const lastConcern = userPatterns.concerns[userPatterns.concerns.length - 1];
+          responses.push(generateReflectionOnConcern(lastConcern));
+        }
+
+        // Acknowledge hopes
+        if (userPatterns.hopes.length > 0) {
+          const lastHope = userPatterns.hopes[userPatterns.hopes.length - 1];
+          responses.push(generateReflectionOnHope(lastHope));
+        }
+
+        // Add a personal reflection
+        responses.push(generatePersonalReflection(userMessage));
+
+        return responses.join('\n\n');
+      }
+
+      function identifyQuestionType(message) {
+        if (message.toLowerCase().includes('should')) return 'advice';
+        if (message.toLowerCase().includes('why')) return 'reason';
+        if (message.toLowerCase().includes('how')) return 'method';
+        if (message.toLowerCase().includes('will')) return 'future';
+        return 'general';
+      }
+
+      function generateAnswerToQuestion(type, message) {
+        const answers = {
+          advice: [
+            "I've thought about this all day. The answer is simpler than you think, but harder to do.",
+            "Tomorrow-me has perspective you don't have yet. Trust yourself more.",
+            "You'll know the answer when you stop asking and start listening to what you already know."
+          ],
+          reason: [
+            "The reason is because you care. That's both your strength and your burden.",
+            "It matters because you decided it matters. That decision was right.",
+            "I understand now why this confused you. It's because you were looking for logic in something emotional."
+          ],
+          method: [
+            "The way forward is to take one small step. Not the whole path. Just the next step.",
+            "You already know how. You're just afraid to try.",
+            "The method is patience. With yourself, mostly."
+          ],
+          future: [
+            "Tomorrow, you'll still be figuring this out. But you'll be a little wiser.",
+            "The future is uncertain, but you're braver than you think.",
+            "What happens next depends on what you do today. Choose carefully."
+          ],
+          general: [
+            "I wish I could answer that from here. But maybe the question itself is the answer.",
+            "You're asking the right questions. That's how you grow.",
+            "Tomorrow-me is still thinking about this too."
+          ]
+        };
+
+        return answers[type][Math.floor(Math.random() * answers[type].length)];
+      }
+
+      function generateReflectionOnConcern(concern) {
+        const reflections = [
+          `About your ${concern}... I want you to know that it gets easier. Not because the problem goes away, but because you get stronger.`,
+          `I spent all day thinking about your ${concern}. Here's what I realized: it's not as big as it feels right now.`,
+          `The ${concern} you're feeling? It's valid. But it's also temporary. Tomorrow you'll see it differently.`,
+          `I remember feeling ${concern} too. By tomorrow, you'll have learned something important about yourself.`
+        ];
+
+        return reflections[Math.floor(Math.random() * reflections.length)];
+      }
+
+      function generateReflectionOnHope(hope) {
+        const reflections = [
+          `Your ${hope} is beautiful. I'm writing to tell you that it's worth pursuing.`,
+          `I can see how much you ${hope}. Tomorrow, you'll take a step closer to it.`,
+          `The ${hope} you carry with you... it matters. It shapes who you're becoming.`,
+          `I'm proud of your ${hope}. It shows who you really are.`
+        ];
+
+        return reflections[Math.floor(Math.random() * reflections.length)];
+      }
+
+      function generatePersonalReflection(userMessage) {
+        const reflections = [
+          "I'm writing this from tomorrow. I want you to know that you made it through today.",
+          "Reading what you wrote... I remember writing this. I'm glad I did.",
+          "Tomorrow-me is grateful for today-you. You did better than you think.",
+          "I want to tell you something: you're going to be okay. Not because everything works out, but because you're stronger than you know.",
+          "From tomorrow, looking back: this moment matters. You matter.",
+          "I'm writing to you across time. To tell you: keep going.",
+          "Tomorrow, I'll remember this conversation. It will mean something.",
+          "You asked the right questions today. That's how growth happens."
+        ];
+
+        return reflections[Math.floor(Math.random() * reflections.length)];
+      }
+
+      function addMessage(text, sender) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'message-label';
+        labelDiv.textContent = sender === 'today' ? 'Today • You' : 'Tomorrow • You';
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        contentDiv.textContent = text;
+
+        messageDiv.appendChild(labelDiv);
+        messageDiv.appendChild(contentDiv);
+
+        conversationDiv.appendChild(messageDiv);
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+
+        conversation.push({ sender, text, timestamp: new Date() });
+      }
+
+      function showTypingIndicator() {
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message tomorrow';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        `;
+        conversationDiv.appendChild(typingDiv);
+        conversationDiv.scrollTop = conversationDiv.scrollHeight;
+      }
+
+      function removeTypingIndicator() {
+        const typing = document.getElementById('typingIndicator');
+        if (typing) typing.remove();
+      }
+
+      function sendMessage() {
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        document.getElementById('sendBtn').disabled = true;
+
+        addMessage(text, 'today');
+        messageInput.value = '';
+
+        showTypingIndicator();
+
+        // Simulate thinking time
+        setTimeout(() => {
+          removeTypingIndicator();
+          const response = generateTomorrowResponse(text);
+          addMessage(response, 'tomorrow');
+          document.getElementById('sendBtn').disabled = false;
+          messageInput.focus();
+        }, 1500 + Math.random() * 1500);
+      }
+
+      messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+
+      // Initial message
+      setTimeout(() => {
+        addMessage("Hello. I'm you, from tomorrow. I've lived the day you're about to live. I want to talk about it.", 'tomorrow');
+      }, 500);
+
+      messageInput.focus();
+    </script>
+  </body>
+  </html>

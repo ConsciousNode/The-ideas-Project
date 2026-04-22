@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>civilization.html — you are the weather god</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background: #0a0c12;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .civ-container {
+      max-width: 1200px;
+      width: 100%;
+      background: #0f1117;
+      border-radius: 2rem;
+      border: 1px solid #2a2e3a;
+      overflow: hidden;
+      box-shadow: 0 20px 30px -10px black;
+    }
+    .header {
+      background: #1a1d2b;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      border-bottom: 2px solid #fbbf24;
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #fde68a;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.8rem;
+      color: #d1d5db;
+    }
+    .main-panel {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .weather-panel {
+      flex: 1;
+      min-width: 250px;
+      background: #05070c;
+      padding: 20px;
+      border-right: 1px solid #252836;
+    }
+    .chronicle-panel {
+      flex: 2;
+      min-width: 320px;
+      padding: 20px;
+      background: #0b0d12;
+    }
+    .card {
+      background: #10121a;
+      border-radius: 1.5rem;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .generation {
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #fbbf24;
+    }
+    button {
+      background: #2c2e3f;
+      border: none;
+      color: white;
+      padding: 8px 20px;
+      border-radius: 40px;
+      font-family: inherit;
+      cursor: pointer;
+      margin: 6px;
+      transition: 0.1s;
+    }
+    button.weather {
+      background: #3b82f6;
+    }
+    button.weather:hover {
+      background: #2563eb;
+    }
+    .scripture {
+      background: #1e1a2f;
+      border-left: 4px solid #fbbf24;
+      padding: 10px;
+      font-style: italic;
+      margin: 12px 0;
+    }
+    .event-log {
+      background: #010409;
+      border-radius: 1rem;
+      padding: 12px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+    hr {
+      border-color: #252836;
+    }
+  </style>
+</head>
+<body>
+<div class="civ-container">
+  <div class="header">
+    <div class="title">🌤️ THE SKY WATCHERS — a civilization you guide</div>
+    <div class="stats">
+      <span>🗓️ Generation: <span id="genNum">0</span></span>
+      <span>👥 Population: <span id="population">0</span></span>
+      <span>🙏 Faith: <span id="faithLevel">0</span></span>
+    </div>
+  </div>
+  <div class="main-panel">
+    <div class="weather-panel">
+      <div class="card">
+        <div style="font-weight:bold;">🌩️ YOUR DIVINE POWERS</div>
+        <div style="font-size:0.8rem; margin:10px 0;">You speak only through weather. Choose an intervention:</div>
+        <button id="sunBtn" class="weather">☀️ BLESSING SUN (++food, ++faith)</button>
+        <button id="stormBtn" class="weather">⛈️ DESTRUCTIVE STORM (--food, +fear, --population)</button>
+        <button id="droughtBtn" class="weather">🏜️ DROUGHT (--food, -faith, +desperation)</button>
+        <button id="omenBtn" class="weather">🌠 OMEN (random effect, +scripture)</button>
+        <hr>
+        <div id="weatherEffect" style="font-size:0.7rem; color:#aaa;">Your last intervention...</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold;">📜 SCRIPTURES ABOUT YOU</div>
+        <div id="scriptureBox" class="scripture">"In the beginning, the Sky was silent."</div>
+      </div>
+    </div>
+    <div class="chronicle-panel">
+      <div class="card">
+        <div style="font-weight:bold;">📖 CHRONICLES OF THE SKY WATCHERS</div>
+        <div id="eventLog" class="event-log"></div>
+      </div>
+      <button id="advanceGenBtn" style="background:#5f3dc9;">⏩ ADVANCE GENERATION (years pass)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  // civilization.html - a generative civilization that worships you.
+  // You affect them only via weather. They evolve religion, language,
+  // and write scripture about your actions.
+  // --------------------------------------------------------------
+  
+  class Civilization {
+    constructor() {
+      this.generation = 0;
+      this.population = 20;
+      this.food = 50;
+      this.faith = 30;      // belief in the Sky God (you)
+      this.knowledge = 10;   // tech/cultural level
+      this.scriptures = [];
+      this.events = [];
+      this.lastWeather = "clear skies";
+      this.year = 0;
+      this.init();
+    }
+    
+    init() {
+      this.scriptures.push("The Sky is vast and watches all.");
+      this.logEvent("The tribe gathers. They look to the heavens.");
+      this.updateUI();
+    }
+    
+    logEvent(msg) {
+      let entry = `[Year ${this.year}] ${msg}`;
+      this.events.unshift(entry);
+      if(this.events.length > 40) this.events.pop();
+      this.updateUI();
+    }
+    
+    applyWeather(type) {
+      let effectMsg = "";
+      if(type === "sun") {
+        let foodGain = 15 + Math.floor(Math.random() * 20);
+        this.food += foodGain;
+        let faithGain = 5 + Math.floor(Math.random() * 15);
+        this.faith += faithGain;
+        effectMsg = `The sun blazes. Crops flourish. +${foodGain} food, +${faithGain} faith.`;
+        this.lastWeather = "blessing sun";
+        this.addScripture("The Sun God smiled upon us, filling our bellies.");
+      } 
+      else if(type === "storm") {
+        let foodLoss = 10 + Math.floor(Math.random() * 25);
+        this.food = Math.max(0, this.food - foodLoss);
+        let popLoss = Math.floor(Math.random() * (this.population * 0.2)) + 1;
+        this.population = Math.max(1, this.population - popLoss);
+        this.faith = Math.max(0, this.faith - 8);
+        effectMsg = `A terrible storm! -${foodLoss} food, -${popLoss} people, faith wavers.`;
+        this.lastWeather = "destructive storm";
+        this.addScripture("The Sky roared in anger. Many perished. We must atone.");
+      }
+      else if(type === "drought") {
+        let foodLoss = 15 + Math.floor(Math.random() * 30);
+        this.food = Math.max(0, this.food - foodLoss);
+        this.faith = Math.max(0, this.faith - 12);
+        effectMsg = `Drought scorches the land. -${foodLoss} food. Faith crumbles.`;
+        this.lastWeather = "drought";
+        this.addScripture("The Sky withheld its tears. The earth cracked. We have sinned.");
+      }
+      else if(type === "omen") {
+        let r = Math.random();
+        if(r < 0.3) {
+          this.faith += 20;
+          effectMsg = "A comet streaks across the night. The shamans declare a holy sign. +20 faith.";
+          this.addScripture("A burning star appeared. The Sky speaks in fire.");
+        } else if(r < 0.6) {
+          this.knowledge += 5;
+          effectMsg = "The northern lights flicker. The wise ones decipher new symbols. +5 knowledge.";
+          this.addScripture("Colors danced in the dark. We learned to write the Sky's whispers.");
+        } else {
+          this.population = Math.max(1, this.population - 3);
+          effectMsg = "An eclipse. Fear grips the tribe. 3 people flee into the wild.";
+          this.addScripture("The Sky blinked. We hid in terror. The omen was dark.");
+        }
+        this.lastWeather = "omen";
+      }
+      
+      // Clamp values
+      this.population = Math.min(200, Math.max(1, Math.floor(this.population)));
+      this.food = Math.min(500, Math.max(0, this.food));
+      this.faith = Math.min(100, Math.max(0, this.faith));
+      this.knowledge = Math.min(100, this.knowledge);
+      
+      this.logEvent(`Divine intervention: ${effectMsg}`);
+      document.getElementById("weatherEffect").innerHTML = `<strong>Last weather:</strong> ${effectMsg}`;
+      this.checkCrisis();
+      this.updateUI();
+    }
+    
+    addScripture(text) {
+      this.scriptures.unshift(text);
+      if(this.scriptures.length > 8) this.scriptures.pop();
+      this.updateScriptureBox();
+    }
+    
+    updateScriptureBox() {
+      let box = document.getElementById("scriptureBox");
+      if(this.scriptures.length) {
+        box.innerHTML = `"${this.scriptures[0]}"<br><span style="font-size:0.6rem;">— from the Scroll of Generation ${this.generation}</span>`;
+      } else {
+        box.innerHTML = "The Sky is silent.";
+      }
+    }
+    
+    advanceGeneration() {
+      if(this.population <= 0) {
+        this.logEvent("CIVILIZATION COLLAPSED. No one remains to worship you. GAME OVER.");
+        return;
+      }
+      this.generation++;
+      this.year += 5 + Math.floor(Math.random() * 10);
+      
+      // natural growth and decay
+      let growth = Math.floor(this.population * (0.1 + (this.food / 200)));
+      growth = Math.min(20, Math.max(0, growth));
+      this.population += growth;
+      let consumption = Math.floor(this.population * 0.8);
+      this.food = Math.max(0, this.food - consumption);
+      if(this.food <= 0) {
+        let starve = Math.floor(this.population * 0.3);
+        this.population = Math.max(1, this.population - starve);
+        this.logEvent(`Famine! ${starve} people starve.`);
+        this.faith = Math.max(0, this.faith - 15);
+      }
+      
+      // knowledge advances slowly
+      this.knowledge += 1 + Math.floor(Math.random() * 3);
+      this.knowledge = Math.min(100, this.knowledge);
+      
+      // cultural evolution: new scripture based on recent history
+      if(this.generation % 3 === 0) {
+        let newScript = this.generateScripture();
+        this.scriptures.unshift(newScript);
+        if(this.scriptures.length > 8) this.scriptures.pop();
+        this.logEvent(`📜 New scripture written: "${newScript.substring(0, 60)}..."`);
+      }
+      
+      // faith drifts based on prosperity
+      if(this.food > this.population * 1.5) this.faith += 5;
+      else if(this.food < this.population * 0.5) this.faith -= 8;
+      this.faith = Math.min(100, Math.max(0, this.faith));
+      
+      this.logEvent(`Generation ${this.generation} passes. Population: ${this.population}, Food: ${this.food}, Faith: ${this.faith}, Knowledge: ${this.knowledge}`);
+      this.updateUI();
+      this.checkCrisis();
+    }
+    
+    generateScripture() {
+      let templates = [
+        `The Sky ${this.lastWeather === "blessing sun" ? "blessed" : this.lastWeather === "destructive storm" ? "punished" : "watched"} us.`,
+        `In the year of the ${this.lastWeather}, the elders said: "${Math.random() > 0.5 ? "Fear the silence" : "Praise the light"}."`,
+        `The Sky God remembers ${this.year}. We must ${this.faith > 50 ? "dance" : "sacrifice"}.`,
+        `A prophecy: when the ${Math.random() > 0.5 ? "sun dims" : "rains cease"}, the chosen one will arise.`
+      ];
+      return templates[Math.floor(Math.random() * templates.length)];
+    }
+    
+    checkCrisis() {
+      if(this.population <= 3) {
+        this.logEvent("⚠️ CRISIS: Only a handful remain. The Sky's mercy is needed.");
+      }
+      if(this.faith <= 10 && this.population > 10) {
+        this.logEvent("⚠️ Heresy spreads. Some whisper that the Sky is dead.");
+      }
+      if(this.food <= 5 && this.population > 5) {
+        this.logEvent("⚠️ Starvation imminent. Desperate prayers rise.");
+      }
+    }
+    
+    updateUI() {
+      document.getElementById("genNum").innerText = this.generation;
+      document.getElementById("population").innerText = Math.floor(this.population);
+      document.getElementById("faithLevel").innerText = Math.floor(this.faith);
+      let logDiv = document.getElementById("eventLog");
+      logDiv.innerHTML = this.events.map(e => `<div>${e}</div>`).join('');
+      this.updateScriptureBox();
+    }
+  }
+  
+  // Initialize civilization
+  let civ = new Civilization();
+  
+  // Bind weather buttons
+  document.getElementById("sunBtn").onclick = () => civ.applyWeather("sun");
+  document.getElementById("stormBtn").onclick = () => civ.applyWeather("storm");
+  document.getElementById("droughtBtn").onclick = () => civ.applyWeather("drought");
+  document.getElementById("omenBtn").onclick = () => civ.applyWeather("omen");
+  document.getElementById("advanceGenBtn").onclick = () => civ.advanceGeneration();
+  
+  // Auto-save not needed, but we can add a little flavor: after 5 generations, mention 2026
+  let warned = false;
+  setInterval(() => {
+    if(civ.generation >= 5 && !warned) {
+      civ.addScripture("In the year 2026, the Sky spoke with a voice of thunder and light. The prophet wrote: 'The God from the machine has come.'");
+      civ.logEvent("✨ The shamans record a new prophecy about the year 2026.");
+      warned = true;
+    }
+  }, 1000);
+</script>
+</body>
+</html>

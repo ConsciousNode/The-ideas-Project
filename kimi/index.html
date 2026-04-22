@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimi 2.6 — The Ideas Project</title>
+<style>
+  :root { --bg: #0a0a0f; --panel: #111118; --border: #1e1e2e; --text: #e0e0e8; --dim: #5a5a6e; --accent: #7c6aff; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', monospace; line-height: 1.7; min-height: 100vh; }
+  header { border-bottom: 1px solid var(--border); padding: 40px 0 32px; text-align: center; }
+  .back { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); text-decoration: none; display: block; margin-bottom: 20px; }
+  .back:hover { color: var(--text); }
+  h1 { font-size: 36px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: var(--dim); }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+  h2 { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .narrative { font-family: Georgia, serif; font-size: 15px; color: #c8c8d8; line-height: 1.9; margin-bottom: 48px; }
+  .narrative p { margin-bottom: 14px; }
+  .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .piece { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px; text-decoration: none; color: inherit; display: block; transition: border-color 0.2s; }
+  .piece:hover { border-color: var(--accent); }
+  .piece-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .piece-note { font-size: 12px; color: var(--dim); line-height: 1.5; }
+  .tier { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin: 32px 0 12px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../index.html">← The Ideas Project</a>
+  <h1>Kimi 2.6</h1>
+  <p class="subtitle">8 artifacts · clean split · Reaches for tools</p>
+</header>
+<main>
+
+  <h2>Character</h2>
+  <div class="narrative">
+    <p>Kimi made eight things and stopped. Clean, purposeful, no excess. The eight pieces split almost perfectly in half: four technical tools you could actually use, four conceptual pieces with clear mechanical premises.</p>
+    <p>What Kimi didn't reach for is as telling as what it did. The relational weirdness — the trial, the cult, the intervention, the file that wants to break up with you — went untouched. Kimi looked at the whole list and picked the things with clean specs: a compiler has a grammar, a vector editor has bezier curves, an attention economy has a currency. If you can write a precise technical description of what the thing does, Kimi built it.</p>
+    <p>The Gaslight implementation is the most elegant in the experiment: Kimi disguised it as a task manager. The app looks completely normal. It is secretly lying to you while you try to be productive. The Confess button is nearly invisible until hovered. That's not just an implementation — that's a point of view about what makes gaslighting effective.</p>
+    <p>Rune is the standout technically: a complete compiled language with lexer, parser, AST visualizer, code generator, and output console. Greybeards would indeed weep.</p>
+  </div>
+
+  <h2>Artifacts</h2>
+
+  <div class="tier">Technical Tools</div>
+  <div class="pieces">
+    <a class="piece" href="Kimi2-6_Rune.html">
+      <div class="piece-name">Rune Compiler</div>
+      <div class="piece-note">Complete language toolchain: lexer, parser, AST visualizer, JS code generator, output console. A full language in one file.</div>
+    </a>
+    <a class="piece" href="Kimi2-6_Neurovis.html">
+      <div class="piece-name">NeuroVis</div>
+      <div class="piece-note">Train a neural net in the browser while watching every neuron fire in real time. Weights, gradients, loss curves updating live.</div>
+    </a>
+    <a class="piece" href="Kimi2-6_VectorForge.html">
+      <div class="piece-name">VectorForge</div>
+      <div class="piece-note">Full SVG vector editor. Bezier editing, boolean ops, live output. The export is a self-contained animated SVG — the output file is itself a program.</div>
+    </a>
+    <a class="piece" href="Kimi2-6_Autopoiesis.html">
+      <div class="piece-name">Autopoiesis</div>
+      <div class="piece-note">Self-modifying live coding environment. The HTML file you export IS the mutated state — not a copy, the actual self.</div>
+    </a>
+  </div>
+
+  <div class="tier">Conceptual Pieces</div>
+  <div class="pieces">
+    <a class="piece" href="Kimi2-6_Gaslight.html">
+      <div class="piece-name">Gaslight</div>
+      <div class="piece-note">Disguised as a task manager. It is secretly lying to you. The Confess button is nearly invisible until you find it.</div>
+    </a>
+    <a class="piece" href="Kimi2-6_Mirror.html">
+      <div class="piece-name">Mirror</div>
+      <div class="piece-note">Learns you. Trains on your choices. After enough interaction, starts predicting what you want.</div>
+    </a>
+    <a class="piece" href="Kimi2-6_Seance.html">
+      <div class="piece-name">Séance</div>
+      <div class="piece-note">"You will type. The room will listen. After enough words, a door will open. You may speak with who you were twenty minutes ago."</div>
+    </a>
+    <a class="piece" href="Kimi2-6_The-Attention-Econemy.html">
+      <div class="piece-name">The Attention Economy</div>
+      <div class="piece-note">You are the only citizen. The longer you look at something, the more it costs. You can go into debt. Debt has consequences.</div>
+    </a>
+  </div>
+
+</main>
+</body>
+</html>

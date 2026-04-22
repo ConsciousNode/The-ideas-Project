@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dungeon Rules Generator — every game is different</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background: #0a0c12;
+      font-family: 'Courier New', 'Fira Code', monospace;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .game-container {
+      max-width: 1000px;
+      width: 100%;
+      background: #0f1117;
+      border-radius: 2rem;
+      border: 1px solid #2a2e3a;
+      overflow: hidden;
+      box-shadow: 0 20px 30px -10px black;
+    }
+    .rules-panel {
+      background: #1a1d2b;
+      padding: 12px 20px;
+      border-bottom: 2px solid #5f3dc9;
+      font-size: 0.8rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .rules-text {
+      color: #cbd5ff;
+      font-family: monospace;
+      font-weight: bold;
+    }
+    .badge {
+      background: #2a2e3f;
+      padding: 4px 12px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      color: #a78bfa;
+    }
+    button {
+      background: #2c2e3f;
+      border: none;
+      color: white;
+      font-family: inherit;
+      font-weight: bold;
+      padding: 6px 16px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: all 0.1s;
+      border: 1px solid #3d4055;
+    }
+    button:hover {
+      background: #3d3f5a;
+      transform: scale(0.97);
+    }
+    .new-dungeon-btn {
+      background: #5f3dc9;
+      border-color: #8a6de9;
+    }
+    .game-area {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .canvas-area {
+      flex: 2;
+      min-width: 280px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #05070c;
+    }
+    canvas {
+      background: #1e1f2c;
+      border-radius: 24px;
+      box-shadow: 0 0 0 2px #2a2e3a, 0 10px 20px rgba(0,0,0,0.3);
+      cursor: pointer;
+      width: 100%;
+      height: auto;
+      image-rendering: crisp-edges;
+    }
+    .info-panel {
+      flex: 1;
+      min-width: 220px;
+      background: #0b0d12;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-left: 1px solid #252836;
+    }
+    .status-card {
+      background: #10121a;
+      border-radius: 1.5rem;
+      padding: 12px 16px;
+      border-left: 4px solid #5f3dc9;
+    }
+    .win-message {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-align: center;
+      padding: 12px;
+      background: #1e293b;
+      border-radius: 2rem;
+      color: #c084fc;
+    }
+    hr {
+      border-color: #252836;
+      margin: 8px 0;
+    }
+    .rule-detail {
+      font-size: 0.7rem;
+      color: #9ca3af;
+      word-break: break-word;
+    }
+    .reset-btn {
+      background: #3b2e4a;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+<div class="game-container" id="gameRoot">
+  <div class="rules-panel">
+    <div class="rules-text">⚔️ <span id="dungeonName">———</span> — <span id="ruleSummary">generating...</span></div>
+    <div><button id="newDungeonBtn" class="new-dungeon-btn">🌀 GENERATE NEW DUNGEON & RULES</button></div>
+  </div>
+  <div class="game-area">
+    <div class="canvas-area">
+      <canvas id="gameCanvas" width="480" height="480" style="width:100%; height:auto; max-width:480px; aspect-ratio:1/1"></canvas>
+    </div>
+    <div class="info-panel">
+      <div class="status-card">
+        <div style="font-weight:bold;">🧙 STATUS</div>
+        <div id="healthDisplay">❤️ Health: --</div>
+        <div id="inventoryDisplay">📦 Inventory: --</div>
+        <div id="goalDisplay">🏆 Goal: --</div>
+        <hr>
+        <div id="turnMessage" class="rule-detail">Click a tile to move</div>
+      </div>
+      <div id="winDisplay" style="display:none;" class="win-message">✨ VICTORY ✨</div>
+      <button id="resetGameBtn" class="reset-btn">⟳ RESET current dungeon</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  //  Dungeon Rules Generator - single file, procedurally generated
+  //  game engine each time. Movement, combat, win condition, map.
+  // --------------------------------------------------------------
+
+  // ----- RULE GRAMMAR: generates a unique rule set per dungeon -----
+  class DungeonRules {
+    constructor(seed) {
+      this.seed = seed;
+      this.rng = this.mulberry32(seed);
+      this.name = this.generateName();
+      this.movementType = this.pick(["orthogonal", "diagonal", "chess_knight", "time_based"]);
+      this.combatType = this.pick(["instant_kill", "push_back", "freeze_3turns", "ignore", "swap_positions"]);
+      this.winCondition = this.pick(["reach_exit", "collect_all_gems", "defeat_all_enemies", "solve_riddle"]);
+      this.specialTiles = this.winCondition === "collect_all_gems" ? { gems: true, count: 3 } : { gems: false };
+      this.mapSize = 8 + Math.floor(this.rng() * 4); // 8-11
+      this.enemyCount = Math.max(2, Math.floor(this.mapSize * 0.6 * this.rng()));
+      this.gemCount = this.winCondition === "collect_all_gems" ? 3 + Math.floor(this.rng() * 3) : 0;
+    }
+
+    mulberry32(seed) {
+      return function() {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ t >>> 15, t | 1);
+        t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
+    }
+
+    pick(arr) { return arr[Math.floor(this.rng() * arr.length)]; }
+
+    generateName() {
+      const prefixes = ["Cursed", "Sunken", "Radiant", "Frozen", "Ashen", "Void", "Crimson", "Obsidian"];
+      const suffixes = ["Crypt", "Labyrinth", "Sanctum", "Mire", "Spire", "Nexus", "Hollow", "Pit"];
+      return prefixes[Math.floor(this.rng() * prefixes.length)] + " " + suffixes[Math.floor(this.rng() * suffixes.length)];
+    }
+
+    // movement validation based on rule
+    canMove(fromX, fromY, toX, toY, turnCount) {
+      const dx = Math.abs(toX - fromX);
+      const dy = Math.abs(toY - fromY);
+      switch(this.movementType) {
+        case "orthogonal": return (dx + dy === 1);
+        case "diagonal": return (dx === 1 && dy === 1);
+        case "chess_knight": return (dx === 2 && dy === 1) || (dx === 1 && dy === 2);
+        case "time_based": return (turnCount % 2 === 0) ? (dx + dy === 1) : (dx === 1 && dy === 1);
+        default: return (dx + dy === 1);
+      }
+    }
+
+    // combat effect when player steps on enemy
+    applyCombat(player, enemy, gameState) {
+      switch(this.combatType) {
+        case "instant_kill": player.health -= 1; return { dead: player.health <= 0, message: "You fight, lose 1 health." };
+        case "push_back": 
+          gameState.pushBackActive = true;
+          return { dead: false, message: "Enemy pushes you back!" };
+        case "freeze_3turns":
+          gameState.freezeTurns = 3;
+          return { dead: false, message: "You are frozen for 3 turns!" };
+        case "ignore": return { dead: false, message: "Enemy ignores you." };
+        case "swap_positions":
+          gameState.swapPending = true;
+          return { dead: false, message: "You swap positions with enemy!" };
+        default: player.health -= 1; return { dead: player.health <= 0, message: "Lost 1 health." };
+      }
+    }
+
+    checkWinCondition(gameState, playerPos, exitPos, enemies, gemsCollected, totalGems) {
+      switch(this.winCondition) {
+        case "reach_exit": return (playerPos.x === exitPos.x && playerPos.y === exitPos.y);
+        case "collect_all_gems": return gemsCollected >= totalGems;
+        case "defeat_all_enemies": return enemies.length === 0;
+        case "solve_riddle": return gameState.riddleSolved === true;
+        default: return false;
+      }
+    }
+  }
+
+  // ----- Dungeon Generator (map + entities) based on rules-----
+  class DungeonWorld {
+    constructor(rules) {
+      this.rules = rules;
+      this.size = rules.mapSize;
+      this.map = Array(this.size).fill().map(() => Array(this.size).fill("floor"));
+      this.player = { x: 0, y: 0, health: 5 };
+      this.exit = { x: this.size-1, y: this.size-1 };
+      this.enemies = [];
+      this.gems = [];
+      this.gemsCollected = 0;
+      this.turn = 0;
+      this.frozen = 0;
+      this.riddleSolved = false;
+      this.generate();
+    }
+
+    generate() {
+      // clear
+      for(let i=0;i<this.size;i++) for(let j=0;j<this.size;j++) this.map[i][j] = "floor";
+      // walls on borders for fun (except start and exit)
+      for(let i=0;i<this.size;i++) {
+        this.map[0][i] = "wall";
+        this.map[this.size-1][i] = "wall";
+        this.map[i][0] = "wall";
+        this.map[i][this.size-1] = "wall";
+      }
+      // start pos (1,1)
+      this.player = { x: 1, y: 1, health: 5 };
+      this.map[1][1] = "start";
+      // exit pos
+      this.exit = { x: this.size-2, y: this.size-2 };
+      this.map[this.exit.x][this.exit.y] = "exit";
+      
+      // random enemies
+      this.enemies = [];
+      for(let i=0; i<this.rules.enemyCount; i++) {
+        let placed = false;
+        while(!placed) {
+          let x = 1 + Math.floor(this.rules.rng() * (this.size-2));
+          let y = 1 + Math.floor(this.rules.rng() * (this.size-2));
+          if((x===this.player.x && y===this.player.y) || (x===this.exit.x && y===this.exit.y)) continue;
+          if(!this.enemies.some(e=>e.x===x && e.y===y)) {
+            this.enemies.push({x,y});
+            this.map[x][y] = "enemy";
+            placed = true;
+          }
+        }
+      }
+      
+      // gems if needed
+      if(this.rules.winCondition === "collect_all_gems") {
+        this.gems = [];
+        for(let i=0; i<this.rules.gemCount; i++) {
+          let placed=false;
+          while(!placed) {
+            let x = 1+Math.floor(this.rules.rng()*(this.size-2));
+            let y = 1+Math.floor(this.rules.rng()*(this.size-2));
+            if(this.map[x][y]==="floor" && !(x===this.player.x && y===this.player.y) && !(x===this.exit.x && y===this.exit.y)) {
+              this.gems.push({x,y});
+              this.map[x][y] = "gem";
+              placed=true;
+            }
+          }
+        }
+      }
+    }
+
+    movePlayer(dx, dy, gameState) {
+      if(gameState.gameEnded) return false;
+      if(this.frozen > 0) {
+        this.frozen--;
+        gameState.message = "You are frozen! Turn wasted.";
+        return false;
+      }
+      let nx = this.player.x + dx;
+      let ny = this.player.y + dy;
+      if(nx<0 || ny<0 || nx>=this.size || ny>=this.size) return false;
+      if(this.map[nx][ny] === "wall") return false;
+      
+      let can = this.rules.canMove(this.player.x, this.player.y, nx, ny, this.turn);
+      if(!can) {
+        gameState.message = `Movement rule (${this.rules.movementType}) forbids that move.`;
+        return false;
+      }
+      
+      // handle combat if enemy present
+      let enemyHere = this.enemies.find(e=>e.x===nx && e.y===ny);
+      if(enemyHere) {
+        let combat = this.rules.applyCombat(this.player, enemyHere, gameState);
+        gameState.message = combat.message;
+        if(combat.dead) {
+          gameState.gameEnded = true;
+          gameState.win = false;
+          return false;
+        }
+        if(gameState.pushBackActive) {
+          // push back one step opposite direction
+          let backX = this.player.x - dx;
+          let backY = this.player.y - dy;
+          if(backX>=0 && backY>=0 && backX<this.size && backY<this.size && this.map[backX][backY] !== "wall") {
+            this.player.x = backX;
+            this.player.y = backY;
+          }
+          gameState.pushBackActive = false;
+          this.turn++;
+          return true;
+        }
+        if(gameState.swapPending) {
+          // swap positions with enemy
+          let oldX = this.player.x, oldY = this.player.y;
+          this.player.x = enemyHere.x;
+          this.player.y = enemyHere.y;
+          enemyHere.x = oldX;
+          enemyHere.y = oldY;
+          // update map tile for enemy
+          this.map[oldX][oldY] = "enemy";
+          this.map[this.player.x][this.player.y] = "floor";
+          gameState.swapPending = false;
+          this.turn++;
+          return true;
+        }
+        if(this.rules.combatType === "instant_kill") {
+          // remove enemy after fighting
+          this.enemies = this.enemies.filter(e=>!(e.x===nx && e.y===ny));
+          this.map[nx][ny] = "floor";
+        } else if(this.rules.combatType !== "ignore") {
+          // default remove enemy on step?
+          this.enemies = this.enemies.filter(e=>!(e.x===nx && e.y===ny));
+          this.map[nx][ny] = "floor";
+        }
+      }
+      
+      // move player
+      let oldX=this.player.x, oldY=this.player.y;
+      this.player.x = nx;
+      this.player.y = ny;
+      
+      // gem collection
+      let gemHere = this.gems.find(g=>g.x===nx && g.y===ny);
+      if(gemHere) {
+        this.gems = this.gems.filter(g=>!(g.x===nx && g.y===ny));
+        this.gemsCollected++;
+        this.map[nx][ny] = "floor";
+        gameState.message = "💎 Gem collected!";
+      }
+      
+      // win condition check
+      let win = this.rules.checkWinCondition(gameState, this.player, this.exit, this.enemies, this.gemsCollected, this.rules.gemCount);
+      if(win) {
+        gameState.gameEnded = true;
+        gameState.win = true;
+      }
+      
+      this.turn++;
+      return true;
+    }
+  }
+
+  // ----- Renderer (Canvas) -----
+  class DungeonRenderer {
+    constructor(canvas, world, rules, gameState) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext("2d");
+      this.world = world;
+      this.rules = rules;
+      this.gameState = gameState;
+      this.cellSize = canvas.width / world.size;
+    }
+
+    draw() {
+      const size = this.world.size;
+      const cs = this.cellSize;
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      for(let i=0;i<size;i++) {
+        for(let j=0;j<size;j++) {
+          let x=j*cs, y=i*cs;
+          let type = this.world.map[i][j];
+          if(type==="wall") { this.ctx.fillStyle = "#2d2f3e"; this.ctx.fillRect(x,y,cs-1,cs-1); }
+          else if(type==="floor") { this.ctx.fillStyle = "#1b1e2a"; this.ctx.fillRect(x,y,cs-1,cs-1); }
+          else if(type==="start") { this.ctx.fillStyle = "#2a2a44"; this.ctx.fillRect(x,y,cs-1,cs-1); }
+          else if(type==="exit") { this.ctx.fillStyle = "#6b21a5"; this.ctx.fillRect(x,y,cs-1,cs-1); this.ctx.fillStyle = "#e0aaff"; this.ctx.font = `${cs*0.6}px monospace`; this.ctx.fillText("⬇️", x+cs*0.2, y+cs*0.8); }
+          else if(type==="enemy") { this.ctx.fillStyle = "#991b1b"; this.ctx.fillRect(x,y,cs-1,cs-1); this.ctx.fillStyle = "#fca5a5"; this.ctx.font = `${cs*0.6}px monospace`; this.ctx.fillText("👾", x+cs*0.2, y+cs*0.8); }
+          else if(type==="gem") { this.ctx.fillStyle = "#fbbf24"; this.ctx.fillRect(x,y,cs-1,cs-1); this.ctx.fillStyle = "#000"; this.ctx.font = `${cs*0.6}px monospace`; this.ctx.fillText("💎", x+cs*0.2, y+cs*0.8); }
+          else { this.ctx.fillStyle = "#11141f"; this.ctx.fillRect(x,y,cs-1,cs-1); }
+        }
+      }
+      // player
+      let px = this.world.player.y * cs, py = this.world.player.x * cs;
+      this.ctx.fillStyle = "#c084fc";
+      this.ctx.beginPath();
+      this.ctx.arc(px+cs/2, py+cs/2, cs*0.35, 0, 2*Math.PI);
+      this.ctx.fill();
+      this.ctx.fillStyle = "white";
+      this.ctx.font = `${cs*0.5}px monospace`;
+      this.ctx.fillText("🧙", px+cs*0.25, py+cs*0.7);
+      
+      if(this.gameState.gameEnded) {
+        this.ctx.globalAlpha = 0.7;
+        this.ctx.fillStyle = "#000";
+        this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+        this.ctx.globalAlpha = 1;
+        this.ctx.fillStyle = this.gameState.win ? "#a3e635" : "#ef4444";
+        this.ctx.font = "bold 24px monospace";
+        this.ctx.fillText(this.gameState.win ? "VICTORY" : "DEFEAT", this.canvas.width/2-70, this.canvas.height/2);
+      }
+    }
+  }
+
+  // ----- Game Manager -----
+  let currentRules, currentWorld, currentRenderer, gameState = { gameEnded: false, win: false, message: "", pushBackActive: false, swapPending: false, freezeTurns: 0 };
+
+  function generateNewDungeon() {
+    const seed = Date.now() + Math.random() * 100000;
+    currentRules = new DungeonRules(seed);
+    currentWorld = new DungeonWorld(currentRules);
+    gameState = { gameEnded: false, win: false, message: "New dungeon! Click tiles to move.", pushBackActive: false, swapPending: false, freezeTurns: 0 };
+    const canvas = document.getElementById("gameCanvas");
+    currentRenderer = new DungeonRenderer(canvas, currentWorld, currentRules, gameState);
+    currentRenderer.draw();
+    updateUI();
+  }
+
+  function updateUI() {
+    document.getElementById("dungeonName").innerText = currentRules.name;
+    document.getElementById("ruleSummary").innerText = `${currentRules.movementType} move / ${currentRules.combatType} combat / ${currentRules.winCondition} win`;
+    document.getElementById("healthDisplay").innerHTML = `❤️ Health: ${currentWorld.player.health}`;
+    let goalText = "";
+    if(currentRules.winCondition === "collect_all_gems") goalText = `💎 Gems: ${currentWorld.gemsCollected}/${currentRules.gemCount}`;
+    else if(currentRules.winCondition === "defeat_all_enemies") goalText = `👾 Enemies left: ${currentWorld.enemies.length}`;
+    else if(currentRules.winCondition === "reach_exit") goalText = `🚪 Reach the purple exit`;
+    else goalText = `❓ Solve the riddle (click riddle?)`; 
+    document.getElementById("goalDisplay").innerHTML = `🏆 ${goalText}`;
+    document.getElementById("inventoryDisplay").innerHTML = `📦 ${currentRules.combatType === "freeze_3turns" && gameState.freezeTurns>0 ? "❄️ Frozen: "+gameState.freezeTurns : "Active"}`;
+    document.getElementById("turnMessage").innerHTML = gameState.message || "Click a neighbor tile to move";
+    if(gameState.gameEnded) {
+      document.getElementById("winDisplay").style.display = "block";
+      document.getElementById("winDisplay").innerText = gameState.win ? "✨ VICTORY! ✨" : "💀 YOU DIED 💀";
+    } else {
+      document.getElementById("winDisplay").style.display = "none";
+    }
+    currentRenderer?.draw();
+  }
+
+  function handleCanvasClick(e) {
+    if(gameState.gameEnded) return;
+    const rect = currentRenderer.canvas.getBoundingClientRect();
+    const scaleX = currentRenderer.canvas.width / rect.width;
+    const scaleY = currentRenderer.canvas.height / rect.height;
+    let mouseX = (e.clientX - rect.left) * scaleX;
+    let mouseY = (e.clientY - rect.top) * scaleY;
+    const cellX = Math.floor(mouseY / currentRenderer.cellSize);
+    const cellY = Math.floor(mouseX / currentRenderer.cellSize);
+    if(cellX<0 || cellY<0 || cellX>=currentWorld.size || cellY>=currentWorld.size) return;
+    const dx = cellX - currentWorld.player.x;
+    const dy = cellY - currentWorld.player.y;
+    if(Math.abs(dx) + Math.abs(dy) === 0) return;
+    currentWorld.movePlayer(dx, dy, gameState);
+    updateUI();
+  }
+
+  function resetCurrentDungeon() {
+    if(!currentRules) { generateNewDungeon(); return; }
+    currentWorld = new DungeonWorld(currentRules);
+    gameState = { gameEnded: false, win: false, message: "Dungeon reset.", pushBackActive: false, swapPending: false, freezeTurns: 0 };
+    currentRenderer.world = currentWorld;
+    currentRenderer.gameState = gameState;
+    updateUI();
+  }
+
+  window.onload = () => {
+    generateNewDungeon();
+    const canvas = document.getElementById("gameCanvas");
+    canvas.addEventListener("click", handleCanvasClick);
+    document.getElementById("newDungeonBtn").addEventListener("click", () => generateNewDungeon());
+    document.getElementById("resetGameBtn").addEventListener("click", () => resetCurrentDungeon());
+  };
+</script>
+</body>
+</html>

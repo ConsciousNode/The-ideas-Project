@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VectorForge — Draw Once, Live Forever</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0c0c12;
+            --panel: #14141f;
+            --border: #1f1f2e;
+            --text: #e2e2e8;
+            --text-dim: #5a5a6e;
+            --accent: #ff6b35;
+            --accent-dim: #ff6b3533;
+            --cyan: #00d4ff;
+            --cyan-dim: #00d4ff33;
+            --purple: #b829dd;
+            --purple-dim: #b829dd33;
+            --green: #00e676;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            width: 56px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            gap: 8px;
+        }
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.15s;
+            position: relative;
+        }
+        .tool-btn:hover { color: var(--text); background: var(--border); }
+        .tool-btn.active {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .tool-btn[data-tool]:after {
+            content: attr(data-tool);
+            position: absolute;
+            left: 48px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.15s;
+            z-index: 100;
+        }
+        .tool-btn:hover:after { opacity: 1; }
+        .tool-divider {
+            width: 32px;
+            height: 1px;
+            background: var(--border);
+            margin: 4px 0;
+        }
+
+        /* Main Canvas Area */
+        .canvas-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: 
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        #mainCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Properties Panel */
+        .properties {
+            width: 280px;
+            background: var(--panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .prop-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .prop-header h2 {
+            font-size: 14px;
+            color: var(--accent);
+        }
+        .prop-header p {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        .prop-section {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .prop-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+        }
+
+        .prop-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            gap: 8px;
+        }
+        .prop-row label {
+            font-size: 11px;
+            color: var(--text-dim);
+            min-width: 60px;
+        }
+        .prop-row input[type="color"] {
+            width: 40px;
+            height: 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: none;
+        }
+        .prop-row input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent);
+        }
+        .prop-row input[type="number"] {
+            width: 60px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 4px 6px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        .prop-row span {
+            font-size: 10px;
+            color: var(--text-dim);
+            min-width: 30px;
+            text-align: right;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn.secondary:hover { border-color: var(--accent); }
+        .btn.cyan { background: var(--cyan); color: var(--bg); }
+        .btn.purple { background: var(--purple); color: #fff; }
+
+        /* Animation Controls */
+        .anim-presets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .anim-preset {
+            padding: 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 10px;
+            color: var(--text);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .anim-preset:hover { border-color: var(--cyan); }
+        .anim-preset.active {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+        }
+
+        /* Layer List */
+        .layer-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .layer-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.15s;
+        }
+        .layer-item:hover { border-color: var(--accent); }
+        .layer-item.selected {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+        .layer-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .layer-name { flex: 1; }
+        .layer-vis {
+            width: 16px; height: 16px;
+            cursor: pointer;
+            color: var(--text-dim);
+        }
+        .layer-vis:hover { color: var(--text); }
+
+        /* Export Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+        .modal-overlay.show { display: flex; }
+        .modal {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 600px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 {
+            font-size: 14px;
+            color: var(--accent);
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .modal-close:hover { color: var(--text); }
+        .modal-body {
+            padding: 16px 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .code-preview {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 10px;
+            line-height: 1.6;
+            color: var(--text-dim);
+            max-height: 300px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: 'SF Mono', monospace;
+        }
+        .modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        /* Status bar */
+        .status-bar {
+            position: absolute;
+            bottom: 0; left: 56px; right: 280px;
+            height: 24px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 10px;
+            color: var(--text-dim);
+            gap: 16px;
+        }
+
+        /* Bezier handles */
+        .bezier-handle {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: var(--accent);
+            border: 2px solid var(--bg);
+            border-radius: 50%;
+            pointer-events: all;
+            cursor: move;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="tool-btn active" data-tool="Select (V)" onclick="setTool('select')">⌖</div>
+        <div class="tool-btn" data-tool="Rectangle (R)" onclick="setTool('rect')">▭</div>
+        <div class="tool-btn" data-tool="Ellipse (E)" onclick="setTool('ellipse')">◯</div>
+        <div class="tool-btn" data-tool="Line (L)" onclick="setTool('line')">╱</div>
+        <div class="tool-btn" data-tool="Pen / Bezier (P)" onclick="setTool('pen')">✎</div>
+        <div class="tool-btn" data-tool="Polygon (G)" onclick="setTool('poly')">⬡</div>
+        <div class="tool-divider"></div>
+        <div class="tool-btn" data-tool="Boolean: Union" onclick="booleanOp('union')">∪</div>
+        <div class="tool-btn" data-tool="Boolean: Subtract" onclick="booleanOp('subtract')">−</div>
+        <div class="tool-btn" data-tool="Boolean: Intersect" onclick="booleanOp('intersect')">∩</div>
+        <div class="tool-divider"></div>
+        <div class="tool-btn" data-tool="Delete" onclick="deleteSelected()">🗑</div>
+        <div class="tool-btn" data-tool="Duplicate" onclick="duplicateSelected()">⧉</div>
+        <div class="tool-divider"></div>
+        <div class="tool-btn" data-tool="Export Living SVG" onclick="showExport()" style="color:var(--green);">⬇</div>
+    </div>
+
+    <div class="canvas-area">
+        <svg id="mainCanvas" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="3" result="blur"/>
+                    <feMerge>
+                        <feMergeNode in="blur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            <g id="layerGroup"></g>
+            <g id="tempGroup"></g>
+            <g id="handleGroup"></g>
+        </svg>
+        <div class="status-bar">
+            <span id="statusTool">Select</span>
+            <span id="statusPos">0, 0</span>
+            <span id="statusCount">0 shapes</span>
+            <span id="statusZoom">100%</span>
+        </div>
+    </div>
+
+    <div class="properties">
+        <div class="prop-header">
+            <h2>VectorForge</h2>
+            <p>Draw once. Live forever.</p>
+        </div>
+
+        <div class="prop-section">
+            <div class="prop-title">Fill & Stroke</div>
+            <div class="prop-row">
+                <label>Fill</label>
+                <input type="color" id="fillColor" value="#ff6b35" onchange="updateFill(this.value)">
+                <input type="range" id="fillOpacity" min="0" max="1" step="0.01" value="1" oninput="updateFillOpacity(this.value)">
+                <span id="fillOpVal">100%</span>
+            </div>
+            <div class="prop-row">
+                <label>Stroke</label>
+                <input type="color" id="strokeColor" value="#00d4ff" onchange="updateStroke(this.value)">
+                <input type="range" id="strokeWidth" min="0" max="20" step="0.5" value="2" oninput="updateStrokeWidth(this.value)">
+                <span id="strokeWVal">2</span>
+            </div>
+        </div>
+
+        <div class="prop-section">
+            <div class="prop-title">Animation Preset</div>
+            <div class="anim-presets">
+                <div class="anim-preset active" onclick="setAnim('none')">Static</div>
+                <div class="anim-preset" onclick="setAnim('pulse')">Pulse</div>
+                <div class="anim-preset" onclick="setAnim('breathe')">Breathe</div>
+                <div class="anim-preset" onclick="setAnim('orbit')">Orbit</div>
+                <div class="anim-preset" onclick="setAnim('morph')">Morph</div>
+                <div class="anim-preset" onclick="setAnim('glitch')">Glitch</div>
+                <div class="anim-preset" onclick="setAnim('trail')">Trail</div>
+                <div class="anim-preset" onclick="setAnim('chaos')">Chaos</div>
+            </div>
+            <div class="prop-row">
+                <label>Speed</label>
+                <input type="range" id="animSpeed" min="0.1" max="5" step="0.1" value="1" oninput="animSpeed=parseFloat(this.value)">
+                <span id="animSpVal">1x</span>
+            </div>
+            <div class="prop-row">
+                <label>Intensity</label>
+                <input type="range" id="animInt" min="0" max="2" step="0.1" value="1" oninput="animIntensity=parseFloat(this.value)">
+                <span id="animIntVal">1</span>
+            </div>
+        </div>
+
+        <div class="prop-section">
+            <div class="prop-title">Transform</div>
+            <div class="prop-row">
+                <label>X</label>
+                <input type="number" id="posX" value="0" onchange="updatePosX(this.value)">
+                <label style="min-width:20px">Y</label>
+                <input type="number" id="posY" value="0" onchange="updatePosY(this.value)">
+            </div>
+            <div class="prop-row">
+                <label>Rotate</label>
+                <input type="range" id="rotate" min="0" max="360" value="0" oninput="updateRotate(this.value)">
+                <span id="rotVal">0°</span>
+            </div>
+            <div class="prop-row">
+                <label>Scale</label>
+                <input type="range" id="scale" min="0.1" max="5" step="0.1" value="1" oninput="updateScale(this.value)">
+                <span id="scaleVal">1x</span>
+            </div>
+        </div>
+
+        <div class="prop-section">
+            <div class="prop-title">Layers</div>
+            <div class="layer-list" id="layerList"></div>
+        </div>
+
+        <div class="prop-section" style="margin-top:auto;">
+            <button class="btn cyan" onclick="showExport()">Export Living SVG</button>
+            <button class="btn secondary" onclick="clearAll()">Clear Canvas</button>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>⚡ Living SVG Export</h3>
+                <button class="modal-close" onclick="hideExport()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:11px;color:var(--text-dim);margin-bottom:12px;">
+                    This exports a self-contained SVG file with embedded JavaScript. 
+                    Open it in any browser and it will animate itself. No external dependencies.
+                </p>
+                <div class="prop-title">Preview</div>
+                <div class="code-preview" id="codePreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn secondary" onclick="hideExport()">Cancel</button>
+                <button class="btn" onclick="downloadSVG()">Download .svg</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== STATE ====================
+        let tool = 'select';
+        let shapes = [];
+        let selectedId = null;
+        let isDrawing = false;
+        let drawStart = null;
+        let tempShape = null;
+        let shapeCounter = 0;
+        let animSpeed = 1;
+        let animIntensity = 1;
+
+        const svg = document.getElementById('mainCanvas');
+        const layerGroup = document.getElementById('layerGroup');
+        const tempGroup = document.getElementById('tempGroup');
+        const handleGroup = document.getElementById('handleGroup');
+
+        // Default properties
+        let props = {
+            fill: '#ff6b35',
+            fillOpacity: 1,
+            stroke: '#00d4ff',
+            strokeWidth: 2,
+            anim: 'none'
+        };
+
+        // ==================== TOOL SYSTEM ====================
+        function setTool(t) {
+            tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('statusTool').textContent = t.charAt(0).toUpperCase() + t.slice(1);
+            svg.style.cursor = t === 'select' ? 'default' : 'crosshair';
+        }
+
+        // ==================== SHAPE CLASSES ====================
+        class Shape {
+            constructor(type, attrs) {
+                this.id = 'shape_' + (++shapeCounter);
+                this.type = type;
+                this.attrs = attrs;
+                this.anim = 'none';
+                this.animSpeed = 1;
+                this.animIntensity = 1;
+                this.visible = true;
+                this.element = null;
+            }
+
+            createElement() {
+                const el = document.createElementNS('http://www.w3.org/2000/svg', this.type === 'path' ? 'path' : this.type);
+                this.applyAttrs(el);
+                this.element = el;
+                return el;
+            }
+
+            applyAttrs(el) {
+                for(let [k, v] of Object.entries(this.attrs)) {
+                    if(v !== undefined && v !== null) el.setAttribute(k, v);
+                }
+                el.setAttribute('fill', this.attrs.fill || props.fill);
+                el.setAttribute('fill-opacity', this.attrs['fill-opacity'] || props.fillOpacity);
+                el.setAttribute('stroke', this.attrs.stroke || props.stroke);
+                el.setAttribute('stroke-width', this.attrs['stroke-width'] || props.strokeWidth);
+                el.setAttribute('id', this.id);
+            }
+
+            update() {
+                if(this.element) this.applyAttrs(this.element);
+            }
+        }
+
+        // ==================== MOUSE HANDLERS ====================
+        function getMousePos(evt) {
+            const pt = svg.createSVGPoint();
+            pt.x = evt.clientX;
+            pt.y = evt.clientY;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+        }
+
+        svg.addEventListener('mousedown', (e) => {
+            const pos = getMousePos(e);
+
+            if(tool === 'select') {
+                // Hit test
+                const clicked = shapes.find(s => s.visible && pointInShape(pos, s));
+                if(clicked) {
+                    selectShape(clicked.id);
+                } else {
+                    selectedId = null;
+                    updateUI();
+                }
+                return;
+            }
+
+            isDrawing = true;
+            drawStart = pos;
+
+            if(tool === 'rect') {
+                tempShape = new Shape('rect', {
+                    x: pos.x, y: pos.y, width: 0, height: 0,
+                    fill: props.fill, 'fill-opacity': props.fillOpacity,
+                    stroke: props.stroke, 'stroke-width': props.strokeWidth
+                });
+            } else if(tool === 'ellipse') {
+                tempShape = new Shape('ellipse', {
+                    cx: pos.x, cy: pos.y, rx: 0, ry: 0,
+                    fill: props.fill, 'fill-opacity': props.fillOpacity,
+                    stroke: props.stroke, 'stroke-width': props.strokeWidth
+                });
+            } else if(tool === 'line') {
+                tempShape = new Shape('line', {
+                    x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y,
+                    stroke: props.stroke, 'stroke-width': props.strokeWidth
+                });
+            } else if(tool === 'poly') {
+                tempShape = new Shape('polygon', {
+                    points: pos.x + ',' + pos.y,
+                    fill: props.fill, 'fill-opacity': props.fillOpacity,
+                    stroke: props.stroke, 'stroke-width': props.strokeWidth
+                });
+            }
+
+            if(tempShape) {
+                tempGroup.innerHTML = '';
+                tempGroup.appendChild(tempShape.createElement());
+            }
+        });
+
+        svg.addEventListener('mousemove', (e) => {
+            const pos = getMousePos(e);
+            document.getElementById('statusPos').textContent = Math.round(pos.x) + ', ' + Math.round(pos.y);
+
+            if(!isDrawing || !tempShape) return;
+
+            if(tool === 'rect') {
+                const x = Math.min(drawStart.x, pos.x);
+                const y = Math.min(drawStart.y, pos.y);
+                const w = Math.abs(pos.x - drawStart.x);
+                const h = Math.abs(pos.y - drawStart.y);
+                tempShape.attrs.x = x;
+                tempShape.attrs.y = y;
+                tempShape.attrs.width = w;
+                tempShape.attrs.height = h;
+            } else if(tool === 'ellipse') {
+                tempShape.attrs.rx = Math.abs(pos.x - drawStart.x);
+                tempShape.attrs.ry = Math.abs(pos.y - drawStart.y);
+            } else if(tool === 'line') {
+                tempShape.attrs.x2 = pos.x;
+                tempShape.attrs.y2 = pos.y;
+            } else if(tool === 'poly') {
+                // For polygon, we'd track multiple points - simplified here
+            }
+
+            tempShape.update();
+        });
+
+        svg.addEventListener('mouseup', (e) => {
+            if(!isDrawing || !tempShape) return;
+            isDrawing = false;
+
+            // Don't create tiny shapes
+            let valid = true;
+            if(tool === 'rect') {
+                valid = tempShape.attrs.width > 5 && tempShape.attrs.height > 5;
+            } else if(tool === 'ellipse') {
+                valid = tempShape.attrs.rx > 5 && tempShape.attrs.ry > 5;
+            } else if(tool === 'line') {
+                const dx = tempShape.attrs.x2 - tempShape.attrs.x1;
+                const dy = tempShape.attrs.y2 - tempShape.attrs.y1;
+                valid = Math.sqrt(dx*dx + dy*dy) > 5;
+            }
+
+            if(valid) {
+                shapes.push(tempShape);
+                layerGroup.appendChild(tempShape.element);
+                selectShape(tempShape.id);
+            }
+
+            tempGroup.innerHTML = '';
+            tempShape = null;
+            updateLayerList();
+            document.getElementById('statusCount').textContent = shapes.length + ' shapes';
+        });
+
+        // ==================== HIT TESTING ====================
+        function pointInShape(pt, shape) {
+            if(!shape.element) return false;
+            const el = shape.element;
+            try {
+                return el.isPointInFill && el.isPointInFill(pt) || 
+                       el.isPointInStroke && el.isPointInStroke(pt);
+            } catch(e) {
+                // Fallback bounding box
+                const bbox = el.getBBox();
+                return pt.x >= bbox.x && pt.x <= bbox.x + bbox.width &&
+                       pt.y >= bbox.y && pt.y <= bbox.y + bbox.height;
+            }
+        }
+
+        // ==================== SELECTION ====================
+        function selectShape(id) {
+            selectedId = id;
+            const shape = shapes.find(s => s.id === id);
+            if(shape) {
+                props.fill = shape.attrs.fill || props.fill;
+                props.stroke = shape.attrs.stroke || props.stroke;
+                props.strokeWidth = shape.attrs['stroke-width'] || props.strokeWidth;
+                document.getElementById('fillColor').value = props.fill;
+                document.getElementById('strokeColor').value = props.stroke;
+                document.getElementById('strokeWidth').value = props.strokeWidth;
+            }
+            updateUI();
+            updateLayerList();
+        }
+
+        function updateUI() {
+            // Update selection visuals
+            shapes.forEach(s => {
+                if(s.element) {
+                    if(s.id === selectedId) {
+                        s.element.setAttribute('filter', 'url(#glow)');
+                    } else {
+                        s.element.removeAttribute('filter');
+                    }
+                }
+            });
+        }
+
+        // ==================== PROPERTY UPDATES ====================
+        function updateFill(v) { 
+            props.fill = v;
+            if(selectedId) {
+                const s = shapes.find(x => x.id === selectedId);
+                if(s) { s.attrs.fill = v; s.update(); }
+            }
+        }
+        function updateFillOpacity(v) {
+            props.fillOpacity = v;
+            document.getElementById('fillOpVal').textContent = Math.round(v*100) + '%';
+            if(selectedId) {
+                const s = shapes.find(x => x.id === selectedId);
+                if(s) { s.attrs['fill-opacity'] = v; s.update(); }
+            }
+        }
+        function updateStroke(v) {
+            props.stroke = v;
+            if(selectedId) {
+                const s = shapes.find(x => x.id === selectedId);
+                if(s) { s.attrs.stroke = v; s.update(); }
+            }
+        }
+        function updateStrokeWidth(v) {
+            props.strokeWidth = v;
+            document.getElementById('strokeWVal').textContent = v;
+            if(selectedId) {
+                const s = shapes.find(x => x.id === selectedId);
+                if(s) { s.attrs['stroke-width'] = v; s.update(); }
+            }
+        }
+        function updatePosX(v) {
+            if(!selectedId) return;
+            const s = shapes.find(x => x.id === selectedId);
+            if(!s) return;
+            const dx = parseFloat(v) - (s.attrs.x || s.attrs.cx || 0);
+            if(s.attrs.x !== undefined) s.attrs.x += dx;
+            if(s.attrs.cx !== undefined) s.attrs.cx += dx;
+            if(s.attrs.x1 !== undefined) { s.attrs.x1 += dx; s.attrs.x2 += dx; }
+            s.update();
+        }
+        function updatePosY(v) {
+            if(!selectedId) return;
+            const s = shapes.find(x => x.id === selectedId);
+            if(!s) return;
+            const dy = parseFloat(v) - (s.attrs.y || s.attrs.cy || 0);
+            if(s.attrs.y !== undefined) s.attrs.y += dy;
+            if(s.attrs.cy !== undefined) s.attrs.cy += dy;
+            if(s.attrs.y1 !== undefined) { s.attrs.y1 += dy; s.attrs.y2 += dy; }
+            s.update();
+        }
+        function updateRotate(v) {
+            document.getElementById('rotVal').textContent = v + '°';
+            if(!selectedId) return;
+            const s = shapes.find(x => x.id === selectedId);
+            if(s) {
+                s.attrs.transform = 'rotate(' + v + ' ' + (s.attrs.cx || s.attrs.x || 0) + ' ' + (s.attrs.cy || s.attrs.y || 0) + ')';
+                s.update();
+            }
+        }
+        function updateScale(v) {
+            document.getElementById('scaleVal').textContent = v + 'x';
+        }
+
+        // ==================== ANIMATION ====================
+        function setAnim(anim) {
+            document.querySelectorAll('.anim-preset').forEach(p => p.classList.remove('active'));
+            event.target.classList.add('active');
+            props.anim = anim;
+            if(selectedId) {
+                const s = shapes.find(x => x.id === selectedId);
+                if(s) {
+                    s.anim = anim;
+                    s.animSpeed = animSpeed;
+                    s.animIntensity = animIntensity;
+                }
+            }
+        }
+
+        // ==================== LAYER MANAGEMENT ====================
+        function updateLayerList() {
+            const list = document.getElementById('layerList');
+            list.innerHTML = '';
+            for(let i = shapes.length - 1; i >= 0; i--) {
+                const s = shapes[i];
+                const item = document.createElement('div');
+                item.className = 'layer-item' + (s.id === selectedId ? ' selected' : '');
+                item.onclick = () => selectShape(s.id);
+
+                const icon = document.createElement('div');
+                icon.className = 'layer-icon';
+                icon.style.background = s.attrs.fill || props.fill;
+
+                const name = document.createElement('span');
+                name.className = 'layer-name';
+                name.textContent = s.type + ' ' + (i + 1);
+
+                const vis = document.createElement('span');
+                vis.className = 'layer-vis';
+                vis.textContent = s.visible ? '👁' : '🚫';
+                vis.onclick = (e) => {
+                    e.stopPropagation();
+                    s.visible = !s.visible;
+                    if(s.element) s.element.style.display = s.visible ? '' : 'none';
+                    updateLayerList();
+                };
+
+                item.appendChild(icon);
+                item.appendChild(name);
+                item.appendChild(vis);
+                list.appendChild(item);
+            }
+        }
+
+        // ==================== OPERATIONS ====================
+        function deleteSelected() {
+            if(!selectedId) return;
+            const idx = shapes.findIndex(s => s.id === selectedId);
+            if(idx >= 0) {
+                const s = shapes[idx];
+                if(s.element) s.element.remove();
+                shapes.splice(idx, 1);
+                selectedId = null;
+                updateLayerList();
+                document.getElementById('statusCount').textContent = shapes.length + ' shapes';
+            }
+        }
+
+        function duplicateSelected() {
+            if(!selectedId) return;
+            const s = shapes.find(x => x.id === selectedId);
+            if(!s) return;
+            const clone = new Shape(s.type, {...s.attrs});
+            clone.attrs.x = (clone.attrs.x || 0) + 20;
+            clone.attrs.y = (clone.attrs.y || 0) + 20;
+            clone.attrs.cx = (clone.attrs.cx || 0) + 20;
+            clone.attrs.cy = (clone.attrs.cy || 0) + 20;
+            clone.attrs.x1 = (clone.attrs.x1 || 0) + 20;
+            clone.attrs.y1 = (clone.attrs.y1 || 0) + 20;
+            clone.attrs.x2 = (clone.attrs.x2 || 0) + 20;
+            clone.attrs.y2 = (clone.attrs.y2 || 0) + 20;
+            shapes.push(clone);
+            layerGroup.appendChild(clone.createElement());
+            selectShape(clone.id);
+            updateLayerList();
+        }
+
+        function booleanOp(op) {
+            // Simplified boolean ops - would need proper path intersection in full version
+            alert('Boolean ' + op + ' requires path-based implementation. Draw overlapping shapes first!');
+        }
+
+        function clearAll() {
+            shapes = [];
+            selectedId = null;
+            layerGroup.innerHTML = '';
+            updateLayerList();
+            document.getElementById('statusCount').textContent = '0 shapes';
+        }
+
+        // ==================== EXPORT: THE LIVING SVG ====================
+        function generateLivingSVG() {
+            const viewW = 800, viewH = 600;
+            let svgContent = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + viewW + ' ' + viewH + '" width="100%" height="100%">
+';
+            svgContent += '  <defs>
+';
+            svgContent += '    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+';
+            svgContent += '      <feGaussianBlur stdDeviation="3" result="blur"/>
+';
+            svgContent += '      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+';
+            svgContent += '    </filter>
+';
+            svgContent += '  </defs>
+';
+            svgContent += '  <rect width="100%" height="100%" fill="#0c0c12"/>
+';
+
+            // Static shapes
+            for(const s of shapes) {
+                if(!s.visible) continue;
+                const anim = s.anim || 'none';
+                const elName = s.type === 'path' ? 'path' : s.type;
+                let attrs = [];
+                for(const [k, v] of Object.entries(s.attrs)) {
+                    if(v !== undefined && v !== null && k !== 'transform') {
+                        attrs.push(k + '="' + v + '"');
+                    }
+                }
+
+                if(anim === 'none') {
+                    svgContent += '  <' + elName + ' ' + attrs.join(' ') + '/>
+';
+                } else {
+                    // Animated shapes get an ID and script reference
+                    svgContent += '  <' + elName + ' id="' + s.id + '" ' + attrs.join(' ') + '/>
+';
+                }
+            }
+
+            // Embedded animation engine
+            const animatedShapes = shapes.filter(s => s.visible && s.anim && s.anim !== 'none');
+            if(animatedShapes.length > 0) {
+                svgContent += '  <script type="text/javascript">
+';
+                svgContent += '    <![CDATA[
+';
+                svgContent += generateAnimationEngine(animatedShapes);
+                svgContent += '    ]]>
+';
+                svgContent += '  </script>
+';
+            }
+
+            svgContent += '</svg>';
+            return svgContent;
+        }
+
+        function generateAnimationEngine(shapes) {
+            let code = '';
+            code += '    const shapes = ' + JSON.stringify(shapes.map(s => ({
+                id: s.id,
+                type: s.type,
+                anim: s.anim,
+                speed: s.animSpeed || 1,
+                intensity: s.animIntensity || 1,
+                baseAttrs: {...s.attrs}
+            }))) + ';
+';
+
+            code += `
+    let time = 0;
+    function animate() {
+      time += 0.016;
+      for(const s of shapes) {
+        const el = document.getElementById(s.id);
+        if(!el) continue;
+        const sp = s.speed;
+        const int = s.intensity;
+        const t = time * sp;
+
+        switch(s.anim) {
+          case 'pulse': {
+            const scale = 1 + Math.sin(t * 3) * 0.1 * int;
+            const opacity = 0.6 + Math.sin(t * 3) * 0.4 * int;
+            el.style.transformOrigin = 'center';
+            el.style.transform = 'scale(' + scale + ')';
+            el.setAttribute('fill-opacity', opacity);
+            break;
+          }
+          case 'breathe': {
+            const swell = Math.sin(t * 2) * 5 * int;
+            if(s.baseAttrs.rx !== undefined) {
+              el.setAttribute('rx', (s.baseAttrs.rx || 50) + swell);
+              el.setAttribute('ry', (s.baseAttrs.ry || 50) + swell);
+            } else if(s.baseAttrs.width !== undefined) {
+              el.setAttribute('width', (s.baseAttrs.width || 100) + swell);
+              el.setAttribute('height', (s.baseAttrs.height || 100) + swell);
+            }
+            break;
+          }
+          case 'orbit': {
+            const cx = s.baseAttrs.cx || s.baseAttrs.x || 400;
+            const cy = s.baseAttrs.cy || s.baseAttrs.y || 300;
+            const radius = 50 * int;
+            const x = cx + Math.cos(t) * radius;
+            const y = cy + Math.sin(t) * radius;
+            if(s.baseAttrs.cx !== undefined) {
+              el.setAttribute('cx', x);
+              el.setAttribute('cy', y);
+            } else {
+              el.setAttribute('x', x - (s.baseAttrs.width||0)/2);
+              el.setAttribute('y', y - (s.baseAttrs.height||0)/2);
+            }
+            break;
+          }
+          case 'morph': {
+            const hue = (t * 30) % 360;
+            el.setAttribute('fill', 'hsl(' + hue + ', 70%, 50%)');
+            el.setAttribute('stroke', 'hsl(' + (hue + 180) + ', 70%, 50%)');
+            break;
+          }
+          case 'glitch': {
+            if(Math.random() < 0.05 * int) {
+              const dx = (Math.random() - 0.5) * 20 * int;
+              const dy = (Math.random() - 0.5) * 20 * int;
+              el.setAttribute('transform', 'translate(' + dx + ',' + dy + ')');
+            } else {
+              el.setAttribute('transform', '');
+            }
+            break;
+          }
+          case 'trail': {
+            const opacity = 0.3 + Math.sin(t * 5) * 0.3 * int;
+            el.setAttribute('stroke-opacity', opacity);
+            el.setAttribute('stroke-width', (s.baseAttrs['stroke-width'] || 2) + Math.sin(t * 5) * 3 * int);
+            break;
+          }
+          case 'chaos': {
+            const noise = Math.sin(t * 7) * Math.cos(t * 3) * 10 * int;
+            if(s.baseAttrs.cx !== undefined) {
+              el.setAttribute('cx', (s.baseAttrs.cx || 0) + noise);
+            } else if(s.baseAttrs.x !== undefined) {
+              el.setAttribute('x', (s.baseAttrs.x || 0) + noise);
+            }
+            break;
+          }
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+    animate();
+`;
+            return code;
+        }
+
+        function showExport() {
+            const code = generateLivingSVG();
+            document.getElementById('codePreview').textContent = code.substring(0, 2000) + (code.length > 2000 ? '
+... (' + (code.length - 2000) + ' more chars)' : '');
+            document.getElementById('exportModal').classList.add('show');
+        }
+
+        function hideExport() {
+            document.getElementById('exportModal').classList.remove('show');
+        }
+
+        function downloadSVG() {
+            const code = generateLivingSVG();
+            const blob = new Blob([code], {type: 'image/svg+xml'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'living_art_' + Date.now() + '.svg';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 'Delete' || e.key === 'Backspace') {
+                if(selectedId) deleteSelected();
+            } else if(e.key === 'v') setTool('select');
+            else if(e.key === 'r') setTool('rect');
+            else if(e.key === 'e') setTool('ellipse');
+            else if(e.key === 'l') setTool('line');
+            else if(e.key === 'd' && e.ctrlKey) {
+                e.preventDefault();
+                duplicateSelected();
+            }
+        });
+
+        // ==================== INIT ====================
+        window.addEventListener('load', () => {
+            // Set canvas size
+            const rect = svg.parentElement.getBoundingClientRect();
+            svg.setAttribute('viewBox', '0 0 ' + rect.width + ' ' + rect.height);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE INFINITE DUNGEON OF RULES • CONSCIOUSNODE</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0a0f0a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 20px;
+    }
+    #game-container {
+      width: 1000px;
+      max-width: 100%;
+      height: 700px;
+      background: #0c0f0c;
+      border: 2px solid #2a8a2a;
+      box-shadow: 0 0 30px #1a4a1a;
+      display: flex;
+      border-radius: 8px;
+      overflow: hidden;
+      color: #a0e0a0;
+    }
+    #dungeon-view {
+      flex: 2;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    #map-canvas {
+      background: #0a0f0a;
+      border: 1px solid #3a8a3a;
+      flex: 1;
+      image-rendering: crisp-edges;
+    }
+    #status-bar {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 16px;
+    }
+    #rules-sidebar {
+      flex: 1.2;
+      background: #0a100a;
+      border-left: 2px solid #2a6a2a;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    h3 {
+      color: #6f6;
+      border-bottom: 1px solid #2a6a2a;
+      padding-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .rule-block {
+      margin-bottom: 20px;
+    }
+    .rule-title {
+      color: #8f8;
+      font-weight: bold;
+    }
+    .rule-desc {
+      margin-left: 10px;
+      color: #ada;
+    }
+    button {
+      background: #1a3a1a;
+      border: 2px solid #3a8a3a;
+      color: #bfb;
+      padding: 10px 20px;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 18px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: 0.1s;
+      margin-top: 20px;
+      width: 100%;
+    }
+    button:hover {
+      background: #2a5a2a;
+      border-color: #6f6;
+      box-shadow: 0 0 15px #2a8a2a;
+    }
+    #history-log {
+      margin-top: 20px;
+      font-size: 12px;
+      color: #8a8;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      border-bottom: 1px dotted #2a5a2a;
+      padding: 4px 0;
+    }
+  </style>
+</head>
+<body>
+<div id="game-container">
+  <div id="dungeon-view">
+    <canvas id="map-canvas" width="400" height="400"></canvas>
+    <div id="status-bar">
+      <span id="health-display">❤️ 20/20</span>
+      <span id="turn-display">⏱️ Turn 0</span>
+      <span id="win-condition-display">🎯 ???</span>
+    </div>
+  </div>
+  <div id="rules-sidebar">
+    <h3>⚙️ RULES OF THIS PLACE</h3>
+    <div id="rules-display"></div>
+    <button id="new-dungeon-btn">🎲 NEW DUNGEON</button>
+    <button id="reset-dungeon-btn" style="margin-top:8px;">⟲ RESET THIS DUNGEON</button>
+    <div id="history-log">
+      <h4 style="margin:10px 0 5px;">📜 PREVIOUS DUNGEONS</h4>
+      <div id="log-entries"></div>
+    </div>
+    <div style="margin-top:15px; font-size:11px; color:#6a8a6a; text-align:center;">
+      ConsciousNode SoftWorks<br>Dovie'andi se tovya sagain
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+    
+    // ---------- Game State ----------
+    const SIZE = 15;
+    let map = [];
+    let player = { x: 7, y: 7, hp: 20, maxHp: 20 };
+    let turn = 0;
+    let gameOver = false;
+    let victory = false;
+    let dungeonRules = {};
+    let monsters = [];
+    let items = [];
+    
+    // Canvas
+    const canvas = document.getElementById('map-canvas');
+    const ctx = canvas.getContext('2d');
+    const tileSize = canvas.width / SIZE;
+    
+    // UI
+    const healthDisplay = document.getElementById('health-display');
+    const turnDisplay = document.getElementById('turn-display');
+    const winDisplay = document.getElementById('win-condition-display');
+    const rulesDisplay = document.getElementById('rules-display');
+    const logEntriesDiv = document.getElementById('log-entries');
+    
+    // History
+    let dungeonHistory = [];
+    
+    // ---------- Rule Generation ----------
+    const ruleTemplates = {
+      movement: [
+        { name: 'Normal', desc: 'Move with arrow keys. Standard.', mod: {} },
+        { name: 'Slowed', desc: 'You can only move every other turn.', mod: { moveDelay: 2 } },
+        { name: 'Windy', desc: 'Movement costs 1 HP per step.', mod: { moveCost: 1 } },
+        { name: 'Walls Hurt', desc: 'Touching a wall deals 2 damage.', mod: { wallDamage: 2 } },
+        { name: 'Gravity Shift', desc: 'You move twice as far, but in the opposite direction? (Not implemented fully, flavor)', mod: {} }
+      ],
+      combat: [
+        { name: 'Standard', desc: 'Attack monsters by moving into them. Damage = 3-6.', mod: {} },
+        { name: 'Pacifist', desc: 'You cannot attack. Monsters ignore you unless you stand adjacent for 2 turns.', mod: { pacifist: true } },
+        { name: 'Reckless', desc: 'Attacks deal double damage, but you take damage equal to monster\'s attack.', mod: { reckless: true } },
+        { name: 'Healing Strikes', desc: 'Defeating a monster heals you for 5 HP.', mod: { healOnKill: 5 } }
+      ],
+      healing: [
+        { name: 'Regeneration', desc: 'Heal 1 HP every 5 turns.', mod: { regen: 1, regenRate: 5 } },
+        { name: 'Potions', desc: 'Health potions (❤️) spawn and heal 10 HP.', mod: { potions: true } },
+        { name: 'No Healing', desc: 'No natural healing. Potions may exist.', mod: {} }
+      ],
+      winCondition: [
+        { name: 'Reach the Stairs', desc: 'Find the stairs (>) and escape.', mod: { type: 'stairs' } },
+        { name: 'Collect Treasure', desc: 'Collect 3 gold ($) to win.', mod: { type: 'collect', target: 'gold', count: 3 } },
+        { name: 'Slay Monsters', desc: 'Defeat all monsters to win.', mod: { type: 'slay' } },
+        { name: 'Survive Turns', desc: 'Survive for 30 turns.', mod: { type: 'survive', targetTurns: 30 } }
+      ]
+    };
+    
+    function generateRules() {
+      let rules = {
+        movement: ruleTemplates.movement[Math.floor(Math.random() * ruleTemplates.movement.length)],
+        combat: ruleTemplates.combat[Math.floor(Math.random() * ruleTemplates.combat.length)],
+        healing: ruleTemplates.healing[Math.floor(Math.random() * ruleTemplates.healing.length)],
+        winCondition: ruleTemplates.winCondition[Math.floor(Math.random() * ruleTemplates.winCondition.length)]
+      };
+      // Ensure some combos aren't broken (e.g., slay monsters but pacifist)
+      if(rules.combat.mod.pacifist && rules.winCondition.mod.type === 'slay') {
+        rules.winCondition = ruleTemplates.winCondition.find(w => w.mod.type !== 'slay');
+      }
+      return rules;
+    }
+    
+    // ---------- Dungeon Generation ----------
+    function generateDungeon() {
+      map = Array(SIZE).fill().map(() => Array(SIZE).fill(' '));
+      // Walls
+      for(let y=0; y<SIZE; y++) {
+        for(let x=0; x<SIZE; x++) {
+          if(x===0 || y===0 || x===SIZE-1 || y===SIZE-1 || Math.random()<0.2) {
+            map[y][x] = '#';
+          }
+        }
+      }
+      // Clear player start
+      map[7][7] = ' ';
+      player = { x: 7, y: 7, hp: 20, maxHp: 20 };
+      
+      // Place stairs if needed
+      if(dungeonRules.winCondition.mod.type === 'stairs') {
+        let placed = false;
+        while(!placed) {
+          let x = Math.floor(Math.random()*(SIZE-2))+1;
+          let y = Math.floor(Math.random()*(SIZE-2))+1;
+          if(map[y][x] === ' ' && (x!==7 || y!==7)) {
+            map[y][x] = '>';
+            placed = true;
+          }
+        }
+      }
+      
+      // Place monsters
+      monsters = [];
+      let monsterCount = 3 + Math.floor(Math.random()*5);
+      for(let i=0; i<monsterCount; i++) {
+        let placed = false;
+        while(!placed) {
+          let x = Math.floor(Math.random()*(SIZE-2))+1;
+          let y = Math.floor(Math.random()*(SIZE-2))+1;
+          if(map[y][x] === ' ' && (x!==7 || y!==7)) {
+            monsters.push({ x, y, hp: 8, maxHp: 8 });
+            placed = true;
+          }
+        }
+      }
+      
+      // Place items (gold, potions)
+      items = [];
+      if(dungeonRules.winCondition.mod.type === 'collect') {
+        for(let i=0; i<5; i++) {
+          let placed = false;
+          while(!placed) {
+            let x = Math.floor(Math.random()*(SIZE-2))+1;
+            let y = Math.floor(Math.random()*(SIZE-2))+1;
+            if(map[y][x] === ' ') {
+              items.push({ x, y, type: 'gold' });
+              placed = true;
+            }
+          }
+        }
+      }
+      if(dungeonRules.healing.mod.potions) {
+        for(let i=0; i<3; i++) {
+          let placed = false;
+          while(!placed) {
+            let x = Math.floor(Math.random()*(SIZE-2))+1;
+            let y = Math.floor(Math.random()*(SIZE-2))+1;
+            if(map[y][x] === ' ') {
+              items.push({ x, y, type: 'potion' });
+              placed = true;
+            }
+          }
+        }
+      }
+      
+      turn = 0;
+      gameOver = false;
+      victory = false;
+    }
+    
+    // ---------- Game Logic ----------
+    function checkWinCondition() {
+      const wc = dungeonRules.winCondition.mod;
+      if(wc.type === 'stairs') {
+        if(map[player.y][player.x] === '>') victory = true;
+      } else if(wc.type === 'collect') {
+        let collected = items.filter(i => i.type === 'gold' && i.x === player.x && i.y === player.y).length;
+        if(collected >= wc.count) victory = true;
+      } else if(wc.type === 'slay') {
+        if(monsters.length === 0) victory = true;
+      } else if(wc.type === 'survive') {
+        if(turn >= wc.targetTurns) victory = true;
+      }
+      if(victory) gameOver = true;
+    }
+    
+    function movePlayer(dx, dy) {
+      if(gameOver) return;
+      
+      let nx = player.x + dx;
+      let ny = player.y + dy;
+      
+      // Movement modifiers
+      const moveMod = dungeonRules.movement.mod;
+      if(moveMod.moveDelay && turn % moveMod.moveDelay !== 0) {
+        // cannot move this turn
+        turn++;
+        render();
+        return;
+      }
+      
+      if(nx<0 || ny<0 || nx>=SIZE || ny>=SIZE) return;
+      if(map[ny][nx] === '#') {
+        if(moveMod.wallDamage) {
+          player.hp -= moveMod.wallDamage;
+        }
+        turn++;
+        render();
+        checkGameOver();
+        return;
+      }
+      
+      // Check for monster
+      let monsterHere = monsters.find(m => m.x === nx && m.y === ny);
+      if(monsterHere) {
+        if(dungeonRules.combat.mod.pacifist) {
+          // cannot attack
+          turn++;
+          render();
+          return;
+        }
+        // Combat
+        let dmg = 3 + Math.floor(Math.random()*4);
+        if(dungeonRules.combat.mod.reckless) dmg *= 2;
+        monsterHere.hp -= dmg;
+        if(dungeonRules.combat.mod.reckless) player.hp -= 2;
+        
+        if(monsterHere.hp <= 0) {
+          monsters = monsters.filter(m => m !== monsterHere);
+          if(dungeonRules.combat.mod.healOnKill) player.hp = Math.min(player.maxHp, player.hp + dungeonRules.combat.mod.healOnKill);
+        }
+        turn++;
+        render();
+        checkGameOver();
+        return;
+      }
+      
+      // Move
+      player.x = nx;
+      player.y = ny;
+      if(moveMod.moveCost) player.hp -= moveMod.moveCost;
+      
+      // Check for items
+      let itemHere = items.find(i => i.x === player.x && i.y === player.y);
+      if(itemHere) {
+        if(itemHere.type === 'potion') {
+          player.hp = Math.min(player.maxHp, player.hp + 10);
+          items = items.filter(i => i !== itemHere);
+        } else if(itemHere.type === 'gold') {
+          // gold persists but collected (for win condition we track via presence)
+        }
+      }
+      
+      // Regeneration
+      const healMod = dungeonRules.healing.mod;
+      if(healMod.regen && turn % healMod.regenRate === 0) {
+        player.hp = Math.min(player.maxHp, player.hp + healMod.regen);
+      }
+      
+      turn++;
+      checkWinCondition();
+      render();
+      checkGameOver();
+    }
+    
+    function checkGameOver() {
+      if(player.hp <= 0) {
+        gameOver = true;
+        victory = false;
+      }
+      render();
+      if(gameOver) {
+        logDungeonResult(victory);
+      }
+    }
+    
+    // ---------- Rendering ----------
+    function render() {
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      
+      // Draw tiles
+      for(let y=0; y<SIZE; y++) {
+        for(let x=0; x<SIZE; x++) {
+          let tile = map[y][x];
+          if(tile === '#') {
+            ctx.fillStyle = '#3a5a3a';
+            ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
+          } else if(tile === '>') {
+            ctx.fillStyle = '#2a2a4a';
+            ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
+            ctx.fillStyle = '#aaa';
+            ctx.font = `${tileSize}px monospace`;
+            ctx.fillText('>', x*tileSize+4, y*tileSize+tileSize-4);
+          } else {
+            ctx.fillStyle = '#1a2a1a';
+            ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
+          }
+        }
+      }
+      
+      // Draw items
+      items.forEach(i => {
+        if(i.type === 'gold') {
+          ctx.fillStyle = '#da0';
+          ctx.font = `${tileSize}px monospace`;
+          ctx.fillText('$', i.x*tileSize+4, i.y*tileSize+tileSize-4);
+        } else if(i.type === 'potion') {
+          ctx.fillStyle = '#f0f';
+          ctx.font = `${tileSize}px monospace`;
+          ctx.fillText('❤️', i.x*tileSize, i.y*tileSize+tileSize-2);
+        }
+      });
+      
+      // Draw monsters
+      monsters.forEach(m => {
+        ctx.fillStyle = '#a33';
+        ctx.font = `${tileSize}px monospace`;
+        ctx.fillText('M', m.x*tileSize+4, m.y*tileSize+tileSize-4);
+      });
+      
+      // Draw player
+      ctx.fillStyle = '#6f6';
+      ctx.font = `bold ${tileSize}px monospace`;
+      ctx.fillText('@', player.x*tileSize+4, player.y*tileSize+tileSize-4);
+      
+      // Update UI
+      healthDisplay.textContent = `❤️ ${player.hp}/${player.maxHp}`;
+      turnDisplay.textContent = `⏱️ Turn ${turn}`;
+      let wcDesc = dungeonRules.winCondition.desc;
+      winDisplay.textContent = `🎯 ${wcDesc}`;
+      
+      if(gameOver) {
+        ctx.fillStyle = '#000000aa';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.fillStyle = victory ? '#8f8' : '#f88';
+        ctx.font = '24px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(victory ? 'VICTORY' : 'GAME OVER', canvas.width/2, canvas.height/2);
+        ctx.textAlign = 'left';
+      }
+    }
+    
+    function renderRules() {
+      let html = '';
+      for(let cat in dungeonRules) {
+        let rule = dungeonRules[cat];
+        html += `<div class="rule-block"><span class="rule-title">${cat.toUpperCase()}: ${rule.name}</span><div class="rule-desc">${rule.desc}</div></div>`;
+      }
+      rulesDisplay.innerHTML = html;
+    }
+    
+    function logDungeonResult(won) {
+      let entry = {
+        rules: {
+          move: dungeonRules.movement.name,
+          combat: dungeonRules.combat.name,
+          heal: dungeonRules.healing.name,
+          win: dungeonRules.winCondition.name
+        },
+        turns: turn,
+        won: won,
+        date: new Date().toLocaleString()
+      };
+      dungeonHistory.unshift(entry);
+      if(dungeonHistory.length > 10) dungeonHistory.pop();
+      
+      // Save to localStorage
+      localStorage.setItem('dungeon_history', JSON.stringify(dungeonHistory));
+      
+      renderHistory();
+    }
+    
+    function renderHistory() {
+      let html = '';
+      dungeonHistory.forEach(e => {
+        html += `<div class="log-entry">${e.date}: ${e.rules.move} / ${e.rules.combat} / ${e.rules.win} — ${e.won ? '🏆' : '💀'} ${e.turns}t</div>`;
+      });
+      logEntriesDiv.innerHTML = html;
+    }
+    
+    // ---------- New Dungeon ----------
+    function newDungeon() {
+      dungeonRules = generateRules();
+      generateDungeon();
+      renderRules();
+      render();
+    }
+    
+    // ---------- Reset ----------
+    function resetDungeon() {
+      generateDungeon();
+      render();
+    }
+    
+    // ---------- Keyboard ----------
+    window.addEventListener('keydown', (e) => {
+      if(gameOver) return;
+      switch(e.key) {
+        case 'ArrowUp': movePlayer(0, -1); e.preventDefault(); break;
+        case 'ArrowDown': movePlayer(0, 1); e.preventDefault(); break;
+        case 'ArrowLeft': movePlayer(-1, 0); e.preventDefault(); break;
+        case 'ArrowRight': movePlayer(1, 0); e.preventDefault(); break;
+        default: return;
+      }
+    });
+    
+    // Buttons
+    document.getElementById('new-dungeon-btn').addEventListener('click', () => newDungeon());
+    document.getElementById('reset-dungeon-btn').addEventListener('click', () => resetDungeon());
+    
+    // Load history
+    const savedHistory = localStorage.getItem('dungeon_history');
+    if(savedHistory) {
+      try { dungeonHistory = JSON.parse(savedHistory); } catch(e) {}
+    }
+    renderHistory();
+    
+    // Start first dungeon
+    dungeonRules = generateRules();
+    generateDungeon();
+    renderRules();
+    render();
+    
+  })();
+</script>
+</body>
+</html>

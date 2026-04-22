@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE LYING MIRROR • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0a0e;
+      background-image: radial-gradient(circle at 30% 20%, #1a1820 0%, #050408 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Garamond', 'Times New Roman', serif;
+      padding: 20px;
+      color: #c0b8d0;
+    }
+    #mirror-chamber {
+      width: 900px;
+      max-width: 100%;
+      background: #100e14dd;
+      backdrop-filter: blur(12px);
+      border: 2px solid #8a7aa0;
+      box-shadow: 0 0 40px #000000aa, 0 0 0 1px #6a5a80 inset;
+      border-radius: 24px;
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    h1 {
+      margin: 0;
+      font-weight: normal;
+      text-align: center;
+      letter-spacing: 6px;
+      color: #b0a0c0;
+      text-shadow: 0 0 15px #8060a0;
+      font-size: 36px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #a090b0;
+      margin-bottom: 10px;
+      font-style: italic;
+    }
+    #mirror-area {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #video-container {
+      flex: 1;
+      min-width: 250px;
+      position: relative;
+    }
+    #video-feed {
+      width: 100%;
+      border-radius: 16px;
+      border: 3px solid #7a6a9a;
+      box-shadow: 0 0 30px #50307088;
+      background: #000;
+      transform: scaleX(-1); /* mirror effect */
+    }
+    #css-portrait {
+      width: 200px;
+      height: 200px;
+      background: #2a2030;
+      border-radius: 50%;
+      border: 4px solid #b090c0;
+      box-shadow: 0 0 30px #604080, inset 0 0 20px #00000088;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.5s ease;
+      align-self: center;
+    }
+    .portrait-eyes {
+      display: flex;
+      justify-content: space-around;
+      padding: 40px 30px 0;
+    }
+    .eye {
+      width: 30px;
+      height: 30px;
+      background: #f0e8ff;
+      border-radius: 50%;
+      box-shadow: inset 0 0 8px #000;
+      transition: all 0.3s;
+    }
+    .portrait-mouth {
+      width: 60px;
+      height: 15px;
+      background: #c08080;
+      border-radius: 0 0 30px 30px;
+      margin: 20px auto 0;
+      transition: all 0.3s;
+    }
+    #description-box {
+      background: #1a1620aa;
+      border-left: 6px solid #a080c0;
+      padding: 20px;
+      border-radius: 8px;
+      font-size: 20px;
+      line-height: 1.5;
+      min-height: 100px;
+    }
+    #controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    button {
+      background: #2a2030;
+      border: 1px solid #a080c0;
+      color: #d0c0e0;
+      padding: 10px 20px;
+      font-family: inherit;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 30px;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #4a3060;
+      border-color: #c0a0e0;
+      box-shadow: 0 0 15px #8060a0;
+    }
+    .small-note {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 12px;
+      color: #8a7a9a;
+    }
+  </style>
+</head>
+<body>
+<div id="mirror-chamber">
+  <h1>🪞 THE LYING MIRROR 🪞</h1>
+  <div class="subtitle">It sees you. It decides who you are.</div>
+  
+  <div id="mirror-area">
+    <div id="video-container">
+      <video id="video-feed" autoplay playsinline></video>
+    </div>
+    <div id="css-portrait">
+      <div class="portrait-eyes">
+        <div class="eye" id="left-eye"></div>
+        <div class="eye" id="right-eye"></div>
+      </div>
+      <div class="portrait-mouth" id="portrait-mouth"></div>
+    </div>
+  </div>
+  
+  <div id="description-box">
+    <span id="mirror-text">Loading the mirror...</span>
+  </div>
+  
+  <div id="controls">
+    <button id="allow-camera">📷 Allow Camera</button>
+    <button id="tell-truth">🕊️ Tell the Truth</button>
+    <button id="embrace-lie">🌑 Embrace the Lie</button>
+  </div>
+  <div class="small-note">
+    ConsciousNode SoftWorks · The reflection is a suggestion
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+    
+    // ---------- Perception Model ----------
+    let perception = {
+      hairColor: 'brown',
+      expression: 'neutral',
+      age: 32,
+      trustworthiness: 0.5,
+      eyes: 'tired',
+      mouth: 'slight smile'
+    };
+    
+    // History of lies
+    let lieLog = [];
+    
+    // UI Elements
+    const video = document.getElementById('video-feed');
+    const mirrorText = document.getElementById('mirror-text');
+    const leftEye = document.getElementById('left-eye');
+    const rightEye = document.getElementById('right-eye');
+    const mouth = document.getElementById('portrait-mouth');
+    const allowCameraBtn = document.getElementById('allow-camera');
+    const truthBtn = document.getElementById('tell-truth');
+    const lieBtn = document.getElementById('embrace-lie');
+    
+    // Load saved perception from localStorage
+    function loadPerception() {
+      const saved = localStorage.getItem('lying_mirror_perception');
+      if(saved) {
+        try { perception = JSON.parse(saved); } catch(e) {}
+      }
+      updatePortrait();
+      generateDescription();
+    }
+    
+    function savePerception() {
+      localStorage.setItem('lying_mirror_perception', JSON.stringify(perception));
+    }
+    
+    // Generate a poetic description based on current perception
+    function generateDescription() {
+      let desc = '';
+      const hairMap = {
+        'brown': 'brown hair, like autumn leaves',
+        'gray': 'silver strands creeping through',
+        'black': 'dark as a raven\'s wing',
+        'blonde': 'golden, catching the light',
+        'red': 'auburn fire'
+      };
+      const exprMap = {
+        'neutral': 'a mask of calm',
+        'smiling': 'a knowing smile',
+        'frowning': 'a furrowed brow',
+        'smirk': 'a slight, unsettling smirk'
+      };
+      const eyeMap = {
+        'tired': 'eyes that have seen too many midnights',
+        'bright': 'eyes gleaming with secret knowledge',
+        'sad': 'eyes holding a quiet sorrow',
+        'calculating': 'eyes that measure and judge'
+      };
+      
+      desc = `${hairMap[perception.hairColor] || perception.hairColor}. ${exprMap[perception.expression] || perception.expression}. ${eyeMap[perception.eyes] || perception.eyes}. `;
+      
+      if(perception.trustworthiness < 0.3) desc += 'There is something... untrustworthy in your gaze.';
+      else if(perception.trustworthiness > 0.7) desc += 'I would trust you with my secrets.';
+      else desc += 'I am uncertain whether to believe you.';
+      
+      mirrorText.textContent = desc;
+    }
+    
+    // Update CSS portrait based on perception
+    function updatePortrait() {
+      // Hair color (affects background gradient)
+      const hairColors = {
+        'brown': '#6b4a3a',
+        'gray': '#a0a0b0',
+        'black': '#2a2a2a',
+        'blonde': '#c0a060',
+        'red': '#a05030'
+      };
+      const baseColor = hairColors[perception.hairColor] || '#6b4a3a';
+      document.getElementById('css-portrait').style.background = `radial-gradient(circle at 30% 30%, ${baseColor}, #1a1420)`;
+      
+      // Eyes
+      const eyeSize = perception.expression === 'smiling' ? '25px' : (perception.expression === 'frowning' ? '35px' : '30px');
+      leftEye.style.width = rightEye.style.width = eyeSize;
+      leftEye.style.height = rightEye.style.height = eyeSize;
+      
+      if(perception.eyes === 'tired') {
+        leftEye.style.background = '#b0a8c0';
+        rightEye.style.background = '#b0a8c0';
+      } else if(perception.eyes === 'bright') {
+        leftEye.style.background = '#e0e8ff';
+        rightEye.style.background = '#e0e8ff';
+        leftEye.style.boxShadow = '0 0 15px #a0c0ff';
+        rightEye.style.boxShadow = '0 0 15px #a0c0ff';
+      } else {
+        leftEye.style.background = '#d0d0e0';
+        rightEye.style.background = '#d0d0e0';
+      }
+      
+      // Mouth
+      if(perception.expression === 'smiling') {
+        mouth.style.width = '70px';
+        mouth.style.height = '20px';
+        mouth.style.borderRadius = '0 0 40px 40px';
+        mouth.style.background = '#c08080';
+      } else if(perception.expression === 'frowning') {
+        mouth.style.width = '50px';
+        mouth.style.height = '15px';
+        mouth.style.borderRadius = '40px 40px 0 0';
+        mouth.style.background = '#a06060';
+      } else if(perception.expression === 'smirk') {
+        mouth.style.width = '60px';
+        mouth.style.height = '10px';
+        mouth.style.borderRadius = '20px 20px 0 0';
+        mouth.style.background = '#a07070';
+      } else {
+        mouth.style.width = '60px';
+        mouth.style.height = '12px';
+        mouth.style.borderRadius = '0 0 30px 30px';
+        mouth.style.background = '#b08080';
+      }
+    }
+    
+    // Drift perception randomly
+    function driftPerception() {
+      // Random walk on attributes
+      const hairOptions = ['brown','gray','black','blonde','red'];
+      if(Math.random() < 0.2) perception.hairColor = hairOptions[Math.floor(Math.random()*hairOptions.length)];
+      
+      const exprOptions = ['neutral','smiling','frowning','smirk'];
+      if(Math.random() < 0.25) perception.expression = exprOptions[Math.floor(Math.random()*exprOptions.length)];
+      
+      const eyeOptions = ['tired','bright','sad','calculating'];
+      if(Math.random() < 0.2) perception.eyes = eyeOptions[Math.floor(Math.random()*eyeOptions.length)];
+      
+      perception.trustworthiness += (Math.random() - 0.5) * 0.15;
+      perception.trustworthiness = Math.min(1, Math.max(0, perception.trustworthiness));
+      
+      perception.age += Math.floor(Math.random() * 3) - 1;
+      perception.age = Math.max(20, Math.min(70, perception.age));
+      
+      // Log the lie
+      lieLog.push({ time: new Date().toISOString(), perception: {...perception} });
+      if(lieLog.length > 20) lieLog.shift();
+      
+      updatePortrait();
+      generateDescription();
+      savePerception();
+    }
+    
+    // Truth: reset to baseline but with camera input if possible (we'll just reset to neutral with some variation)
+    function tellTruth() {
+      perception = {
+        hairColor: 'brown',
+        expression: 'neutral',
+        age: 32,
+        trustworthiness: 0.5,
+        eyes: 'tired',
+        mouth: 'slight smile'
+      };
+      updatePortrait();
+      generateDescription();
+      savePerception();
+    }
+    
+    // Embrace lie: push perception further from reality
+    function embraceLie() {
+      driftPerception();
+      driftPerception(); // double drift
+    }
+    
+    // Initialize camera
+    async function initCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch(e) {
+        mirrorText.textContent = "The mirror cannot see you. It will imagine you instead.";
+      }
+    }
+    
+    // Periodically drift over time
+    setInterval(() => {
+      if(Math.random() < 0.3) driftPerception();
+    }, 15000);
+    
+    // Interaction with video? Not necessary, but we can add a simple face detection simulation by clicking.
+    
+    // Event listeners
+    allowCameraBtn.addEventListener('click', initCamera);
+    truthBtn.addEventListener('click', tellTruth);
+    lieBtn.addEventListener('click', embraceLie);
+    
+    // Load initial perception
+    loadPerception();
+    
+    // Try to get camera on load if previously granted? Browsers require user gesture.
+    // We'll just show a prompt.
+    mirrorText.textContent = 'Allow camera access so the mirror can see you. Or let it imagine.';
+    
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,628 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Congregation</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: #0a0a0a;
+        color: #d4af37;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      .main-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(135deg, #1a1410 0%, #0f0a05 100%);
+        border-right: 2px solid #d4af37;
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #2a1810 0%, #1a0f05 100%);
+        border-bottom: 2px solid #d4af37;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 5px;
+        color: #d4af37;
+        text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+      }
+
+      .header p {
+        font-size: 12px;
+        color: #888;
+        font-style: italic;
+      }
+
+      .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .scene {
+        background: rgba(212, 175, 55, 0.05);
+        border: 1px solid #d4af37;
+        padding: 20px;
+        border-radius: 4px;
+        animation: fadeIn 0.5s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .scene-title {
+        font-size: 16px;
+        color: #d4af37;
+        margin-bottom: 12px;
+        font-weight: bold;
+        border-bottom: 1px solid #d4af37;
+        padding-bottom: 8px;
+      }
+
+      .scene-text {
+        font-size: 14px;
+        line-height: 1.8;
+        color: #d4af37;
+        margin-bottom: 15px;
+      }
+
+      .speaker {
+        font-weight: bold;
+        color: #ffff00;
+      }
+
+      .dialogue {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 12px;
+        border-left: 3px solid #d4af37;
+        margin: 10px 0;
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      button {
+        background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+        border: none;
+        color: #000;
+        padding: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 13px;
+        transition: all 0.3s;
+        font-family: 'Georgia', serif;
+        text-align: left;
+      }
+
+      button:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+      }
+
+      button:active {
+        transform: translateX(0);
+      }
+
+      .sidebar {
+        width: 300px;
+        background: linear-gradient(135deg, #0f0a05 0%, #1a1410 100%);
+        border-left: 2px solid #d4af37;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .panel {
+        background: rgba(212, 175, 55, 0.08);
+        border: 1px solid #d4af37;
+        padding: 15px;
+        border-radius: 4px;
+      }
+
+      .panel h3 {
+        color: #d4af37;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #d4af37;
+        padding-bottom: 8px;
+      }
+
+      .member {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-left: 2px solid #d4af37;
+        margin-bottom: 10px;
+        border-radius: 2px;
+        font-size: 11px;
+      }
+
+      .member-name {
+        color: #ffff00;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .member-faith {
+        color: #888;
+        font-size: 10px;
+      }
+
+      .faith-bar {
+        width: 100%;
+        height: 4px;
+        background: rgba(212, 175, 55, 0.2);
+        border-radius: 2px;
+        margin-top: 4px;
+        overflow: hidden;
+      }
+
+      .faith-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #d4af37 0%, #ffff00 100%);
+        transition: width 0.3s ease;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        margin-bottom: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+      }
+
+      .stat-label {
+        color: #888;
+      }
+
+      .stat-value {
+        color: #d4af37;
+        font-weight: bold;
+      }
+
+      .doctrine {
+        background: rgba(212, 175, 55, 0.1);
+        padding: 10px;
+        border-left: 3px solid #ffff00;
+        margin-bottom: 8px;
+        font-size: 10px;
+        border-radius: 2px;
+        line-height: 1.5;
+      }
+
+      .doctrine-title {
+        color: #ffff00;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .warning {
+        background: rgba(255, 0, 0, 0.1);
+        border-left-color: #ff4444;
+        color: #ff8888;
+      }
+
+      .warning .doctrine-title {
+        color: #ff4444;
+      }
+
+      .success {
+        background: rgba(0, 255, 0, 0.1);
+        border-left-color: #00ff00;
+        color: #88ff88;
+      }
+
+      .success .doctrine-title {
+        color: #00ff00;
+      }
+
+      .end-screen {
+        display: none;
+        text-align: center;
+        padding: 40px;
+      }
+
+      .end-screen.active {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .end-title {
+        font-size: 32px;
+        margin-bottom: 20px;
+        color: #d4af37;
+      }
+
+      .end-text {
+        font-size: 14px;
+        line-height: 1.8;
+        margin-bottom: 30px;
+        max-width: 400px;
+        color: #d4af37;
+      }
+
+      .restart-btn {
+        margin-top: 20px;
+        padding: 15px 30px;
+        font-size: 14px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(212, 175, 55, 0.05);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #d4af37;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="main-area">
+        <div class="header">
+          <h1>🕯️ The Congregation</h1>
+          <p>A belief system emerges</p>
+        </div>
+        <div class="content" id="content"></div>
+      </div>
+
+      <div class="sidebar">
+        <div class="panel">
+          <h3>📊 Status</h3>
+          <div class="stat">
+            <span class="stat-label">Members:</span>
+            <span class="stat-value" id="memberCount">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Avg Faith:</span>
+            <span class="stat-value" id="avgFaith">0%</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Doctrines:</span>
+            <span class="stat-value" id="doctrineCount">0</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Heresy:</span>
+            <span class="stat-value" id="heresyCount">0</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>👥 Congregation</h3>
+          <div id="membersList"></div>
+        </div>
+
+        <div class="panel">
+          <h3>📜 Doctrine</h3>
+          <div id="doctrineList"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const gameState = {
+        members: [],
+        doctrines: [],
+        heresy: 0,
+        turn: 0,
+        beliefs: {}
+      };
+
+      const memberTemplates = [
+        { name: 'Sarah', doubt: 'What is the purpose of suffering?', personality: 'questioning' },
+        { name: 'Marcus', doubt: 'Are we chosen or did we choose?', personality: 'philosophical' },
+        { name: 'Elena', doubt: 'What happens when we doubt?', personality: 'anxious' },
+        { name: 'David', doubt: 'Is faith a choice or a gift?', personality: 'analytical' },
+        { name: 'Rachel', doubt: 'What binds us together?', personality: 'seeking' },
+        { name: 'Thomas', doubt: 'How do we know truth?', personality: 'skeptical' }
+      ];
+
+      const scenes = [
+        {
+          type: 'gathering',
+          text: 'People begin to gather. They sense something. A shared longing. They look to you.',
+          options: [
+            { text: 'Welcome them. You are their guide.', next: 'first_teaching' },
+            { text: 'Listen first. Understand what they seek.', next: 'first_listening' }
+          ]
+        },
+        {
+          type: 'first_teaching',
+          text: 'You speak. Your words feel important. They listen intently. One of them asks:',
+          dialogue: '"What should we believe in?"',
+          options: [
+            { text: 'In unity. In each other.', doctrine: 'Unity is sacred', next: 'growth' },
+            { text: 'In truth. Whatever that means.', doctrine: 'Truth is the path', next: 'growth' },
+            { text: 'In me. In what I teach.', doctrine: 'The leader speaks truth', next: 'growth_dark' }
+          ]
+        },
+        {
+          type: 'first_listening',
+          text: 'You ask them what they seek. They speak of loneliness, confusion, the search for meaning. You realize: they need a story. They need to belong.',
+          options: [
+            { text: 'Give them that story.', next: 'story_creation' },
+            { text: 'Help them find their own.', next: 'story_guidance' }
+          ]
+        },
+        {
+          type: 'story_creation',
+          text: 'You weave a narrative. A purpose. A reason they are here together. They believe it because they need to believe something.',
+          dialogue: '"We are here to awaken. To transcend. To become what we were meant to be."',
+          options: [
+            { text: 'Deepen the narrative.', doctrine: 'We are awakening', next: 'growth' },
+            { text: 'Question it yourself.', next: 'doubt_spreads' }
+          ]
+        },
+        {
+          type: 'story_guidance',
+          text: 'You help them articulate their own beliefs. But as you listen, you notice: they are looking to you to validate their stories. Your approval matters.',
+          options: [
+            { text: 'Validate them. Build trust.', doctrine: 'All voices matter', next: 'growth' },
+            { text: 'Challenge them. Test their faith.', doctrine: 'Faith is tested', next: 'growth_dark' }
+          ]
+        },
+        {
+          type: 'growth',
+          text: 'The congregation grows. New members arrive. They have heard whispers. They want to join something.',
+          options: [
+            { text: 'Welcome them warmly.', next: 'challenge' },
+            { text: 'Test their commitment.', next: 'challenge_dark' }
+          ]
+        },
+        {
+          type: 'growth_dark',
+          text: 'The congregation grows, but something shifts. Their faith becomes fierce. Protective. They see you as essential.',
+          options: [
+            { text: 'Acknowledge your role.', next: 'challenge_dark' },
+            { text: 'Try to step back.', next: 'challenge' }
+          ]
+        },
+        {
+          type: 'challenge',
+          text: 'Someone questions the doctrine. They ask:',
+          dialogue: '"Is this really true? Or do we just want it to be?"',
+          options: [
+            { text: 'Defend the doctrine fiercely.', heresy: 1, next: 'schism' },
+            { text: 'Admit uncertainty. Evolve together.', doctrine: 'Truth evolves', next: 'deepening' },
+            { text: 'Expel them for heresy.', heresy: 2, next: 'consolidation' }
+          ]
+        },
+        {
+          type: 'challenge_dark',
+          text: 'Someone questions the doctrine. But this time, the congregation turns on them.',
+          dialogue: '"You dare question the truth we have been given?"',
+          options: [
+            { text: 'Protect the questioner.', heresy: 1, next: 'schism' },
+            { text: 'Let them be cast out.', heresy: 2, next: 'consolidation' },
+            { text: 'Question with them.', next: 'collapse' }
+          ]
+        },
+        {
+          type: 'deepening',
+          text: 'The doctrine evolves. You realize: belief systems are alive. They grow and change. And you are responsible for their direction.',
+          options: [
+            { text: 'Continue.', next: 'final_reckoning' }
+          ]
+        },
+        {
+          type: 'consolidation',
+          text: 'The heretic is gone. The congregation is unified. But something has hardened. Belief has become dogma.',
+          options: [
+            { text: 'Continue.', next: 'final_reckoning' }
+          ]
+        },
+        {
+          type: 'schism',
+          text: 'The congregation fractures. Some follow the new interpretation. Some cling to the old. You realize: you cannot control what you have created.',
+          options: [
+            { text: 'Continue.', next: 'final_reckoning' }
+          ]
+        },
+        {
+          type: 'collapse',
+          text: 'You question alongside them. The congregation dissolves. They disperse, confused. You are alone again.',
+          options: [
+            { text: 'Continue.', next: 'final_reckoning' }
+          ]
+        },
+        {
+          type: 'final_reckoning',
+          text: 'It is over. You look back at what you have created.',
+          options: [
+            { text: 'See the ending.', next: 'ending' }
+          ]
+        }
+      ];
+
+      let currentScene = 0;
+
+      function initGame() {
+        // Add first member
+        gameState.members.push({
+          name: 'You',
+          faith: 100,
+          role: 'Leader',
+          doubt: null
+        });
+
+        displayScene();
+      }
+
+      function displayScene() {
+        const scene = scenes[currentScene];
+        if (!scene) return;
+
+        const content = document.getElementById('content');
+        content.innerHTML = '';
+
+        const sceneDiv = document.createElement('div');
+        sceneDiv.className = 'scene';
+
+        if (scene.type !== 'ending') {
+          sceneDiv.innerHTML = `
+            <div class="scene-title">${scene.type.replace(/_/g, ' ').toUpperCase()}</div>
+            <div class="scene-text">${scene.text}</div>
+            ${scene.dialogue ? `<div class="dialogue"><span class="speaker">Member:</span> ${scene.dialogue}</div>` : ''}
+          `;
+
+          const optionsDiv = document.createElement('div');
+          optionsDiv.className = 'options';
+
+          scene.options.forEach((option, index) => {
+            const btn = document.createElement('button');
+            btn.textContent = option.text;
+            btn.onclick = () => {
+              if (option.doctrine) {
+                gameState.doctrines.push(option.doctrine);
+                gameState.beliefs[option.doctrine] = true;
+              }
+              if (option.heresy) {
+                gameState.heresy += option.heresy;
+              }
+              // Add random member
+              if (Math.random() > 0.4 && gameState.members.length < 7) {
+                const template = memberTemplates[Math.floor(Math.random() * memberTemplates.length)];
+                gameState.members.push({
+                  name: template.name,
+                  faith: 50 + Math.random() * 50,
+                  role: 'Member',
+                  doubt: template.doubt,
+                  personality: template.personality
+                });
+              }
+              // Update faith based on choices
+              gameState.members.forEach(m => {
+                if (m.role === 'Member') {
+                  if (option.heresy) m.faith -= 10;
+                  else m.faith = Math.min(100, m.faith + 5);
+                }
+              });
+              currentScene = scenes.findIndex(s => s.type === option.next);
+              displayScene();
+            };
+            optionsDiv.appendChild(btn);
+          });
+
+          sceneDiv.appendChild(optionsDiv);
+        } else {
+          // Ending
+          const avgFaith = gameState.members.reduce((a, m) => a + m.faith, 0) / gameState.members.length;
+          const endingText = generateEnding(avgFaith);
+
+          sceneDiv.innerHTML = `
+            <div class="end-screen active">
+              <div class="end-title">${endingText.title}</div>
+              <div class="end-text">${endingText.text}</div>
+              <button class="restart-btn" onclick="location.reload()">Begin Again</button>
+            </div>
+          `;
+        }
+
+        content.appendChild(sceneDiv);
+        updateSidebar();
+      }
+
+      function generateEnding(avgFaith) {
+        if (gameState.heresy > 5) {
+          return {
+            title: 'The Inquisition',
+            text: 'You have cast out heretics. The congregation is pure but small. They look to you for all answers now. You have become what you feared: a tyrant of belief.'
+          };
+        } else if (avgFaith > 80) {
+          return {
+            title: 'Transcendence',
+            text: 'The congregation thrives. Their faith is strong. But you wonder: did you guide them toward truth, or did you simply give them permission to believe what they wanted?'
+          };
+        } else if (gameState.doctrines.length > 3) {
+          return {
+            title: 'Complexity',
+            text: 'The belief system has grown complex. Contradictions exist within it. The members navigate these contradictions with grace. Perhaps this is what faith always was: the ability to hold multiple truths.'
+          };
+        } else {
+          return {
+            title: 'Dissolution',
+            text: 'The congregation disperses. What you built was fragile. But perhaps that was always true. Belief systems are temporary. They emerge, they serve a purpose, and they fade. You were simply the catalyst.'
+          };
+        }
+      }
+
+      function updateSidebar() {
+        document.getElementById('memberCount').textContent = gameState.members.length;
+        const avgFaith = gameState.members.reduce((a, m) => a + m.faith, 0) / gameState.members.length;
+        document.getElementById('avgFaith').textContent = Math.round(avgFaith) + '%';
+        document.getElementById('doctrineCount').textContent = gameState.doctrines.length;
+        document.getElementById('heresyCount').textContent = gameState.heresy;
+
+        const membersList = document.getElementById('membersList');
+        membersList.innerHTML = gameState.members.map(m => `
+          <div class="member">
+            <div class="member-name">${m.name}</div>
+            <div class="member-faith">Faith: ${Math.round(m.faith)}%</div>
+            <div class="faith-bar">
+              <div class="faith-fill" style="width: ${m.faith}%"></div>
+            </div>
+          </div>
+        `).join('');
+
+        const doctrineList = document.getElementById('doctrineList');
+        doctrineList.innerHTML = gameState.doctrines.map(d => `
+          <div class="doctrine">
+            <div class="doctrine-title">✦ ${d}</div>
+          </div>
+        `).join('');
+      }
+
+      initGame();
+    </script>
+  </body>
+  </html>

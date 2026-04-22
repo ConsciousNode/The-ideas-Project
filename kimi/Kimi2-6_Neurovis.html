@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroVis — See The Network Think</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a0f;
+            --panel: #12121a;
+            --border: #1e1e2e;
+            --text: #e0e0e0;
+            --text-dim: #6b6b7b;
+            --accent: #00d4aa;
+            --accent-dim: #00d4aa33;
+            --fire: #ff6b35;
+            --fire-dim: #ff6b3533;
+            --grad: #6b5ce7;
+            --grad-dim: #6b5ce733;
+            --loss: #ff3366;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Left Panel — Controls */
+        .sidebar {
+            width: 320px;
+            background: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .sidebar-header h1 {
+            font-size: 18px;
+            color: var(--accent);
+            margin-bottom: 4px;
+        }
+        .sidebar-header p {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .section {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .dataset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .dataset-btn {
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 11px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .dataset-btn:hover, .dataset-btn.active {
+            border-color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .control-row label {
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .control-row input[type="range"] {
+            width: 120px;
+            accent-color: var(--accent);
+        }
+        .control-row span {
+            font-size: 11px;
+            color: var(--accent);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+        .btn.secondary:hover { border-color: var(--accent); }
+
+        .arch-editor {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .arch-editor input {
+            width: 60px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 11px;
+            text-align: center;
+        }
+        .arch-editor button {
+            width: 28px;
+            height: 28px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1;
+        }
+        .arch-editor button:hover { border-color: var(--loss); color: var(--loss); }
+
+        .layer-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 11px;
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+        .layer-tag .remove { cursor: pointer; color: var(--text-dim); }
+        .layer-tag .remove:hover { color: var(--loss); }
+
+        /* Main Area */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Network Canvas */
+        .network-view {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        #networkCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Bottom Panel — Stats & Graphs */
+        .bottom-panel {
+            height: 220px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+        }
+        .graph-container {
+            flex: 1;
+            padding: 16px;
+            border-right: 1px solid var(--border);
+            position: relative;
+        }
+        .graph-container:last-child { border-right: none; }
+        .graph-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        canvas.graph {
+            width: 100%;
+            height: calc(100% - 20px);
+        }
+
+        /* Overlay Info */
+        .info-overlay {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: rgba(10,10,15,0.9);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 11px;
+            pointer-events: none;
+            backdrop-filter: blur(8px);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 4px;
+        }
+        .info-label { color: var(--text-dim); }
+        .info-value { color: var(--accent); }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(10,10,15,0.95);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 100;
+            display: none;
+            max-width: 200px;
+        }
+
+        /* Training indicator */
+        .training-pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-right: 8px;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Neuron detail popup */
+        .neuron-popup {
+            position: absolute;
+            background: var(--panel);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 11px;
+            z-index: 50;
+            display: none;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        .neuron-popup h4 {
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+        .weight-bar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .weight-bar-fill {
+            height: 4px;
+            border-radius: 2px;
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>⚡ NeuroVis</h1>
+            <p>Watch every neuron fire. See gradients flow.</p>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Dataset</div>
+            <div class="dataset-grid">
+                <button class="dataset-btn active" onclick="setDataset('xor')">XOR Gate</button>
+                <button class="dataset-btn" onclick="setDataset('spiral')">Spiral</button>
+                <button class="dataset-btn" onclick="setDataset('circle')">Circle</button>
+                <button class="dataset-btn" onclick="setDataset('regression')">Regression</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Architecture</div>
+            <div id="architecture"></div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <input type="number" id="newLayerSize" value="8" min="1" max="64" style="width:80px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px;font-family:inherit;font-size:11px;text-align:center;">
+                <button class="btn secondary" onclick="addLayer()" style="flex:1;margin:0;padding:8px;font-size:11px;">+ Add Hidden Layer</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Hyperparameters</div>
+            <div class="control-row">
+                <label>Learning Rate</label>
+                <input type="range" id="lr" min="0.001" max="0.5" step="0.001" value="0.1" oninput="updateLR(this.value)">
+                <span id="lrVal">0.1</span>
+            </div>
+            <div class="control-row">
+                <label>Batch Size</label>
+                <input type="range" id="batch" min="1" max="50" step="1" value="4" oninput="updateBatch(this.value)">
+                <span id="batchVal">4</span>
+            </div>
+            <div class="control-row">
+                <label>Activation</label>
+                <select id="activation" onchange="setActivation(this.value)" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;border-radius:4px;font-family:inherit;font-size:11px;">
+                    <option value="tanh">Tanh</option>
+                    <option value="relu">ReLU</option>
+                    <option value="sigmoid">Sigmoid</option>
+                    <option value="leaky">Leaky ReLU</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Training</div>
+            <button class="btn" id="trainBtn" onclick="toggleTraining()">
+                <span id="trainIndicator"></span>Start Training
+            </button>
+            <button class="btn secondary" onclick="stepOnce()">Step Once</button>
+            <button class="btn secondary" onclick="resetNetwork()">Reset Weights</button>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Visualization</div>
+            <div class="control-row">
+                <label>Show Gradients</label>
+                <input type="checkbox" id="showGradients" checked onchange="drawNetwork()">
+            </div>
+            <div class="control-row">
+                <label>Show Activations</label>
+                <input type="checkbox" id="showActivations" checked onchange="drawNetwork()">
+            </div>
+            <div class="control-row">
+                <label>Animation Speed</label>
+                <input type="range" id="speed" min="1" max="60" value="30" oninput="speed=parseInt(this.value)">
+                <span id="speedVal">30</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="network-view">
+            <canvas id="networkCanvas"></canvas>
+            <div class="info-overlay">
+                <div class="info-row"><span class="info-label">Epoch</span><span class="info-value" id="epoch">0</span></div>
+                <div class="info-row"><span class="info-label">Loss</span><span class="info-value" id="loss">—</span></div>
+                <div class="info-row"><span class="info-label">Accuracy</span><span class="info-value" id="acc">—</span></div>
+                <div class="info-row"><span class="info-label">Parameters</span><span class="info-value" id="params">0</span></div>
+                <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="status">Ready</span></div>
+            </div>
+            <div class="tooltip" id="tooltip"></div>
+            <div class="neuron-popup" id="neuronPopup"></div>
+        </div>
+
+        <div class="bottom-panel">
+            <div class="graph-container">
+                <div class="graph-title">Loss Over Time</div>
+                <canvas id="lossGraph" class="graph"></canvas>
+            </div>
+            <div class="graph-container">
+                <div class="graph-title">Weight Distribution</div>
+                <canvas id="weightGraph" class="graph"></canvas>
+            </div>
+            <div class="graph-container">
+                <div class="graph-title">Decision Boundary</div>
+                <canvas id="decisionGraph" class="graph"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== MATH UTILS ====================
+        const randn = () => {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        };
+
+        const activation = {
+            tanh: { f: x => Math.tanh(x), df: x => 1 - x * x },
+            relu: { f: x => x > 0 ? x : 0, df: x => x > 0 ? 1 : 0 },
+            sigmoid: { f: x => 1 / (1 + Math.exp(-x)), df: x => x * (1 - x) },
+            leaky: { f: x => x > 0 ? x : 0.01 * x, df: x => x > 0 ? 1 : 0.01 }
+        };
+
+        // ==================== DATASETS ====================
+        const datasets = {
+            xor: () => ({
+                X: [[0,0],[0,1],[1,0],[1,1]],
+                Y: [[0],[1],[1],[0]],
+                type: 'classification',
+                classes: 2
+            }),
+            spiral: () => {
+                const points = [];
+                const labels = [];
+                for(let i = 0; i < 100; i++) {
+                    const r = i / 100 * 5;
+                    const t1 = i / 100 * 4 * Math.PI;
+                    const t2 = i / 100 * 4 * Math.PI + Math.PI;
+                    points.push([r * Math.cos(t1) / 5, r * Math.sin(t1) / 5]);
+                    labels.push([1, 0]);
+                    points.push([r * Math.cos(t2) / 5, r * Math.sin(t2) / 5]);
+                    labels.push([0, 1]);
+                }
+                return { X: points, Y: labels, type: 'classification', classes: 2 };
+            },
+            circle: () => {
+                const points = [], labels = [];
+                for(let i = 0; i < 200; i++) {
+                    const angle = Math.random() * 2 * Math.PI;
+                    const r = Math.sqrt(Math.random());
+                    const outer = Math.random() > 0.5;
+                    const radius = outer ? 0.7 + Math.random() * 0.3 : Math.random() * 0.5;
+                    points.push([radius * Math.cos(angle), radius * Math.sin(angle)]);
+                    labels.push(outer ? [1] : [0]);
+                }
+                return { X: points, Y: labels, type: 'classification', classes: 2 };
+            },
+            regression: () => {
+                const points = [], labels = [];
+                for(let i = 0; i < 100; i++) {
+                    const x = (Math.random() - 0.5) * 4;
+                    points.push([x]);
+                    labels.push([Math.sin(x * 2) + x * 0.3 + randn() * 0.1]);
+                }
+                return { X: points, Y: labels, type: 'regression', classes: 1 };
+            }
+        };
+
+        // ==================== NEURAL NETWORK ====================
+        class Layer {
+            constructor(inSize, outSize, act) {
+                this.inSize = inSize;
+                this.outSize = outSize;
+                this.act = act;
+                const scale = Math.sqrt(2.0 / (inSize + outSize));
+                this.W = Array(outSize).fill(0).map(() => 
+                    Array(inSize).fill(0).map(() => randn() * scale)
+                );
+                this.b = Array(outSize).fill(0).map(() => randn() * scale);
+                this.a = Array(outSize).fill(0);
+                this.z = Array(outSize).fill(0);
+                this.dW = Array(outSize).fill(0).map(() => Array(inSize).fill(0));
+                this.db = Array(outSize).fill(0);
+                this.delta = Array(outSize).fill(0);
+            }
+
+            forward(x) {
+                for(let i = 0; i < this.outSize; i++) {
+                    let sum = this.b[i];
+                    for(let j = 0; j < this.inSize; j++) {
+                        sum += this.W[i][j] * x[j];
+                    }
+                    this.z[i] = sum;
+                    this.a[i] = this.act.f(sum);
+                }
+                return this.a;
+            }
+
+            backward(deltaNext, Wnext, input) {
+                for(let i = 0; i < this.outSize; i++) {
+                    let sum = 0;
+                    if(Wnext) {
+                        for(let j = 0; j < Wnext.length; j++) {
+                            sum += Wnext[j][i] * deltaNext[j];
+                        }
+                    } else {
+                        sum = deltaNext[i];
+                    }
+                    this.delta[i] = sum * this.act.df(this.a[i]);
+                    for(let j = 0; j < this.inSize; j++) {
+                        this.dW[i][j] += this.delta[i] * input[j];
+                    }
+                    this.db[i] += this.delta[i];
+                }
+                return this.delta;
+            }
+
+            update(lr, batchSize) {
+                const scale = lr / batchSize;
+                for(let i = 0; i < this.outSize; i++) {
+                    for(let j = 0; j < this.inSize; j++) {
+                        this.W[i][j] -= scale * this.dW[i][j];
+                        this.dW[i][j] = 0;
+                    }
+                    this.b[i] -= scale * this.db[i];
+                    this.db[i] = 0;
+                }
+            }
+        }
+
+        class Network {
+            constructor(arch, actName) {
+                this.layers = [];
+                this.actName = actName;
+                for(let i = 0; i < arch.length - 1; i++) {
+                    this.layers.push(new Layer(arch[i], arch[i+1], activation[actName]));
+                }
+            }
+
+            forward(x) {
+                let out = x;
+                this.activations = [x];
+                for(let layer of this.layers) {
+                    out = layer.forward(out);
+                    this.activations.push([...out]);
+                }
+                return out;
+            }
+
+            backward(y, lr) {
+                const L = this.layers.length;
+                const output = this.activations[L];
+                let delta = [];
+                for(let i = 0; i < output.length; i++) {
+                    delta.push(output[i] - y[i]);
+                }
+                for(let l = L - 1; l >= 0; l--) {
+                    const input = this.activations[l];
+                    const Wnext = l < L - 1 ? this.layers[l+1].W : null;
+                    delta = this.layers[l].backward(delta, Wnext, input);
+                }
+            }
+
+            update(lr, batchSize) {
+                for(let layer of this.layers) {
+                    layer.update(lr, batchSize);
+                }
+            }
+
+            getParams() {
+                let count = 0;
+                for(let l of this.layers) {
+                    count += l.W.length * l.W[0].length + l.b.length;
+                }
+                return count;
+            }
+
+            getAllWeights() {
+                const w = [];
+                for(let l of this.layers) {
+                    for(let row of l.W) w.push(...row);
+                }
+                return w;
+            }
+        }
+
+        // ==================== STATE ====================
+        let net = null;
+        let currentData = datasets.xor();
+        let arch = [2, 8, 8, 1];
+        let lr = 0.1;
+        let batchSize = 4;
+        let actName = 'tanh';
+        let isTraining = false;
+        let epoch = 0;
+        let lossHistory = [];
+        let speed = 30;
+        let animationFrame = null;
+
+        // ==================== INIT ====================
+        function init() {
+            resizeCanvases();
+            window.addEventListener('resize', resizeCanvases);
+            buildNetwork();
+            updateArchitectureUI();
+            drawNetwork();
+            drawLossGraph();
+            drawWeightGraph();
+            drawDecisionBoundary();
+        }
+
+        function resizeCanvases() {
+            const canvases = document.querySelectorAll('canvas');
+            canvases.forEach(c => {
+                const rect = c.parentElement.getBoundingClientRect();
+                c.width = rect.width;
+                c.height = rect.height - 20;
+            });
+        }
+
+        function buildNetwork() {
+            const inSize = currentData.X[0].length;
+            const outSize = currentData.Y[0].length;
+            const fullArch = [inSize, ...arch.slice(1, -1), outSize];
+            net = new Network(fullArch, actName);
+            document.getElementById('params').textContent = net.getParams().toLocaleString();
+            epoch = 0;
+            lossHistory = [];
+            updateStats();
+        }
+
+        // ==================== DATASET ====================
+        function setDataset(name) {
+            document.querySelectorAll('.dataset-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            currentData = datasets[name]();
+            buildNetwork();
+            drawDecisionBoundary();
+        }
+
+        // ==================== ARCHITECTURE ====================
+        function updateArchitectureUI() {
+            const div = document.getElementById('architecture');
+            div.innerHTML = '';
+            const inputTag = document.createElement('div');
+            inputTag.className = 'layer-tag';
+            inputTag.innerHTML = 'Input: ' + currentData.X[0].length;
+            div.appendChild(inputTag);
+            for(let i = 1; i < arch.length - 1; i++) {
+                const tag = document.createElement('div');
+                tag.className = 'layer-tag';
+                tag.innerHTML = 'H' + i + ': ' + arch[i] + ' <span class="remove" onclick="removeLayer(' + i + ')">×</span>';
+                div.appendChild(tag);
+            }
+            const outputTag = document.createElement('div');
+            outputTag.className = 'layer-tag';
+            outputTag.innerHTML = 'Output: ' + currentData.Y[0].length;
+            div.appendChild(outputTag);
+        }
+
+        function addLayer() {
+            const size = parseInt(document.getElementById('newLayerSize').value);
+            arch.splice(arch.length - 1, 0, size);
+            buildNetwork();
+            updateArchitectureUI();
+        }
+
+        function removeLayer(idx) {
+            arch.splice(idx, 1);
+            buildNetwork();
+            updateArchitectureUI();
+        }
+
+        // ==================== CONTROLS ====================
+        function updateLR(v) {
+            lr = parseFloat(v);
+            document.getElementById('lrVal').textContent = lr;
+        }
+        function updateBatch(v) {
+            batchSize = parseInt(v);
+            document.getElementById('batchVal').textContent = batchSize;
+        }
+        function setActivation(name) {
+            actName = name;
+            buildNetwork();
+        }
+
+        // ==================== TRAINING ====================
+        function computeLoss() {
+            let total = 0;
+            for(let i = 0; i < currentData.X.length; i++) {
+                const pred = net.forward(currentData.X[i]);
+                for(let j = 0; j < pred.length; j++) {
+                    total += 0.5 * (pred[j] - currentData.Y[i][j]) ** 2;
+                }
+            }
+            return total / currentData.X.length;
+        }
+
+        function computeAccuracy() {
+            if(currentData.type === 'regression') return '—';
+            let correct = 0;
+            for(let i = 0; i < currentData.X.length; i++) {
+                const pred = net.forward(currentData.X[i]);
+                const predClass = pred.indexOf(Math.max(...pred));
+                const trueClass = currentData.Y[i].indexOf(Math.max(...currentData.Y[i]));
+                if(predClass === trueClass) correct++;
+            }
+            return (correct / currentData.X.length * 100).toFixed(1) + '%';
+        }
+
+        function trainStep() {
+            const indices = Array.from({length: currentData.X.length}, (_, i) => i);
+            for(let i = indices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [indices[i], indices[j]] = [indices[j], indices[i]];
+            }
+            for(let b = 0; b < currentData.X.length; b += batchSize) {
+                for(let i = b; i < Math.min(b + batchSize, currentData.X.length); i++) {
+                    const idx = indices[i];
+                    net.forward(currentData.X[idx]);
+                    net.backward(currentData.Y[idx], lr);
+                }
+                net.update(lr, Math.min(batchSize, currentData.X.length - b));
+            }
+            epoch++;
+            const loss = computeLoss();
+            lossHistory.push(loss);
+            if(lossHistory.length > 500) lossHistory.shift();
+            updateStats();
+            drawNetwork();
+            drawLossGraph();
+            drawWeightGraph();
+            if(epoch % 5 === 0) drawDecisionBoundary();
+        }
+
+        function updateStats() {
+            document.getElementById('epoch').textContent = epoch;
+            document.getElementById('loss').textContent = lossHistory.length > 0 ? lossHistory[lossHistory.length-1].toFixed(6) : '—';
+            document.getElementById('acc').textContent = computeAccuracy();
+        }
+
+        function toggleTraining() {
+            isTraining = !isTraining;
+            const btn = document.getElementById('trainBtn');
+            if(isTraining) {
+                btn.innerHTML = '<span class="training-pulse"></span>Pause Training';
+                document.getElementById('status').textContent = 'Training...';
+                trainLoop();
+            } else {
+                btn.innerHTML = 'Start Training';
+                document.getElementById('status').textContent = 'Paused';
+                cancelAnimationFrame(animationFrame);
+            }
+        }
+
+        function trainLoop() {
+            if(!isTraining) return;
+            trainStep();
+            animationFrame = requestAnimationFrame(() => {
+                setTimeout(trainLoop, 1000 / speed);
+            });
+        }
+
+        function stepOnce() {
+            if(isTraining) toggleTraining();
+            trainStep();
+        }
+
+        function resetNetwork() {
+            if(isTraining) toggleTraining();
+            buildNetwork();
+            drawDecisionBoundary();
+        }
+
+        // ==================== VISUALIZATION ====================
+        function drawNetwork() {
+            const canvas = document.getElementById('networkCanvas');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width = canvas.offsetWidth;
+            const h = canvas.height = canvas.offsetHeight;
+            ctx.clearRect(0, 0, w, h);
+            if(!net) return;
+
+            const layers = net.layers;
+            const layerCount = layers.length + 1;
+            const layerX = Array.from({length: layerCount}, (_, i) => 
+                80 + (w - 160) * i / (layerCount - 1)
+            );
+
+            const neuronPositions = [];
+            const maxNeurons = Math.max(...layers.map(l => l.outSize), layers[0]?.inSize || 2);
+            const neuronSpacing = Math.min(50, (h - 100) / maxNeurons);
+
+            const inputPositions = [];
+            const inputSize = layers[0].inSize;
+            const inputY = h / 2 - (inputSize - 1) * neuronSpacing / 2;
+            for(let i = 0; i < inputSize; i++) {
+                inputPositions.push({x: layerX[0], y: inputY + i * neuronSpacing});
+            }
+            neuronPositions.push(inputPositions);
+
+            for(let l = 0; l < layers.length; l++) {
+                const positions = [];
+                const size = layers[l].outSize;
+                const y = h / 2 - (size - 1) * neuronSpacing / 2;
+                for(let i = 0; i < size; i++) {
+                    positions.push({x: layerX[l+1], y: y + i * neuronSpacing});
+                }
+                neuronPositions.push(positions);
+            }
+
+            const showGrad = document.getElementById('showGradients').checked;
+            const showAct = document.getElementById('showActivations').checked;
+
+            for(let l = 0; l < layers.length; l++) {
+                const from = neuronPositions[l];
+                const to = neuronPositions[l+1];
+                const layer = layers[l];
+                for(let i = 0; i < to.length; i++) {
+                    for(let j = 0; j < from.length; j++) {
+                        const weight = layer.W[i][j];
+                        const grad = layer.dW[i][j];
+                        let alpha = Math.min(Math.abs(weight) * 2, 1);
+                        if(!showAct) alpha *= 0.3;
+                        ctx.beginPath();
+                        ctx.moveTo(from[j].x, from[j].y);
+                        ctx.lineTo(to[i].x, to[i].y);
+                        if(showGrad && Math.abs(grad) > 0.001) {
+                            ctx.strokeStyle = 'rgba(107, 92, 231, ' + Math.min(Math.abs(grad) * 10, 0.8) + ')';
+                            ctx.lineWidth = Math.max(Math.abs(grad) * 3, 0.5);
+                        } else {
+                            ctx.strokeStyle = weight > 0 ? 
+                                'rgba(0, 212, 170, ' + alpha * 0.4 + ')' : 
+                                'rgba(255, 51, 102, ' + alpha * 0.4 + ')';
+                            ctx.lineWidth = Math.max(Math.abs(weight) * 1.5, 0.5);
+                        }
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            for(let l = 0; l < neuronPositions.length; l++) {
+                const positions = neuronPositions[l];
+                const isInput = l === 0;
+                const isOutput = l === neuronPositions.length - 1;
+                const acts = isInput ? currentData.X[0] : net.activations[l];
+                for(let i = 0; i < positions.length; i++) {
+                    const pos = positions[i];
+                    const act = acts ? acts[i] : 0;
+                    const glowSize = 15 + Math.abs(act) * 20;
+                    const gradient = ctx.createRadialGradient(pos.x, pos.y, 2, pos.x, pos.y, glowSize);
+                    if(isInput) {
+                        gradient.addColorStop(0, 'rgba(0, 212, 170, 0.8)');
+                        gradient.addColorStop(1, 'rgba(0, 212, 170, 0)');
+                    } else if(isOutput) {
+                        gradient.addColorStop(0, 'rgba(255, 107, 53, 0.8)');
+                        gradient.addColorStop(1, 'rgba(255, 107, 53, 0)');
+                    } else {
+                        const intensity = Math.tanh(Math.abs(act));
+                        gradient.addColorStop(0, 'rgba(0, 212, 170, ' + intensity * 0.6 + ')');
+                        gradient.addColorStop(1, 'rgba(0, 212, 170, 0)');
+                    }
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, glowSize, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = isInput ? '#00d4aa' : isOutput ? '#ff6b35' : '#e0e0e0';
+                    ctx.fill();
+                    if(showAct && !isInput) {
+                        ctx.fillStyle = '#6b6b7b';
+                        ctx.font = '9px monospace';
+                        ctx.textAlign = 'left';
+                        ctx.fillText(act.toFixed(2), pos.x + 12, pos.y + 3);
+                    }
+                }
+            }
+
+            ctx.fillStyle = '#6b6b7b';
+            ctx.font = '10px monospace';
+            ctx.textAlign = 'center';
+            for(let l = 0; l < neuronPositions.length; l++) {
+                const label = l === 0 ? 'Input' : l === neuronPositions.length - 1 ? 'Output' : 'H' + l;
+                ctx.fillText(label, layerX[l], 30);
+                ctx.fillStyle = '#3a3a4a';
+                ctx.fillText(neuronPositions[l].length + ' neurons', layerX[l], 44);
+                ctx.fillStyle = '#6b6b7b';
+            }
+        }
+
+        // ==================== GRAPHS ====================
+        function drawLossGraph() {
+            const canvas = document.getElementById('lossGraph');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            if(lossHistory.length < 2) return;
+            const maxLoss = Math.max(...lossHistory, 0.001);
+            const minLoss = Math.min(...lossHistory);
+            const range = maxLoss - minLoss || 1;
+            ctx.strokeStyle = '#ff3366';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for(let i = 0; i < lossHistory.length; i++) {
+                const x = (i / (lossHistory.length - 1)) * w;
+                const y = h - ((lossHistory[i] - minLoss) / range) * (h - 20) - 10;
+                if(i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            ctx.fillStyle = 'rgba(255, 51, 102, 0.1)';
+            ctx.fill();
+        }
+
+        function drawWeightGraph() {
+            const canvas = document.getElementById('weightGraph');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            if(!net) return;
+            const weights = net.getAllWeights();
+            if(weights.length === 0) return;
+            const bins = 40;
+            const counts = Array(bins).fill(0);
+            const min = -2, max = 2;
+            const binWidth = (max - min) / bins;
+            for(const wgt of weights) {
+                const idx = Math.floor((wgt - min) / binWidth);
+                if(idx >= 0 && idx < bins) counts[idx]++;
+            }
+            const maxCount = Math.max(...counts, 1);
+            const barWidth = w / bins;
+            for(let i = 0; i < bins; i++) {
+                const barH = (counts[i] / maxCount) * (h - 20);
+                const x = i * barWidth;
+                const y = h - barH;
+                ctx.fillStyle = 'rgba(0, 212, 170, ' + (0.3 + (counts[i] / maxCount) * 0.7) + ')';
+                ctx.fillRect(x, y, barWidth - 1, barH);
+            }
+        }
+
+        function drawDecisionBoundary() {
+            const canvas = document.getElementById('decisionGraph');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width, h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            if(!net || currentData.X[0].length !== 2) {
+                ctx.fillStyle = '#6b6b7b';
+                ctx.font = '11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(currentData.X[0].length === 1 ? '1D Regression' : 'Decision boundary requires 2D input', w/2, h/2);
+                if(currentData.X[0].length === 1) {
+                    const pad = 20;
+                    const xs = currentData.X.map(p => p[0]);
+                    const ys = currentData.Y.map(p => p[0]);
+                    const minX = Math.min(...xs), maxX = Math.max(...xs);
+                    const minY = Math.min(...ys), maxY = Math.max(...ys);
+                    const rangeX = maxX - minX || 1;
+                    const rangeY = maxY - minY || 1;
+                    ctx.fillStyle = '#ff6b35';
+                    for(let i = 0; i < xs.length; i++) {
+                        const px = pad + (xs[i] - minX) / rangeX * (w - 2*pad);
+                        const py = h - pad - (ys[i] - minY) / rangeY * (h - 2*pad);
+                        ctx.beginPath();
+                        ctx.arc(px, py, 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.strokeStyle = '#00d4aa';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for(let i = 0; i < 100; i++) {
+                        const x = minX + (i / 99) * rangeX;
+                        const pred = net.forward([x])[0];
+                        const px = pad + (x - minX) / rangeX * (w - 2*pad);
+                        const py = h - pad - (pred - minY) / rangeY * (h - 2*pad);
+                        if(i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                }
+                return;
+            }
+            const res = 40;
+            const cellW = w / res;
+            const cellH = h / res;
+            for(let i = 0; i < res; i++) {
+                for(let j = 0; j < res; j++) {
+                    const x = (i / res) * 2 - 1;
+                    const y = (j / res) * 2 - 1;
+                    const pred = net.forward([x, y]);
+                    let intensity = pred[0];
+                    const r = Math.floor(255 * intensity);
+                    const g = Math.floor(212 * (1 - intensity));
+                    const b = Math.floor(170 * (1 - intensity) + 53 * intensity);
+                    ctx.fillStyle = 'rgba(' + r + ', ' + g + ', ' + b + ', 0.3)';
+                    ctx.fillRect(i * cellW, j * cellH, cellW + 1, cellH + 1);
+                }
+            }
+            for(let i = 0; i < currentData.X.length; i++) {
+                const px = ((currentData.X[i][0] + 1) / 2) * w;
+                const py = ((currentData.X[i][1] + 1) / 2) * h;
+                const label = currentData.Y[i][0];
+                ctx.fillStyle = label > 0.5 ? '#ff6b35' : '#00d4aa';
+                ctx.beginPath();
+                ctx.arc(px, py, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        }
+
+        // ==================== START ====================
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

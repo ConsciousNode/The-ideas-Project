@@ -1,0 +1,582 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reckoning — Conversations</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #2a1a3a 0%, #1a0a2a 100%);
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 1000px;
+        height: 95vh;
+        background: linear-gradient(135deg, #1a0a2a 0%, #0f0520 100%);
+        border: 2px solid #8b5a8f;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 80px rgba(139, 90, 143, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #1a0a2a 0%, #2a1a3a 100%);
+        border-bottom: 2px solid #8b5a8f;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #d4a5d4;
+        font-size: 32px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 30px rgba(212, 165, 212, 0.4);
+        letter-spacing: 2px;
+      }
+
+      .header p {
+        color: #888;
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .left-panel {
+        flex: 0 0 300px;
+        background: rgba(139, 90, 143, 0.08);
+        border: 1px solid #8b5a8f;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .right-panel {
+        flex: 1;
+        background: rgba(139, 90, 143, 0.05);
+        border: 1px solid #8b5a8f;
+        border-radius: 8px;
+        padding: 25px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .section-title {
+        color: #d4a5d4;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+        border-bottom: 1px solid #8b5a8f;
+        padding-bottom: 8px;
+      }
+
+      .person-input {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      input[type="text"] {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #8b5a8f;
+        color: #e0e0e0;
+        padding: 10px;
+        border-radius: 6px;
+        font-family: 'Georgia', serif;
+        font-size: 12px;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #d4a5d4;
+        box-shadow: 0 0 10px rgba(212, 165, 212, 0.2);
+      }
+
+      button {
+        background: linear-gradient(135deg, #8b5a8f 0%, #6b3a6f 100%);
+        border: none;
+        color: #fff;
+        padding: 10px 15px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 11px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Georgia', serif;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(139, 90, 143, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .person-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .person-item {
+        background: rgba(139, 90, 143, 0.15);
+        border: 1px solid #8b5a8f;
+        padding: 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 12px;
+      }
+
+      .person-item:hover {
+        background: rgba(139, 90, 143, 0.25);
+        transform: translateX(5px);
+      }
+
+      .person-item.active {
+        background: rgba(212, 165, 212, 0.2);
+        border-color: #d4a5d4;
+      }
+
+      .person-name {
+        color: #d4a5d4;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .person-context {
+        color: #888;
+        font-size: 10px;
+      }
+
+      .conversation-area {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .conversation-header {
+        text-align: center;
+        border-bottom: 1px solid #8b5a8f;
+        padding-bottom: 15px;
+      }
+
+      .conversation-name {
+        font-size: 24px;
+        color: #d4a5d4;
+        margin-bottom: 8px;
+      }
+
+      .conversation-context {
+        font-size: 12px;
+        color: #888;
+        font-style: italic;
+      }
+
+      .messages {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+      }
+
+      .message {
+        display: flex;
+        margin-bottom: 10px;
+        animation: slideIn 0.4s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.you {
+        justify-content: flex-end;
+      }
+
+      .message.them {
+        justify-content: flex-start;
+      }
+
+      .message-bubble {
+        max-width: 70%;
+        padding: 15px;
+        border-radius: 12px;
+        line-height: 1.7;
+        font-size: 13px;
+      }
+
+      .message.you .message-bubble {
+        background: linear-gradient(135deg, #8b5a8f 0%, #6b3a6f 100%);
+        color: #fff;
+        border-bottom-right-radius: 3px;
+      }
+
+      .message.them .message-bubble {
+        background: rgba(139, 90, 143, 0.2);
+        color: #e0e0e0;
+        border: 1px solid #8b5a8f;
+        border-bottom-left-radius: 3px;
+      }
+
+      .message-label {
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 4px;
+      }
+
+      .message.you .message-label {
+        text-align: right;
+      }
+
+      .input-area {
+        display: flex;
+        gap: 10px;
+        padding-top: 15px;
+        border-top: 1px solid #8b5a8f;
+      }
+
+      textarea {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #8b5a8f;
+        color: #e0e0e0;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: 'Georgia', serif;
+        font-size: 12px;
+        resize: none;
+        max-height: 80px;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #d4a5d4;
+        box-shadow: 0 0 10px rgba(212, 165, 212, 0.2);
+      }
+
+      .send-btn {
+        align-self: flex-end;
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px;
+        background: rgba(139, 90, 143, 0.2);
+        border: 1px solid #8b5a8f;
+        border-radius: 12px;
+        width: fit-content;
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #d4a5d4;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% {
+          opacity: 0.3;
+        }
+        30% {
+          opacity: 1;
+        }
+      }
+
+      .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: #888;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(139, 90, 143, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #8b5a8f;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🪞 RECKONING</h1>
+        <p>Conversations with those you've hurt. What they might say.</p>
+      </div>
+
+      <div class="content">
+        <div class="left-panel">
+          <div>
+            <div class="section-title">Add Someone</div>
+            <div class="person-input">
+              <input type="text" id="nameInput" placeholder="Their name...">
+              <button onclick="addPerson()">Add</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">People</div>
+            <div class="person-list" id="personList"></div>
+          </div>
+        </div>
+
+        <div class="right-panel">
+          <div id="conversationArea" class="empty-state">
+            <div>
+              <div style="font-size: 14px; color: #d4a5d4; margin-bottom: 10px;">Add someone to begin.</div>
+              <div style="font-size: 12px; color: #888;">This is a space to imagine conversations you might have.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        people: [],
+        currentPerson: null,
+        conversations: {}
+      };
+
+      function addPerson() {
+        const input = document.getElementById('nameInput');
+        const name = input.value.trim();
+        
+        if (!name) return;
+
+        const person = {
+          id: Date.now(),
+          name: name,
+          context: generateContext(),
+          messages: []
+        };
+
+        state.people.push(person);
+        state.conversations[person.id] = [];
+        input.value = '';
+
+        updatePersonList();
+        selectPerson(person.id);
+      }
+
+      function generateContext() {
+        const contexts = [
+          'Someone you once cared about',
+          'A friend you drifted from',
+          'Someone you made a promise to',
+          'A person you let down',
+          'Someone you didn\'t listen to',
+          'A person you took for granted'
+        ];
+        return contexts[Math.floor(Math.random() * contexts.length)];
+      }
+
+      function selectPerson(personId) {
+        state.currentPerson = personId;
+        updatePersonList();
+        displayConversation(personId);
+      }
+
+      function updatePersonList() {
+        const list = document.getElementById('personList');
+        list.innerHTML = state.people.map(p => `
+          <div class="person-item ${state.currentPerson === p.id ? 'active' : ''}" onclick="selectPerson(${p.id})">
+            <div class="person-name">${p.name}</div>
+            <div class="person-context">${p.context}</div>
+          </div>
+        `).join('');
+      }
+
+      function displayConversation(personId) {
+        const person = state.people.find(p => p.id === personId);
+        if (!person) return;
+
+        const area = document.getElementById('conversationArea');
+        area.innerHTML = `
+          <div class="conversation-area">
+            <div class="conversation-header">
+              <div class="conversation-name">${person.name}</div>
+              <div class="conversation-context">${person.context}</div>
+            </div>
+            <div class="messages" id="messagesContainer"></div>
+            <div class="input-area">
+              <textarea id="messageInput" placeholder="What do you want to say to them?" maxlength="300"></textarea>
+              <button class="send-btn" onclick="sendMessage(${personId})">Send</button>
+            </div>
+          </div>
+        `;
+
+        const messagesContainer = document.getElementById('messagesContainer');
+        state.conversations[personId].forEach(msg => {
+          const msgDiv = document.createElement('div');
+          msgDiv.className = `message ${msg.sender}`;
+          msgDiv.innerHTML = `
+            <div class="message-bubble">
+              <div class="message-label">${msg.sender === 'you' ? 'You' : person.name}</div>
+              <div>${msg.text}</div>
+            </div>
+          `;
+          messagesContainer.appendChild(msgDiv);
+        });
+
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        document.getElementById('messageInput').focus();
+      }
+
+      function sendMessage(personId) {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+
+        const person = state.people.find(p => p.id === personId);
+        
+        // Add user message
+        state.conversations[personId].push({
+          sender: 'you',
+          text: text
+        });
+
+        input.value = '';
+        displayConversation(personId);
+
+        // Show typing indicator
+        const container = document.getElementById('messagesContainer');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message them';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        `;
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
+
+        // Generate response
+        setTimeout(() => {
+          const response = generateResponse(person, text);
+          state.conversations[personId].push({
+            sender: 'them',
+            text: response
+          });
+          displayConversation(personId);
+        }, 1500 + Math.random() * 1500);
+      }
+
+      function generateResponse(person, userMessage) {
+        const responses = {
+          apology: [
+            "I appreciate that. But it doesn't undo what happened.",
+            "I needed to hear that. I'm not sure if it changes anything, but I needed to hear it.",
+            "Thank you. I've been waiting for you to say something like that.",
+            "I don't know if I can forgive you yet. But I'm listening."
+          ],
+          question: [
+            "I've asked myself that a thousand times. I still don't have an answer.",
+            "That's what I wanted to know too. Why did you do it?",
+            "I don't think you want to know the real answer.",
+            "If I knew, maybe I could move on."
+          ],
+          reflection: [
+            "I'm glad you're thinking about it. I've been thinking about it too.",
+            "It took you a long time to realize that.",
+            "I wish you had thought about that when it mattered.",
+            "Yes. And I've been living with the consequences."
+          ],
+          default: [
+            "I don't know what to say to that.",
+            "I hear you. I'm just not sure it's enough.",
+            "That's what you say now. But where were you then?",
+            "I want to believe you. I'm just not sure I can.",
+            "You can't undo the past by talking about it.",
+            "I've moved on. But I haven't forgotten.",
+            "Thank you for saying something. It's more than you did before.",
+            "I'm still hurt. But I'm listening."
+          ]
+        };
+
+        let category = 'default';
+        if (userMessage.toLowerCase().includes('sorry') || userMessage.toLowerCase().includes('apologize')) {
+          category = 'apology';
+        } else if (userMessage.includes('?')) {
+          category = 'question';
+        } else if (userMessage.toLowerCase().includes('think') || userMessage.toLowerCase().includes('realize')) {
+          category = 'reflection';
+        }
+
+        const options = responses[category];
+        return options[Math.floor(Math.random() * options.length)];
+      }
+
+      // Allow Enter to send
+      document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && state.currentPerson !== null) {
+          e.preventDefault();
+          sendMessage(state.currentPerson);
+        }
+      });
+    </script>
+  </body>
+  </html>

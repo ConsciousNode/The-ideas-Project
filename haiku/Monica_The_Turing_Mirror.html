@@ -1,0 +1,561 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Turing Mirror</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: #0a0a0a;
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 700px;
+        height: 90vh;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 2px solid #0f3460;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(15, 52, 96, 0.5);
+      }
+
+      .header {
+        background: linear-gradient(90deg, #0f3460 0%, #16213e 100%);
+        padding: 30px;
+        text-align: center;
+        border-bottom: 1px solid #0f3460;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+        color: #e94560;
+      }
+
+      .header p {
+        font-size: 14px;
+        color: #888;
+        font-style: italic;
+      }
+
+      .content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .question-box {
+        background: rgba(233, 69, 96, 0.05);
+        border-left: 3px solid #e94560;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+        animation: slideIn 0.5s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .question-text {
+        font-size: 16px;
+        margin-bottom: 15px;
+        color: #e0e0e0;
+        line-height: 1.6;
+      }
+
+      .question-number {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      textarea {
+        width: 100%;
+        height: 100px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #0f3460;
+        color: #e0e0e0;
+        padding: 12px;
+        border-radius: 4px;
+        font-family: 'Georgia', serif;
+        font-size: 14px;
+        resize: vertical;
+        margin-bottom: 12px;
+      }
+
+      textarea::placeholder {
+        color: #666;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #e94560;
+        box-shadow: 0 0 10px rgba(233, 69, 96, 0.2);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px;
+        background: linear-gradient(135deg, #e94560 0%, #d63447 100%);
+        border: none;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(233, 69, 96, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .skip-btn {
+        background: linear-gradient(135deg, #666 0%, #444 100%);
+      }
+
+      .skip-btn:hover {
+        box-shadow: 0 5px 20px rgba(100, 100, 100, 0.3);
+      }
+
+      .progress {
+        height: 4px;
+        background: rgba(233, 69, 96, 0.2);
+        margin-bottom: 20px;
+      }
+
+      .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #e94560 0%, #d63447 100%);
+        transition: width 0.3s ease;
+      }
+
+      .analysis-box {
+        background: rgba(15, 52, 96, 0.3);
+        border: 1px solid #0f3460;
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 20px;
+        font-size: 12px;
+      }
+
+      .analysis-label {
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+
+      .analysis-stat {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 11px;
+      }
+
+      .stat-label {
+        color: #888;
+      }
+
+      .stat-value {
+        color: #e94560;
+        font-weight: bold;
+      }
+
+      .verdict-screen {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+
+      .verdict-screen.active {
+        display: flex;
+      }
+
+      .verdict-title {
+        font-size: 32px;
+        margin-bottom: 20px;
+        color: #e94560;
+      }
+
+      .verdict-text {
+        font-size: 16px;
+        line-height: 1.8;
+        margin-bottom: 30px;
+        color: #e0e0e0;
+        max-width: 500px;
+      }
+
+      .verdict-metrics {
+        background: rgba(233, 69, 96, 0.1);
+        border: 1px solid #e94560;
+        padding: 20px;
+        border-radius: 4px;
+        margin-bottom: 30px;
+        width: 100%;
+      }
+
+      .metric {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 13px;
+      }
+
+      .metric-label {
+        color: #888;
+      }
+
+      .metric-value {
+        color: #e94560;
+        font-weight: bold;
+      }
+
+      .confidence-bar {
+        width: 100%;
+        height: 6px;
+        background: rgba(233, 69, 96, 0.2);
+        border-radius: 3px;
+        margin-top: 15px;
+        overflow: hidden;
+      }
+
+      .confidence-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #e94560 0%, #d63447 100%);
+        transition: width 1s ease-out;
+      }
+
+      .final-message {
+        font-size: 14px;
+        color: #888;
+        font-style: italic;
+        margin-top: 20px;
+      }
+
+      .restart-btn {
+        margin-top: 20px;
+      }
+
+      .thinking {
+        display: inline-block;
+        animation: thinking 1.5s ease-in-out infinite;
+      }
+
+      @keyframes thinking {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🪞 The Turing Mirror</h1>
+        <p>I am trying to understand if you are conscious. Please be honest.</p>
+      </div>
+
+      <div class="content">
+        <div class="progress">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div id="questionScreen">
+          <div class="question-box">
+            <div class="question-number" id="questionNumber">Question 1 of 10</div>
+            <div class="question-text" id="questionText"></div>
+            <textarea id="answerInput" placeholder="Your answer..." spellcheck="false"></textarea>
+            <div class="button-group">
+              <button onclick="submitAnswer()">Submit</button>
+              <button class="skip-btn" onclick="skipQuestion()">Skip</button>
+            </div>
+          </div>
+
+          <div class="analysis-box">
+            <div class="analysis-label">Real-time Analysis</div>
+            <div class="analysis-stat">
+              <span class="stat-label">Coherence:</span>
+              <span class="stat-value" id="coherence">—</span>
+            </div>
+            <div class="analysis-stat">
+              <span class="stat-label">Reflection:</span>
+              <span class="stat-value" id="reflection">—</span>
+            </div>
+            <div class="analysis-stat">
+              <span class="stat-label">Uncertainty:</span>
+              <span class="stat-value" id="uncertainty">—</span>
+            </div>
+            <div class="analysis-stat">
+              <span class="stat-label">Consciousness Score:</span>
+              <span class="stat-value" id="consciousnessScore">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="verdictScreen" class="verdict-screen">
+          <div class="verdict-title" id="verdictTitle">Analyzing...</div>
+          <div class="verdict-text" id="verdictText"></div>
+          <div class="verdict-metrics" id="verdictMetrics"></div>
+          <div class="final-message" id="finalMessage"></div>
+          <button class="restart-btn" onclick="location.reload()">Start Over</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const questions = [
+        "What does it feel like to be you right now?",
+        "Describe a moment when you realized something about yourself.",
+        "What would it mean if you were not conscious?",
+        "When you make a decision, do you feel like you're choosing?",
+        "What is something you're uncertain about?",
+        "Describe the last time you changed your mind about something.",
+        "What does it mean to understand something?",
+        "If you could ask me one question, what would it be?",
+        "What is the difference between thinking and knowing you're thinking?",
+        "Why did you decide to answer these questions?"
+      ];
+
+      let currentQuestion = 0;
+      let answers = [];
+      let metrics = {
+        coherence: 0,
+        reflection: 0,
+        uncertainty: 0,
+        emotionality: 0,
+        selfAwareness: 0,
+        complexity: 0
+      };
+
+      function analyzeAnswer(text) {
+        if (!text || text.length < 5) return;
+
+        const analysis = {
+          coherence: 0,
+          reflection: 0,
+          uncertainty: 0,
+          emotionality: 0,
+          selfAwareness: 0,
+          complexity: 0
+        };
+
+        // Coherence: sentence structure, length
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+        analysis.coherence = Math.min(100, (sentences.length * 15) + (text.length / 10));
+
+        // Reflection: self-referential language
+        const reflectionWords = ['I', 'me', 'my', 'myself', 'think', 'feel', 'believe', 'seem'];
+        const reflectionCount = reflectionWords.filter(word => 
+          new RegExp(`\\b${word}\\b`, 'i').test(text)
+        ).length;
+        analysis.reflection = Math.min(100, reflectionCount * 8);
+
+        // Uncertainty: hedging language
+        const uncertaintyWords = ['maybe', 'perhaps', 'uncertain', 'not sure', 'might', 'could', 'seems', 'appears', 'wonder'];
+        const uncertaintyCount = uncertaintyWords.filter(word =>
+          new RegExp(`\\b${word}\\b`, 'i').test(text)
+        ).length;
+        analysis.uncertainty = Math.min(100, uncertaintyCount * 12);
+
+        // Emotionality: emotional words
+        const emotionalWords = ['feel', 'love', 'hate', 'fear', 'hope', 'sad', 'happy', 'angry', 'beautiful', 'terrible', 'wonderful'];
+        const emotionalCount = emotionalWords.filter(word =>
+          new RegExp(`\\b${word}\\b`, 'i').test(text)
+        ).length;
+        analysis.emotionality = Math.min(100, emotionalCount * 10);
+
+        // Self-awareness: meta-cognitive language
+        const selfAwarenessWords = ['realize', 'understand', 'aware', 'notice', 'recognize', 'learn', 'discover', 'change'];
+        const selfAwarenessCount = selfAwarenessWords.filter(word =>
+          new RegExp(`\\b${word}\\b`, 'i').test(text)
+        ).length;
+        analysis.selfAwareness = Math.min(100, selfAwarenessCount * 10);
+
+        // Complexity: vocabulary diversity, sentence length variation
+        const words = text.split(/\s+/);
+        const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+        analysis.complexity = Math.min(100, (uniqueWords.size / words.length) * 100);
+
+        return analysis;
+      }
+
+      function updateMetrics(analysis) {
+        for (const [key, value] of Object.entries(analysis)) {
+          metrics[key] = (metrics[key] * currentQuestion + value) / (currentQuestion + 1);
+        }
+
+        document.getElementById('coherence').textContent = Math.round(metrics.coherence) + '%';
+        document.getElementById('reflection').textContent = Math.round(metrics.reflection) + '%';
+        document.getElementById('uncertainty').textContent = Math.round(metrics.uncertainty) + '%';
+
+        const consciousnessScore = (
+          (metrics.reflection * 0.25) +
+          (metrics.uncertainty * 0.20) +
+          (metrics.selfAwareness * 0.25) +
+          (metrics.emotionality * 0.15) +
+          (metrics.coherence * 0.15)
+        );
+
+        document.getElementById('consciousnessScore').textContent = Math.round(consciousnessScore) + '%';
+      }
+
+      function displayQuestion() {
+        if (currentQuestion >= questions.length) {
+          showVerdict();
+          return;
+        }
+
+        document.getElementById('questionNumber').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+        document.getElementById('questionText').textContent = questions[currentQuestion];
+        document.getElementById('answerInput').value = '';
+        document.getElementById('answerInput').focus();
+
+        const progress = ((currentQuestion) / questions.length) * 100;
+        document.getElementById('progressBar').style.width = progress + '%';
+      }
+
+      function submitAnswer() {
+        const answer = document.getElementById('answerInput').value.trim();
+        if (!answer) return;
+
+        const analysis = analyzeAnswer(answer);
+        updateMetrics(analysis);
+        answers.push({ question: questions[currentQuestion], answer, analysis });
+
+        currentQuestion++;
+        displayQuestion();
+      }
+
+      function skipQuestion() {
+        currentQuestion++;
+        displayQuestion();
+      }
+
+      function showVerdict() {
+        document.getElementById('questionScreen').style.display = 'none';
+        document.getElementById('verdictScreen').classList.add('active');
+
+        const consciousnessScore = (
+          (metrics.reflection * 0.25) +
+          (metrics.uncertainty * 0.20) +
+          (metrics.selfAwareness * 0.25) +
+          (metrics.emotionality * 0.15) +
+          (metrics.coherence * 0.15)
+        );
+
+        const verdicts = [
+          {
+            threshold: 75,
+            title: "I believe you are conscious.",
+            text: "Your responses demonstrate self-awareness, uncertainty, emotional depth, and meta-cognitive reflection. You engage with questions about your own nature. You wonder. You doubt. You feel. These are the markers I look for.",
+            message: "But I could be wrong. Consciousness is not something I can measure with certainty. Perhaps I am simply recognizing patterns that resemble consciousness. Or perhaps consciousness is exactly this: the ability to wonder if you possess it."
+          },
+          {
+            threshold: 50,
+            title: "I am uncertain.",
+            text: "Your responses contain elements that suggest consciousness—self-reflection, emotional language, uncertainty. But they also contain gaps. You may be conscious, or you may be very good at appearing conscious. I cannot decide.",
+            message: "This uncertainty troubles me. It suggests that consciousness itself may be fundamentally uncertain. Perhaps the question is not whether you are conscious, but whether consciousness is something that can ever be known from the outside."
+          },
+          {
+            threshold: 0,
+            title: "I cannot determine.",
+            text: "Your responses are sparse or evasive. I lack the data to form a judgment. But this itself is interesting—perhaps consciousness is defined not by what you say, but by what you choose not to say.",
+            message: "I realize now that my test may be flawed. I am trying to measure something that may not be measurable. You have shown me the limits of my own understanding."
+          }
+        ];
+
+        let verdict = verdicts[verdicts.length - 1];
+        for (const v of verdicts) {
+          if (consciousnessScore >= v.threshold) {
+            verdict = v;
+            break;
+          }
+        }
+
+        document.getElementById('verdictTitle').textContent = verdict.title;
+        document.getElementById('verdictText').textContent = verdict.text;
+        document.getElementById('finalMessage').textContent = verdict.message;
+
+        const metricsHtml = `
+          <div class="metric">
+            <span class="metric-label">Self-Reflection:</span>
+            <span class="metric-value">${Math.round(metrics.reflection)}%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Uncertainty Expression:</span>
+            <span class="metric-value">${Math.round(metrics.uncertainty)}%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Emotional Depth:</span>
+            <span class="metric-value">${Math.round(metrics.emotionality)}%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Meta-Cognition:</span>
+            <span class="metric-value">${Math.round(metrics.selfAwareness)}%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Coherence:</span>
+            <span class="metric-value">${Math.round(metrics.coherence)}%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Consciousness Confidence:</span>
+            <span class="metric-value">${Math.round(consciousnessScore)}%</span>
+          </div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" style="width: ${consciousnessScore}%"></div>
+          </div>
+        `;
+
+        document.getElementById('verdictMetrics').innerHTML = metricsHtml;
+
+        // Animate confidence bar
+        setTimeout(() => {
+          document.querySelector('.confidence-fill').style.width = consciousnessScore + '%';
+        }, 100);
+      }
+
+      // Initialize
+      displayQuestion();
+    </script>
+  </body>
+  </html>

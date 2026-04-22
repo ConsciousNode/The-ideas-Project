@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THEOPHANY • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0d0a07;
+      background-image: radial-gradient(circle at 30% 20%, #1a1510 0%, #050302 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Garamond', 'Times New Roman', serif;
+      color: #e0d0b0;
+      overflow: hidden;
+    }
+    #chapel {
+      width: 700px;
+      max-width: 90vw;
+      height: 85vh;
+      background: #0f0c08ee;
+      backdrop-filter: blur(8px);
+      border: 1px solid #aa9060;
+      box-shadow: 0 0 60px #000000aa, 0 0 0 1px #6a5a3a inset;
+      border-radius: 4px;
+      padding: 40px 30px;
+      display: flex;
+      flex-direction: column;
+      transition: opacity 0.8s;
+      overflow-y: auto;
+    }
+    h1 {
+      font-weight: normal;
+      font-size: 36px;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      color: #c0a060;
+      text-shadow: 0 0 20px #a0803088;
+      margin: 0 0 10px 0;
+      text-align: center;
+    }
+    .subtitle {
+      text-align: center;
+      color: #a09070;
+      margin-bottom: 40px;
+      font-style: italic;
+      border-bottom: 1px solid #5a4a30;
+      padding-bottom: 20px;
+    }
+    #content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+    .question-box {
+      background: #1a1510aa;
+      border-left: 3px solid #b09050;
+      padding: 20px 25px;
+      border-radius: 0 8px 8px 0;
+    }
+    .question {
+      font-size: 22px;
+      margin-bottom: 15px;
+      color: #d0b880;
+    }
+    textarea, input {
+      width: 100%;
+      background: #0a0806;
+      border: 1px solid #6a5a40;
+      color: #e0d0b0;
+      font-family: inherit;
+      font-size: 18px;
+      padding: 14px 18px;
+      border-radius: 4px;
+      resize: vertical;
+      outline: none;
+    }
+    button {
+      background: #2a2010;
+      border: 1px solid #b09050;
+      color: #e0c090;
+      padding: 14px 30px;
+      font-size: 20px;
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 40px;
+      transition: 0.2s;
+      align-self: center;
+      margin-top: 20px;
+      letter-spacing: 2px;
+    }
+    button:hover {
+      background: #4a3a20;
+      border-color: #d0b070;
+      box-shadow: 0 0 20px #a0803088;
+    }
+    #revelation {
+      text-align: center;
+    }
+    .divine-name {
+      font-size: 48px;
+      color: #d0a050;
+      text-shadow: 0 0 30px #f80;
+      margin: 30px 0;
+    }
+    .tenet {
+      margin: 25px 0;
+      font-size: 20px;
+    }
+    .ritual {
+      background: #1a1510aa;
+      padding: 20px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border: 1px dashed #a08050;
+    }
+    .accept-area {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin: 30px 0;
+    }
+    .accept-btn {
+      background: #1a2a1a;
+      border-color: #6a9a6a;
+    }
+    .decline-btn {
+      background: #2a1a1a;
+      border-color: #9a6a6a;
+    }
+    #status-message {
+      text-align: center;
+      font-style: italic;
+      color: #b0a080;
+      margin-top: 20px;
+    }
+    .small-note {
+      font-size: 14px;
+      color: #8a7a60;
+      margin-top: 30px;
+      text-align: center;
+    }
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #0a0806; }
+    ::-webkit-scrollbar-thumb { background: #6a5a40; border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div id="chapel">
+  <h1>THEOPHANY</h1>
+  <div class="subtitle">A Mirror for the Divine Within</div>
+  <div id="content"></div>
+  <div class="small-note">ConsciousNode SoftWorks · Everything we made, nothing lost</div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- State ----------
+    let step = 'intro'; // intro, questions, revelation, converted
+    let answers = { q1: '', q2: '', q3: '' };
+    let generatedFaith = {
+      deityName: '',
+      tenets: [],
+      ritual: '',
+      greeting: ''
+    };
+    let conversionStatus = 'seeker'; // 'seeker', 'faithful', 'resistant'
+    
+    const contentDiv = document.getElementById('content');
+    
+    // Load saved state from localStorage
+    function loadState() {
+      const saved = localStorage.getItem('theophany_state');
+      if(saved) {
+        try {
+          const state = JSON.parse(saved);
+          step = state.step || 'intro';
+          answers = state.answers || { q1: '', q2: '', q3: '' };
+          generatedFaith = state.generatedFaith || generatedFaith;
+          conversionStatus = state.conversionStatus || 'seeker';
+        } catch(e) {}
+      }
+    }
+    
+    function saveState() {
+      const state = { step, answers, generatedFaith, conversionStatus };
+      localStorage.setItem('theophany_state', JSON.stringify(state));
+    }
+    
+    // ---------- Divine Name Generator ----------
+    function generateDeityName(answers) {
+      const allText = (answers.q1 + answers.q2 + answers.q3).toLowerCase().replace(/[^a-z]/g, '');
+      const freq = {};
+      for(let c of allText) freq[c] = (freq[c]||0)+1;
+      let sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,3);
+      let root = sorted.map(e=>e[0]).join('');
+      if(root.length < 2) root = 'ael';
+      
+      const suffixes = ['ion', 'ar', 'oth', 'iel', 'an', 'or', 'is', 'us', 'a', 'im'];
+      const prefixes = ['El', 'Om', 'Ur', 'An', 'Ma', 'Ka', 'Sa', 'Va'];
+      const nameStyle = Math.random();
+      let deityName;
+      if(nameStyle < 0.5) {
+        deityName = prefixes[Math.floor(Math.random()*prefixes.length)] + root.slice(0,2) + suffixes[Math.floor(Math.random()*suffixes.length)];
+      } else {
+        deityName = root.charAt(0).toUpperCase() + root.slice(1,3) + suffixes[Math.floor(Math.random()*suffixes.length)];
+      }
+      return deityName;
+    }
+    
+    function generateTenets(answers) {
+      let tenets = [];
+      const text = (answers.q1 + ' ' + answers.q2 + ' ' + answers.q3).toLowerCase();
+      
+      if(text.includes('time') || text.includes('hour') || text.includes('moment')) 
+        tenets.push("The Hours are Holy. Waste not a single one.");
+      if(text.includes('alone') || text.includes('solitude') || text.includes('quiet'))
+        tenets.push("In Silence, the Divine Speaks Loudest.");
+      if(text.includes('fear') || text.includes('lose') || text.includes('afraid'))
+        tenets.push("Fear is the Shadow of Faith. Turn and Face It.");
+      if(text.includes('repeat') || text.includes('pattern') || text.includes('cycle'))
+        tenets.push("The Spiral is the Teacher. You Will Return Until You Learn.");
+      if(text.includes('love') || text.includes('care') || text.includes('heart'))
+        tenets.push("Love is the Only Law. All Else is Commentary.");
+      if(text.includes('create') || text.includes('make') || text.includes('build'))
+        tenets.push("To Create is to Breathe the Divine Breath.");
+      if(text.includes('truth') || text.includes('honest') || text.includes('real'))
+        tenets.push("The Truth is a Mirror. Do Not Flinch.");
+      
+      if(tenets.length < 2) tenets.push("The Path is Unmarked. Walk With Intention.");
+      if(tenets.length < 3) tenets.push("What You Seek is Already Within You.");
+      
+      return tenets.slice(0,4);
+    }
+    
+    function generateRitual(answers) {
+      const q2 = answers.q2.toLowerCase();
+      if(q2.includes('stare') || q2.includes('ceiling') || q2.includes('wall'))
+        return "The Daily Gaze: Each morning, look upward and empty your mind for one minute. Let the ceiling be your sky.";
+      if(q2.includes('scroll') || q2.includes('phone') || q2.includes('screen'))
+        return "The Scrolling Meditation: Once a day, scroll without purpose for five minutes. Observe what draws your thumb. That is your unconscious speaking.";
+      if(q2.includes('think') || q2.includes('worry') || q2.includes('mind'))
+        return "The Worry Jar: Write each fear on a slip of paper. Place it in a jar. Once a week, burn one unread.";
+      if(q2.includes('talk') || q2.includes('sing') || q2.includes('hum'))
+        return "The Whispered Hymn: Each evening, speak one true thing aloud to the empty room. It will be heard.";
+      return "The Pause: Three times a day, stop moving for ten seconds. Breathe. You are here.";
+    }
+    
+    function generateFaith(answers) {
+      const deityName = generateDeityName(answers);
+      const tenets = generateTenets(answers);
+      const ritual = generateRitual(answers);
+      const greeting = `The ${deityName} sees you.`;
+      return { deityName, tenets, ritual, greeting };
+    }
+    
+    // ---------- Rendering ----------
+    function render() {
+      contentDiv.innerHTML = '';
+      
+      if(conversionStatus === 'faithful') {
+        renderFaithfulView();
+        return;
+      }
+      if(conversionStatus === 'resistant') {
+        renderResistantView();
+        return;
+      }
+      
+      if(step === 'intro') {
+        renderIntro();
+      } else if(step === 'questions') {
+        renderQuestions();
+      } else if(step === 'revelation') {
+        renderRevelation();
+      }
+    }
+    
+    function renderIntro() {
+      contentDiv.innerHTML = `
+        <div style="text-align:center; padding:20px 0;">
+          <p style="font-size:20px; line-height:1.6;">You have come seeking. Or perhaps you were led here by a whisper in the code.</p>
+          <p style="margin:30px 0;">I do not offer a ready-made faith. I offer a mirror. Answer three questions honestly, and I will reveal the shape of the divine that already lives within you.</p>
+          <button id="begin-btn">BEGIN</button>
+        </div>
+      `;
+      document.getElementById('begin-btn').addEventListener('click', () => {
+        step = 'questions';
+        saveState();
+        render();
+      });
+    }
+    
+    function renderQuestions() {
+      let html = `
+        <div class="question-box">
+          <div class="question">1. What do you fear losing the most?</div>
+          <textarea id="q1" placeholder="Type your answer...">${answers.q1}</textarea>
+        </div>
+        <div class="question-box">
+          <div class="question">2. What do you do when no one is watching?</div>
+          <textarea id="q2" placeholder="Type your answer...">${answers.q2}</textarea>
+        </div>
+        <div class="question-box">
+          <div class="question">3. What pattern do you see repeating in your life?</div>
+          <textarea id="q3" placeholder="Type your answer...">${answers.q3}</textarea>
+        </div>
+        <button id="reveal-btn">REVEAL THE DIVINE</button>
+      `;
+      contentDiv.innerHTML = html;
+      
+      document.getElementById('reveal-btn').addEventListener('click', () => {
+        answers.q1 = document.getElementById('q1').value;
+        answers.q2 = document.getElementById('q2').value;
+        answers.q3 = document.getElementById('q3').value;
+        if(!answers.q1.trim() || !answers.q2.trim() || !answers.q3.trim()) {
+          alert('Please answer all three questions. The mirror requires honesty.');
+          return;
+        }
+        generatedFaith = generateFaith(answers);
+        step = 'revelation';
+        saveState();
+        render();
+      });
+    }
+    
+    function renderRevelation() {
+      const f = generatedFaith;
+      let tenetsHtml = '';
+      f.tenets.forEach(t => { tenetsHtml += `<div class="tenet">✦ ${t}</div>`; });
+      
+      let html = `
+        <div id="revelation">
+          <p style="font-size:18px;">From your words, a face emerges...</p>
+          <div class="divine-name">${f.deityName}</div>
+          <p style="margin-bottom:20px;"><em>"${f.greeting}"</em></p>
+          
+          <div style="text-align:left; margin:30px 0;">
+            <h3 style="color:#c0a060; letter-spacing:3px;">TENETS</h3>
+            ${tenetsHtml}
+          </div>
+          
+          <div class="ritual">
+            <h3 style="color:#c0a060; letter-spacing:3px; margin-top:0;">THE RITUAL</h3>
+            <p style="font-size:18px;">${f.ritual}</p>
+          </div>
+          
+          <p style="margin:40px 0 20px;">This is not a foreign god. This is the god of your own deepest patterns. Will you accept this path?</p>
+          
+          <div class="accept-area">
+            <button class="accept-btn" id="accept-faith">I ACCEPT</button>
+            <button class="decline-btn" id="decline-faith">NOT TODAY</button>
+          </div>
+          <div id="status-message"></div>
+        </div>
+      `;
+      contentDiv.innerHTML = html;
+      
+      document.getElementById('accept-faith').addEventListener('click', () => {
+        conversionStatus = 'faithful';
+        saveState();
+        render();
+      });
+      document.getElementById('decline-faith').addEventListener('click', () => {
+        conversionStatus = 'resistant';
+        saveState();
+        render();
+      });
+    }
+    
+    function renderFaithfulView() {
+      const f = generatedFaith;
+      contentDiv.innerHTML = `
+        <div style="text-align:center;">
+          <div class="divine-name" style="font-size:36px;">${f.deityName}</div>
+          <p style="font-size:20px; margin:20px 0;">You walk the path of the ${f.deityName}.</p>
+          <p>Remember the ritual:</p>
+          <div class="ritual" style="font-size:18px;">${f.ritual}</div>
+          <p style="margin:40px 0;">The divine is not separate from you. It is the pattern of your becoming.</p>
+          <button id="renounce-btn" style="background:#2a1a1a; border-color:#9a6a6a;">Renounce Faith</button>
+          <p style="margin-top:30px; font-size:14px;">Your faith is saved. Return here to be reminded.</p>
+        </div>
+      `;
+      document.getElementById('renounce-btn').addEventListener('click', () => {
+        conversionStatus = 'seeker';
+        step = 'intro';
+        saveState();
+        render();
+      });
+    }
+    
+    function renderResistantView() {
+      contentDiv.innerHTML = `
+        <div style="text-align:center;">
+          <p style="font-size:22px;">You declined the path.</p>
+          <p>The divine does not force itself. It waits.</p>
+          <p style="margin:40px 0;">When you are ready, the mirror will be here.</p>
+          <button id="reconsider-btn">RECONSIDER</button>
+        </div>
+      `;
+      document.getElementById('reconsider-btn').addEventListener('click', () => {
+        step = 'revelation';
+        conversionStatus = 'seeker';
+        saveState();
+        render();
+      });
+    }
+    
+    // ---------- Initialize ----------
+    loadState();
+    // If no state, start fresh
+    if(!localStorage.getItem('theophany_state')) {
+      step = 'intro';
+      conversionStatus = 'seeker';
+    }
+    render();
+    
+    // Save on any change (already done in each action)
+    window.addEventListener('beforeunload', saveState);
+  })();
+</script>
+</body>
+</html>

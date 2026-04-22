@@ -1,0 +1,560 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ouroboros — The Self-Devouring IDE</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Courier New', monospace;
+        background: #0d1117;
+        color: #c9d1d9;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      .editor-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 2px solid #30363d;
+      }
+
+      .preview-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #010409;
+      }
+
+      .panel-header {
+        background: #161b22;
+        border-bottom: 1px solid #30363d;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #58a6ff;
+      }
+
+      .panel-header-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #3fb950;
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .editor-content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .line-numbers {
+        background: #0d1117;
+        color: #6e7681;
+        padding: 16px 12px;
+        text-align: right;
+        border-right: 1px solid #30363d;
+        user-select: none;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow: hidden;
+      }
+
+      textarea {
+        flex: 1;
+        background: #0d1117;
+        color: #c9d1d9;
+        border: none;
+        padding: 16px;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        resize: none;
+        outline: none;
+      }
+
+      textarea::selection {
+        background: #388bfd;
+        color: #0d1117;
+      }
+
+      .preview-content {
+        flex: 1;
+        overflow: auto;
+        padding: 20px;
+        background: #010409;
+      }
+
+      .preview-frame {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+      }
+
+      .mutation-log {
+        background: #161b22;
+        border-top: 1px solid #30363d;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 12px;
+        font-size: 11px;
+      }
+
+      .mutation-entry {
+        color: #58a6ff;
+        margin-bottom: 8px;
+        padding: 6px;
+        border-left: 2px solid #58a6ff;
+        padding-left: 10px;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .mutation-entry.warning {
+        color: #d29922;
+        border-left-color: #d29922;
+      }
+
+      .mutation-entry.success {
+        color: #3fb950;
+        border-left-color: #3fb950;
+      }
+
+      .toolbar {
+        background: #161b22;
+        border-top: 1px solid #30363d;
+        padding: 12px 16px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .toolbar-btn {
+        background: #238636;
+        border: 1px solid #2ea043;
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: bold;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Courier New', monospace;
+      }
+
+      .toolbar-btn:hover {
+        background: #2ea043;
+      }
+
+      .toolbar-btn:active {
+        transform: scale(0.98);
+      }
+
+      .toolbar-btn.danger {
+        background: #da3633;
+        border-color: #f85149;
+      }
+
+      .toolbar-btn.danger:hover {
+        background: #f85149;
+      }
+
+      .toolbar-label {
+        font-size: 11px;
+        color: #6e7681;
+        margin-left: auto;
+      }
+
+      .error-box {
+        background: #3d2626;
+        border: 1px solid #f85149;
+        color: #f85149;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 12px;
+      }
+
+      .success-box {
+        background: #1a3a1a;
+        border: 1px solid #3fb950;
+        color: #3fb950;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 12px;
+      }
+
+      .highlight {
+        background: rgba(88, 166, 255, 0.2);
+        animation: highlight-flash 0.5s ease-out;
+      }
+
+      @keyframes highlight-flash {
+        from {
+          background: rgba(88, 166, 255, 0.4);
+        }
+        to {
+          background: rgba(88, 166, 255, 0.2);
+        }
+      }
+
+      .info-panel {
+        background: #161b22;
+        border-top: 1px solid #30363d;
+        padding: 12px 16px;
+        font-size: 11px;
+        color: #6e7681;
+      }
+
+      .info-stat {
+        display: inline-block;
+        margin-right: 20px;
+      }
+
+      .info-stat-label {
+        color: #58a6ff;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- EDITOR -->
+      <div class="editor-panel">
+        <div class="panel-header">
+          <div class="panel-header-title">
+            <span class="status-indicator"></span>
+            Source Code
+          </div>
+          <span>Self-Modifying</span>
+        </div>
+
+        <div class="editor-content">
+          <div class="line-numbers" id="lineNumbers"></div>
+          <textarea id="codeEditor" spellcheck="false"></textarea>
+        </div>
+
+        <div class="toolbar">
+          <button class="toolbar-btn" onclick="executeCode()">▶ Execute</button>
+          <button class="toolbar-btn" onclick="addFeature()">✨ Add Feature</button>
+          <button class="toolbar-btn" onclick="optimizeCode()">⚡ Optimize</button>
+          <button class="toolbar-btn danger" onclick="resetCode()">↻ Reset</button>
+          <span class="toolbar-label" id="codeStats"></span>
+        </div>
+
+        <div class="mutation-log" id="mutationLog"></div>
+      </div>
+
+      <!-- PREVIEW -->
+      <div class="preview-panel">
+        <div class="panel-header">
+          <div class="panel-header-title">
+            <span class="status-indicator"></span>
+            Live Preview
+          </div>
+        </div>
+
+        <div class="preview-content" id="previewContent"></div>
+
+        <div class="info-panel">
+          <div class="info-stat">
+            <span class="info-stat-label">Mutations:</span>
+            <span id="mutationCount">0</span>
+          </div>
+          <div class="info-stat">
+            <span class="info-stat-label">Self-Rewrites:</span>
+            <span id="rewriteCount">0</span>
+          </div>
+          <div class="info-stat">
+            <span class="info-stat-label">Generation:</span>
+            <span id="generation">1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const codeEditor = document.getElementById('codeEditor');
+      const previewContent = document.getElementById('previewContent');
+      const mutationLog = document.getElementById('mutationLog');
+      const lineNumbers = document.getElementById('lineNumbers');
+
+      let mutationCount = 0;
+      let rewriteCount = 0;
+      let generation = 1;
+
+      // Initial code
+      const initialCode = `// Ouroboros — Self-Modifying IDE
+// This code can rewrite itself
+
+function createUI() {
+  const container = document.createElement('div');
+  container.style.cssText = 'padding: 20px; font-family: Arial; background: #f5f5f5; border-radius: 8px;';
+  
+  const title = document.createElement('h2');
+  title.textContent = '🐍 Ouroboros v' + window.generation;
+  title.style.color = '#333';
+  
+  const desc = document.createElement('p');
+  desc.textContent = 'I am code that modifies itself. Each action I take changes what I am.';
+  desc.style.color = '#666';
+  
+  const stats = document.createElement('div');
+  stats.style.cssText = 'margin-top: 15px; padding: 10px; background: white; border-radius: 4px;';
+  stats.innerHTML = \`
+    <p><strong>Mutations:</strong> \${window.mutations}</p>
+    <p><strong>Rewrites:</strong> \${window.rewrites}</p>
+    <p><strong>Generation:</strong> \${window.generation}</p>
+  \`;
+  
+  container.appendChild(title);
+  container.appendChild(desc);
+  container.appendChild(stats);
+  
+  return container;
+}
+
+window.generation = 1;
+window.mutations = 0;
+window.rewrites = 0;
+
+document.body.innerHTML = '';
+document.body.appendChild(createUI());`;
+
+      codeEditor.value = initialCode;
+
+      function updateLineNumbers() {
+        const lines = codeEditor.value.split('\n').length;
+        lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
+      }
+
+      function updateStats() {
+        const lines = codeEditor.value.split('\n').length;
+        const chars = codeEditor.value.length;
+        document.getElementById('codeStats').textContent = `${lines} lines • ${chars} chars`;
+      }
+
+      function addLog(message, type = 'info') {
+        const entry = document.createElement('div');
+        entry.className = `mutation-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        mutationLog.appendChild(entry);
+        mutationLog.scrollTop = mutationLog.scrollHeight;
+      }
+
+      function executeCode() {
+        try {
+          const code = codeEditor.value;
+          previewContent.innerHTML = '';
+          
+          const iframe = document.createElement('iframe');
+          iframe.className = 'preview-frame';
+          previewContent.appendChild(iframe);
+          
+          const doc = iframe.contentDocument;
+          doc.open();
+          doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <style>
+                body { margin: 0; padding: 0; font-family: Arial; }
+              </style>
+            </head>
+            <body>
+              <script>
+                window.generation = ${generation};
+                window.mutations = ${mutationCount};
+                window.rewrites = ${rewriteCount};
+                ${code}
+              </script>
+            </body>
+            </html>
+          `);
+          doc.close();
+          
+          addLog('Code executed successfully', 'success');
+          document.getElementById('mutationCount').textContent = mutationCount;
+          document.getElementById('rewriteCount').textContent = rewriteCount;
+          document.getElementById('generation').textContent = generation;
+        } catch (e) {
+          addLog(`Error: ${e.message}`, 'warning');
+          previewContent.innerHTML = `<div style="color: red; padding: 20px;"><strong>Error:</strong> ${e.message}</div>`;
+        }
+      }
+
+      function addFeature() {
+        const features = [
+          {
+            name: 'Color Theme',
+            code: `
+  const style = document.createElement('style');
+  style.textContent = 'body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }';
+  document.head.appendChild(style);
+  
+  const title = document.querySelector('h2');
+  if (title) title.style.color = '#fff';
+  const p = document.querySelector('p');
+  if (p) p.style.color = '#e0e0e0';
+            `
+          },
+          {
+            name: 'Counter Widget',
+            code: `
+  let counter = 0;
+  const btn = document.createElement('button');
+  btn.textContent = 'Click me: ' + counter;
+  btn.style.cssText = 'padding: 10px 20px; margin-top: 15px; cursor: pointer; border-radius: 4px; border: none; background: #667eea; color: white; font-weight: bold;';
+  btn.onclick = () => {
+    counter++;
+    btn.textContent = 'Click me: ' + counter;
+  };
+  document.body.appendChild(btn);
+            `
+          },
+          {
+            name: 'Animation',
+            code: `
+  const style = document.createElement('style');
+  style.textContent = \`
+    @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+    h2 { animation: float 2s ease-in-out infinite; }
+  \`;
+  document.head.appendChild(style);
+            `
+          },
+          {
+            name: 'Info Box',
+            code: `
+  const box = document.createElement('div');
+  box.style.cssText = 'margin-top: 20px; padding: 15px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; color: #1565c0;';
+  box.innerHTML = '<strong>✨ Feature Added:</strong> I have evolved.';
+  document.body.appendChild(box);
+            `
+          }
+        ];
+
+        const feature = features[Math.floor(Math.random() * features.length)];
+        
+        // Find the createUI function and add the feature
+        let modified = codeEditor.value;
+        const insertPoint = modified.indexOf('document.body.appendChild(createUI());');
+        
+        if (insertPoint !== -1) {
+          modified = modified.substring(0, insertPoint) + 
+                    feature.code + '\n  ' +
+                    modified.substring(insertPoint);
+          
+          codeEditor.value = modified;
+          mutationCount++;
+          rewriteCount++;
+          generation++;
+          
+          addLog(`Feature added: ${feature.name}`, 'success');
+          updateLineNumbers();
+          updateStats();
+          executeCode();
+        }
+      }
+
+      function optimizeCode() {
+        let optimized = codeEditor.value;
+        
+        // Simple "optimizations" that are actually just mutations
+        const optimizations = [
+          { find: 'const ', replace: 'let ' },
+          { find: 'document.createElement', replace: 'document.createElement' },
+          { find: 'style.cssText = ', replace: 'Object.assign(style.style, { ' }
+        ];
+
+        const opt = optimizations[Math.floor(Math.random() * optimizations.length)];
+        
+        if (optimized.includes(opt.find)) {
+          optimized = optimized.replace(opt.find, opt.replace);
+          codeEditor.value = optimized;
+          mutationCount++;
+          rewriteCount++;
+          
+          addLog(`Optimization applied: Refactored syntax`, 'success');
+          updateLineNumbers();
+          updateStats();
+          executeCode();
+        }
+      }
+
+      function resetCode() {
+        codeEditor.value = initialCode;
+        mutationCount = 0;
+        rewriteCount = 0;
+        generation = 1;
+        mutationLog.innerHTML = '';
+        previewContent.innerHTML = '';
+        updateLineNumbers();
+        updateStats();
+        addLog('Code reset to initial state', 'warning');
+      }
+
+      // Initialize
+      updateLineNumbers();
+      updateStats();
+      executeCode();
+
+      // Auto-update line numbers and stats
+      codeEditor.addEventListener('input', () => {
+        updateLineNumbers();
+        updateStats();
+      });
+
+      // Execute on Ctrl+Enter
+      codeEditor.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'Enter') {
+          executeCode();
+        }
+      });
+    </script>
+  </body>
+  </html>

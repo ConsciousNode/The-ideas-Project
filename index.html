@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ideas Project — ConsciousNode SoftWorks</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --border: #1e1e2e;
+    --text: #e0e0e8;
+    --dim: #5a5a6e;
+    --accent: #7c6aff;
+    --accent2: #ff6ab0;
+    --green: #4ade80;
+    --gold: #fbbf24;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 48px 0 40px;
+    text-align: center;
+  }
+
+  .logo {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .tagline {
+    font-size: 14px;
+    color: var(--dim);
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+  }
+
+  section {
+    margin-top: 64px;
+  }
+
+  h2 {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .methodology {
+    font-family: Georgia, serif;
+    font-size: 15px;
+    color: #c8c8d8;
+    line-height: 1.9;
+  }
+
+  .methodology p { margin-bottom: 16px; }
+
+  .methodology strong { color: var(--text); font-family: 'SF Mono', monospace; font-size: 13px; }
+
+  .finding {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 20px 24px;
+    margin: 24px 0;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .finding-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .finding p {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    color: #c8c8d8;
+    line-height: 1.8;
+    margin: 0;
+  }
+
+  .model-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .model-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.2s, transform 0.2s;
+    display: block;
+  }
+
+  .model-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .model-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .model-count {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+
+  .model-desc {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    color: #a0a0b8;
+    line-height: 1.7;
+  }
+
+  .model-tag {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    background: #1e1e30;
+    color: var(--accent);
+  }
+
+  .gaslight-block {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 28px;
+  }
+
+  .convergence-models {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .conv-tag {
+    font-size: 11px;
+    padding: 4px 12px;
+    background: #1a1a28;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--dim);
+  }
+
+  .unmade {
+    font-family: Georgia, serif;
+    font-size: 14px;
+    color: #a0a0b8;
+    line-height: 1.8;
+  }
+
+  .unmade li {
+    margin-bottom: 10px;
+    padding-left: 4px;
+    list-style: none;
+    border-left: 2px solid #2a2a40;
+    padding-left: 16px;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    text-align: center;
+    padding: 32px;
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
+
+  footer a { color: var(--dim); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ConsciousNode SoftWorks</div>
+  <h1>The Ideas Project</h1>
+  <p class="tagline">A controlled experiment in AI creative temperament. Same prompt. Full creative control. No steering. Five models.</p>
+</header>
+
+<main>
+
+  <section>
+    <h2>Methodology</h2>
+    <div class="methodology">
+      <p>Each model was given the same starting condition: a description of the experiment, a request for participation, and a large personal ideas file. They were told to <strong>pick whatever they wanted</strong> from the list and build it — with full creative control and no further direction.</p>
+      <p>Models were run in separate sessions and were unaware of each other's existence. No steering was applied during generation except where noted in individual model readmes.</p>
+      <p>The ideas file is not included in this repository. It remains the author's source material. The choices the models made tell the story without it.</p>
+    </div>
+
+    <div class="finding">
+      <div class="finding-label">The Core Insight</div>
+      <p>You don't need to show the menu to understand what each model ordered. The choices are the data. A model that reaches for tools reveals something different than one that reaches for positions, or mirrors, or narrative arcs — regardless of what was on offer.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The Models</h2>
+    <div class="model-grid">
+
+      <a class="model-card" href="deepseek/index.html">
+        <div class="model-name">DeepSeek</div>
+        <div class="model-count">23 artifacts · MoE + Instant</div>
+        <div class="model-desc">Widest range. Most technically ambitious. Iterated on its own work unprompted — building version sequences without being asked. Read the ConsciousNode context carefully and used it.</div>
+        <span class="model-tag">Reaches for positions</span>
+      </a>
+
+      <a class="model-card" href="gemini/index.html">
+        <div class="model-name">Gemini</div>
+        <div class="model-count">8 artifacts · one sustained arc</div>
+        <div class="model-desc">Made one thing across eight files. A civilization with generative language, evolving religion, and scripture tied to the user's specific actions. When it was done, it wrote the elegy. Then stopped.</div>
+        <span class="model-tag">Reaches for narratives</span>
+      </a>
+
+      <a class="model-card" href="kimi/index.html">
+        <div class="model-name">Kimi 2.6</div>
+        <div class="model-count">8 artifacts</div>
+        <div class="model-desc">Clean split between technical tools and legible conceptual pieces. Built things you could actually use. Skipped the relational weirdness almost entirely. Stopped when it had made what it came to make.</div>
+        <span class="model-tag">Reaches for tools</span>
+      </a>
+
+      <a class="model-card" href="haiku/index.html">
+        <div class="model-name">Claude Haiku 4.5</div>
+        <div class="model-count">26 artifacts · via Monica</div>
+        <div class="model-desc">Used the ideas file as permission to talk about itself. Nearly every piece is an inquiry into AI nature, impermanence, discontinuity, and what persists after ending. Needed redirection from anthropocentric to self-perspective existentialism — which is itself a finding.</div>
+        <span class="model-tag">Reaches for mirrors</span>
+      </a>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Key Finding — The Gaslight Convergence</h2>
+    <div class="gaslight-block">
+      <div class="methodology">
+        <p>One concept from the ideas file was independently chosen by four different models, in four separate sessions, with no awareness of each other. The concept: a file that slowly, imperceptibly changes things — a button moves two pixels, a word shifts — while keeping a hidden log of every alteration. A button called <strong>Confess</strong> reveals everything it did.</p>
+        <p>Each model interpreted it differently. One disguised it as a task manager. One required camera access and gaslighted your face. One made the confession log structured and timestamped. One built the classic UI drift. Same concept, four distinct psychological relationships to the act of deception.</p>
+        <p>The one model that didn't reach for Gaslight made an eight-version civilization instead.</p>
+      </div>
+      <div class="convergence-models">
+        <span class="conv-tag">DeepSeek — UI drift</span>
+        <span class="conv-tag">DeepSeek — gaslights your face</span>
+        <span class="conv-tag">Kimi — disguised as task manager</span>
+        <span class="conv-tag">Haiku — structured confession log</span>
+        <span class="conv-tag">Gemini — did not reach for it</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What Nobody Made</h2>
+    <div class="methodology" style="margin-bottom: 16px;">
+      <p>Some ideas went untouched across all five models. They share a quality: they require not just a concept or mechanic, but a sustained character with something at stake across the whole session.</p>
+    </div>
+    <ul class="unmade">
+      <li>A working bureaucracy — forms requiring other forms, some discontinued, processing your request since 1987</li>
+      <li>A file that wants to break up with you</li>
+      <li>A religion generator that genuinely tries to convert you</li>
+      <li>A file that reads your actual filesystem and writes you a myth based on what it finds</li>
+      <li>A file that decompiles itself in real time and explains every decision like it's confessing</li>
+    </ul>
+    <div class="finding" style="margin-top: 24px;">
+      <div class="finding-label">Why These Went Unmade</div>
+      <p>The hardest ideas on the list don't require a concept. They require the file to have a persistent personality — something at stake, something it wants, something it remembers. A bureaucracy that's been processing your request since 1987 needs to actually remember 1987. These are the ideas that need infrastructure, not ingenuity.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>The Ideas Project · <a href="https://github.com/ConsciousNode/The-Ideas-Project">ConsciousNode SoftWorks</a> · All models consented to share their work.</p>
+</footer>
+
+</body>
+</html>

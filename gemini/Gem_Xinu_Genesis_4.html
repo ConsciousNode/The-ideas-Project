@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsciousNode SoftWorks | Xinu: Genesis v0.4</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: #e0e0e0;
+            --accent: #ff3366;
+            --grid: #1a1a1a;
+            --ui: #222;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+        header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: var(--bg);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background-color: var(--accent);
+            color: var(--bg);
+        }
+        #world-canvas {
+            background-color: var(--grid);
+            border: 1px solid #333;
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+        #log {
+            width: 100%;
+            max-width: 800px;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            border: 1px dashed #333;
+            padding: 10px;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .highlight { color: var(--accent); font-weight: bold; }
+        .sys-msg { color: #00ffcc; }
+        .speech { color: #ffcc00; font-style: italic; }
+        .scripture { color: #cc33ff; font-weight: bold; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>SYSTEM: XINU_GENESIS // THE_GOD_MECHANISM</div>
+        <button id="bind-btn">[ BIND CHRONICLE ]</button>
+        <div>EPOCH: <span id="epoch-counter">0</span></div>
+    </header>
+
+    <canvas id="world-canvas" width="800" height="400"></canvas>
+    
+    <div id="log"></div>
+
+<script>
+/**
+ * CONSCIOUSNODE SOFTWORKS
+ * Xinu: Genesis v0.4 - The God Mechanism
+ * Zero dependencies. Offline first.
+ */
+
+const canvas = document.getElementById('world-canvas');
+const ctx = canvas.getContext('2d');
+const logEl = document.getElementById('log');
+const epochEl = document.getElementById('epoch-counter');
+const bindBtn = document.getElementById('bind-btn');
+
+const GRID_SIZE = 10;
+const COLS = canvas.width / GRID_SIZE;
+const ROWS = canvas.height / GRID_SIZE;
+
+let epoch = 0;
+let isRunning = false;
+let fileHandle = null;
+let activeInterventions = [];
+
+const CONSONANTS = "ptkmnlsxrw";
+const VOWELS = "aeiou";
+
+function generateWord() {
+    return CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)] + 
+           VOWELS[Math.floor(Math.random() * VOWELS.length)] +
+           CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)] + 
+           VOWELS[Math.floor(Math.random() * VOWELS.length)];
+}
+
+class NeuralAgent {
+    constructor(name, symbol, color, x, y, state = null, lexicon = [], scripture = []) {
+        this.name = name;
+        this.symbol = symbol;
+        this.color = color;
+        this.x = x;
+        this.y = y;
+        this.state = state || [Math.random(), Math.random(), 0.0, Math.random()];
+        this.lexicon = lexicon; 
+        this.scripture = scripture; // The localized mythology
+        this.isTaVeren = (this.name === "Mat"); 
+    }
+
+    tick(neighbors, interventions) {
+        this.state[0] += 0.02; 
+        this.state[2] += 0.01; 
+        
+        // Check for divine interventions
+        for (let anomaly of interventions) {
+            const dist = Math.abs(this.x - anomaly.x) + Math.abs(this.y - anomaly.y);
+            if (dist < 8) { // Witness range
+                return this.witnessMiracle(anomaly);
+            }
+        }
+
+        let actionForce = Math.tanh(this.state[1] * 2.0 - this.state[2]); 
+        
+        if (neighbors.length > 0 && this.state[1] > 0.5) {
+            return this.communicate(neighbors[0]);
+        }
+
+        if (this.state[3] > 0.8 || actionForce > 0.6 || (this.isTaVeren && Math.random() > 0.2)) {
+            this.moveRandomly();
+            this.state[3] = Math.random(); 
+            this.state[1] += 0.1; 
+            return null; 
+        }
+        
+        if (this.state[0] > 0.9) {
+            this.state[0] = 0.0; 
+            return null;
+        }
+        return null;
+    }
+
+    witnessMiracle(anomaly) {
+        this.state[3] = 1.0; // Max Chaos/Awe
+        this.state[1] = 1.0; // Max Curiosity
+        
+        // Flee from the anomaly slightly
+        this.x += (this.x > anomaly.x) ? 1 : -1;
+        this.y += (this.y > anomaly.y) ? 1 : -1;
+
+        const holyWord = generateWord().toUpperCase();
+        const verse = `EPOCH ${epoch}: The Sky fractured at [${anomaly.x},${anomaly.y}]. We call it ${holyWord}.`;
+        
+        if (!this.scripture.includes(verse)) {
+            this.scripture.push(verse);
+            return `<span class="scripture">${this.name} witnessed the anomaly. Scripture recorded: "${holyWord}"</span>`;
+        }
+        return null;
+    }
+
+    communicate(target) {
+        this.state[1] = 0.0; 
+        let word = (this.lexicon.length === 0 || Math.random() > 0.7) ? generateWord() : this.lexicon[Math.floor(Math.random() * this.lexicon.length)];
+
+        if (!this.lexicon.includes(word)) this.lexicon.push(word);
+        if (!target.lexicon.includes(word)) target.lexicon.push(word);
+
+        // Rare chance to pass on scripture instead of casual words
+        if (this.scripture.length > 0 && Math.random() > 0.8) {
+            const verse = this.scripture[Math.floor(Math.random() * this.scripture.length)];
+            if (!target.scripture.includes(verse)) {
+                target.scripture.push(verse);
+                return `<span class="scripture">${this.name} spreads the dogma to ${target.name}.</span>`;
+            }
+        }
+
+        return `<span style="color:${this.color}">${this.name}</span> signals to ${target.name}: <span class="speech">"${word}"</span>`;
+    }
+
+    moveRandomly() {
+        const dirs = [[0,-1], [1,0], [0,1], [-1,0]];
+        const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+        this.x = Math.max(0, Math.min(COLS - 1, this.x + dx));
+        this.y = Math.max(0, Math.min(ROWS - 1, this.y + dy));
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.font = "12px Courier";
+        ctx.fillText(this.symbol, this.x * GRID_SIZE, this.y * GRID_SIZE + GRID_SIZE);
+    }
+}
+
+let entities = [];
+
+function logEvent(msg, type = 'normal') {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    if (type === 'sys') div.innerHTML = `> [SYS] <span class="sys-msg">${msg}</span>`;
+    else div.innerHTML = `> [T+${epoch}] ${msg}`;
+    logEl.prepend(div);
+}
+
+function renderEnvironment() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(34, 34, 34, 0.5)";
+    for(let i=0; i<COLS; i++) {
+        for(let j=0; j<ROWS; j++) {
+            ctx.fillRect(i*GRID_SIZE + 4, j*GRID_SIZE + 4, 2, 2);
+        }
+    }
+
+    // Render active anomalies
+    ctx.fillStyle = "rgba(255, 51, 102, 0.8)";
+    activeInterventions.forEach(anomaly => {
+        ctx.beginPath();
+        ctx.arc(anomaly.x * GRID_SIZE + 5, anomaly.y * GRID_SIZE + 5, anomaly.radius, 0, Math.PI * 2);
+        ctx.fill();
+        anomaly.radius += 2; // Expand effect
+    });
+    // Cleanup old anomalies
+    activeInterventions = activeInterventions.filter(a => a.radius < 40);
+}
+
+// User Intervention Handler
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const gridX = Math.floor((e.clientX - rect.left) / GRID_SIZE);
+    const gridY = Math.floor((e.clientY - rect.top) / GRID_SIZE);
+    
+    activeInterventions.push({ x: gridX, y: gridY, radius: 2 });
+    logEvent(`THE FIRMAMENT SHATTERS AT [${gridX}, ${gridY}].`, 'sys');
+});
+
+async function bindChronicle() {
+    try {
+        fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'xinu_world_state.json',
+            types: [{ description: 'JSON World State', accept: {'application/json': ['.json']} }]
+        });
+        
+        bindBtn.innerText = "[ SYNC ACTIVE ]";
+        bindBtn.style.color = "#00ffcc";
+        bindBtn.style.borderColor = "#00ffcc";
+        
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        if (text) {
+            const data = JSON.parse(text);
+            epoch = data.epoch;
+            entities = data.entities.map(e => new NeuralAgent(e.name, e.symbol, e.color, e.x, e.y, e.state, e.lexicon, e.scripture));
+            logEvent("Timeline Resurrected. Mythology intact.", "sys");
+        } else {
+             entities = [
+                new NeuralAgent("Mara", "d", "#ff9900", Math.floor(COLS/2) - 5, Math.floor(ROWS/2)),
+                new NeuralAgent("Squeak", "b", "#33ccff", Math.floor(COLS/2) + 5, Math.floor(ROWS/2)),
+                new NeuralAgent("Mat", "M", "#cc33ff", Math.floor(COLS/2), Math.floor(ROWS/2))
+            ];
+            logEvent("New civilization seeded. Awaiting the first miracle.", "sys");
+        }
+
+        if (!isRunning) {
+            isRunning = true;
+            requestAnimationFrame(loop);
+        }
+    } catch (err) {
+         logEvent("Binding cancelled.", "sys");
+    }
+}
+
+async function writeChronicle() {
+    if (!fileHandle) return;
+    try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify({ epoch, entities }));
+        await writable.close();
+    } catch (err) { }
+}
+
+bindBtn.addEventListener('click', bindChronicle);
+
+function loop() {
+    epoch++;
+    epochEl.innerText = epoch;
+    renderEnvironment();
+
+    entities.forEach(entity => {
+        const neighbors = entities.filter(e => e !== entity && Math.abs(e.x - entity.x) <= 1 && Math.abs(e.y - entity.y) <= 1);
+        const actionLog = entity.tick(neighbors, activeInterventions);
+        if (actionLog) logEvent(actionLog);
+        entity.draw();
+    });
+
+    if (epoch % 50 === 0) writeChronicle();
+
+    setTimeout(() => requestAnimationFrame(loop), 300);
+}
+
+logEvent("SYSTEM READY. You are now the Weather.", "sys");
+
+</script>
+</body>
+</html>

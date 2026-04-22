@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE TRIAL • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #1a1210;
+      background-image: radial-gradient(circle at 20% 20%, #2a1e18 0%, #0a0604 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 20px;
+      transition: background 1s;
+    }
+    body.convicted {
+      background: #0a0404;
+      background-image: radial-gradient(circle at 20% 20%, #1a0808 0%, #050000 100%);
+    }
+    body.acquitted {
+      background: #0a1a0a;
+      background-image: radial-gradient(circle at 20% 20%, #1a2a18 0%, #050a04 100%);
+    }
+    #courtroom {
+      width: 900px;
+      max-width: 100%;
+      background: #1e1612;
+      border: 3px solid #aa8060;
+      box-shadow: 0 0 40px #000000aa, inset 0 0 20px #00000055;
+      border-radius: 8px;
+      padding: 30px;
+      color: #d0c0a0;
+    }
+    h1 {
+      margin: 0 0 5px;
+      font-size: 36px;
+      text-align: center;
+      letter-spacing: 8px;
+      color: #c0a060;
+      text-shadow: 0 0 10px #a08030;
+    }
+    .subtitle {
+      text-align: center;
+      color: #a09070;
+      margin-bottom: 30px;
+      border-bottom: 1px solid #6a5a40;
+      padding-bottom: 15px;
+    }
+    #prosecution-area {
+      background: #0a0806aa;
+      border-left: 6px solid #aa3030;
+      padding: 20px;
+      margin-bottom: 25px;
+      min-height: 120px;
+    }
+    .speaker {
+      font-weight: bold;
+      color: #aa6060;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    #prosecutor-text {
+      line-height: 1.6;
+      font-size: 18px;
+    }
+    #jury-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 20px 0;
+      justify-content: center;
+    }
+    .juror {
+      width: 50px;
+      height: 60px;
+      background: #2a2018;
+      border: 1px solid #8a7a60;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: 0.3s;
+    }
+    .juror-name {
+      font-size: 10px;
+      color: #b0a080;
+      margin-top: 4px;
+    }
+    .juror.against { color: #aa4040; border-color: #aa4040; }
+    .juror.for { color: #40aa40; border-color: #40aa40; }
+    #defense-area {
+      margin: 25px 0;
+    }
+    textarea {
+      width: 100%;
+      background: #0e0a08;
+      border: 1px solid #aa9060;
+      color: #e0d0b0;
+      font-family: inherit;
+      font-size: 18px;
+      padding: 15px;
+      border-radius: 4px;
+      resize: vertical;
+      outline: none;
+      margin: 10px 0;
+    }
+    .button-group {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      margin: 20px 0;
+    }
+    button {
+      background: #2a1e14;
+      border: 2px solid #aa8060;
+      color: #d0b890;
+      padding: 12px 24px;
+      font-size: 18px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: 0.1s;
+    }
+    button:hover {
+      background: #4a3a2a;
+      border-color: #c0a070;
+    }
+    #verdict-display {
+      text-align: center;
+      font-size: 28px;
+      margin: 20px 0;
+      min-height: 60px;
+    }
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-20deg);
+      font-size: 80px;
+      color: #ffffff22;
+      pointer-events: none;
+      z-index: 10;
+      text-transform: uppercase;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    .evidence-log {
+      font-size: 12px;
+      color: #9a8a70;
+      margin-top: 20px;
+      border-top: 1px solid #5a4a3a;
+      padding-top: 15px;
+    }
+  </style>
+</head>
+<body id="courtroom-body">
+<div id="courtroom">
+  <h1>⚖️ THE TRIAL ⚖️</h1>
+  <div class="subtitle">Case No. 2026-04-22 — The File vs. You</div>
+  
+  <div id="prosecution-area">
+    <div class="speaker">📁 PROSECUTOR (The File)</div>
+    <div id="prosecutor-text"></div>
+  </div>
+  
+  <div id="jury-box"></div>
+  
+  <div id="defense-area">
+    <div class="speaker" style="color:#6a9a6a;">✍️ YOUR TESTIMONY</div>
+    <textarea id="testimony-input" placeholder="Speak in your defense..."></textarea>
+    <div class="button-group">
+      <button id="testify-btn">🗣️ TESTIFY</button>
+      <button id="rest-case-btn">⚖️ REST MY CASE</button>
+    </div>
+  </div>
+  
+  <div id="verdict-display"></div>
+  
+  <div class="evidence-log">
+    <span>📋 EVIDENCE LOG (stored permanently):</span>
+    <div id="evidence-list"></div>
+  </div>
+  <div style="text-align:center; margin-top:20px; font-size:11px; color:#8a7a6a;">
+    ConsciousNode SoftWorks · The record is eternal
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+    
+    // ---------- Persistent Dossier ----------
+    let dossier = {
+      sessions: [], // { date, duration, keystrokes, backspaces }
+      charges: [],
+      verdict: null, // 'guilty', 'not_guilty', null
+      convictionDate: null
+    };
+    
+    // Current trial state
+    let trialStep = 'opening'; // opening, testimony, cross, deliberation, concluded
+    let jury = [];
+    let currentChargeIndex = 0;
+    let testimonyCount = 0;
+    let prosecutorQuestions = [];
+    
+    // UI Elements
+    const prosecutorText = document.getElementById('prosecutor-text');
+    const juryBox = document.getElementById('jury-box');
+    const testimonyInput = document.getElementById('testimony-input');
+    const testifyBtn = document.getElementById('testify-btn');
+    const restCaseBtn = document.getElementById('rest-case-btn');
+    const verdictDisplay = document.getElementById('verdict-display');
+    const evidenceList = document.getElementById('evidence-list');
+    const body = document.getElementById('courtroom-body');
+    
+    // ---------- Load Dossier ----------
+    function loadDossier() {
+      const saved = localStorage.getItem('the_trial_dossier');
+      if(saved) {
+        try { dossier = JSON.parse(saved); } catch(e) {}
+      }
+      
+      // If no sessions, create some fake ones for demonstration (based on current visit)
+      if(dossier.sessions.length === 0) {
+        // Generate mock history from this session's start
+        let now = Date.now();
+        for(let i=0; i<5; i++) {
+          dossier.sessions.push({
+            date: now - (i * 86400000 * (1 + Math.random())),
+            duration: Math.floor(Math.random() * 30) + 2,
+            keystrokes: Math.floor(Math.random() * 200) + 10,
+            backspaces: Math.floor(Math.random() * 60) + 5,
+            saved: Math.random() > 0.5
+          });
+        }
+      }
+      
+      // Generate charges based on dossier
+      generateCharges();
+      
+      // If already convicted/acquitted, show permanent state
+      if(dossier.verdict) {
+        applyVerdict(dossier.verdict);
+        trialStep = 'concluded';
+      } else {
+        // Start fresh trial
+        initJury();
+        startTrial();
+      }
+      
+      renderEvidence();
+    }
+    
+    function saveDossier() {
+      localStorage.setItem('the_trial_dossier', JSON.stringify(dossier));
+    }
+    
+    function generateCharges() {
+      dossier.charges = [];
+      const sessions = dossier.sessions;
+      if(sessions.length === 0) return;
+      
+      let avgDuration = sessions.reduce((a,b)=>a+b.duration,0)/sessions.length;
+      let backspaceRatio = sessions.reduce((a,b)=>a+b.backspaces,0) / sessions.reduce((a,b)=>a+b.keystrokes,1);
+      let abandonment = sessions.filter(s => s.duration < 5).length;
+      
+      if(abandonment > 2) dossier.charges.push("Chronic abandonment of creative works.");
+      if(backspaceRatio > 0.3) dossier.charges.push("Excessive self-censorship and deletion.");
+      if(avgDuration < 8) dossier.charges.push("Failure to commit sufficient time to your endeavors.");
+      if(sessions.filter(s => !s.saved).length > 3) dossier.charges.push("Negligent disregard for preservation of work.");
+      
+      if(dossier.charges.length === 0) dossier.charges.push("General lack of creative discipline (circumstantial).");
+    }
+    
+    function initJury() {
+      jury = [];
+      const names = ['Alden','Brynn','Corbin','Della','Eldon','Fenna','Gareth','Hollis','Ione','Jasper','Kira','Lorne'];
+      for(let i=0; i<12; i++) {
+        jury.push({
+          name: names[i] || 'Juror '+i,
+          bias: Math.random() * 0.6 - 0.3, // -0.3 to 0.3 initial
+          opinion: 0.5 // 0 = against, 1 = for
+        });
+      }
+    }
+    
+    function startTrial() {
+      trialStep = 'opening';
+      currentChargeIndex = 0;
+      testimonyCount = 0;
+      prosecutorQuestions = [];
+      
+      let chargeText = dossier.charges.join(' ');
+      let opening = `Ladies and gentlemen of the jury. The defendant stands accused of the following: ${chargeText} The evidence is clear. Over ${dossier.sessions.length} recorded sessions, patterns of neglect and self-sabotage have emerged. I will prove beyond a reasonable doubt that the defendant is guilty of wasting their own potential.`;
+      
+      typeText(prosecutorText, opening, 30);
+      
+      // Prepare cross-examination questions
+      if(dossier.sessions.length > 0) {
+        let s = dossier.sessions[0];
+        prosecutorQuestions.push(`On ${new Date(s.date).toLocaleDateString()}, you spent only ${s.duration} minutes before closing the file. Why?`);
+      }
+      prosecutorQuestions.push("Do you deny that you frequently delete your own words before they can be seen?");
+      prosecutorQuestions.push("What do you have to show for all the time you've spent in these files?");
+      
+      renderJury();
+    }
+    
+    function typeText(element, text, speed) {
+      let i = 0;
+      element.textContent = '';
+      function type() {
+        if(i < text.length) {
+          element.textContent += text.charAt(i);
+          i++;
+          setTimeout(type, speed);
+        }
+      }
+      type();
+    }
+    
+    function renderJury() {
+      juryBox.innerHTML = '';
+      jury.forEach((j, idx) => {
+        let div = document.createElement('div');
+        div.className = 'juror';
+        if(j.opinion < 0.4) div.classList.add('against');
+        else if(j.opinion > 0.6) div.classList.add('for');
+        let face = j.opinion > 0.6 ? '😊' : (j.opinion < 0.4 ? '😠' : '😐');
+        div.innerHTML = `${face}<span class="juror-name">${j.name}</span>`;
+        juryBox.appendChild(div);
+      });
+    }
+    
+    function updateJuryOpinion(delta, sentiment) {
+      jury.forEach(j => {
+        let change = delta * (1 + j.bias) * (sentiment === 'positive' ? 1 : -1);
+        j.opinion = Math.min(1, Math.max(0, j.opinion + change));
+      });
+      renderJury();
+    }
+    
+    function analyzeSentiment(text) {
+      const positive = ['create','finish','try','hope','will','love','care','important','value','work','commit','improve'];
+      const negative = ['sorry','fail','can\'t','waste','delete','afraid','quit','bored','tired','lazy'];
+      let score = 0;
+      let lower = text.toLowerCase();
+      positive.forEach(w => { if(lower.includes(w)) score += 0.1; });
+      negative.forEach(w => { if(lower.includes(w)) score -= 0.1; });
+      return score > 0.05 ? 'positive' : (score < -0.05 ? 'negative' : 'neutral');
+    }
+    
+    // Testimony
+    function handleTestify() {
+      let testimony = testimonyInput.value.trim();
+      if(!testimony) return;
+      
+      testimonyCount++;
+      let sentiment = analyzeSentiment(testimony);
+      let impact = 0.1 + (testimony.length / 500);
+      updateJuryOpinion(impact, sentiment);
+      
+      // Prosecutor responds
+      if(trialStep === 'testimony' || trialStep === 'cross') {
+        let response = '';
+        if(testimonyCount === 1) {
+          response = "Interesting. But words are cheap. Let's look at the record.";
+        } else if(prosecutorQuestions.length > 0) {
+          response = prosecutorQuestions.shift() || "I have no further questions. The evidence speaks for itself.";
+        } else {
+          response = "The defense rests on hollow phrases. The jury will see through this.";
+        }
+        typeText(prosecutorText, response, 25);
+      }
+      
+      testimonyInput.value = '';
+      
+      // Move to cross-examination after first testimony
+      if(trialStep === 'opening' && testimonyCount >= 1) {
+        trialStep = 'testimony';
+        typeText(prosecutorText, "Let's examine the specifics. I have some questions for the defendant.", 30);
+      } else if(trialStep === 'testimony' && prosecutorQuestions.length === 0) {
+        trialStep = 'cross';
+        typeText(prosecutorText, "No more questions. The defense may rest, or continue to speak. The jury is watching.", 30);
+      }
+    }
+    
+    function restCase() {
+      if(trialStep === 'concluded') return;
+      trialStep = 'deliberation';
+      
+      typeText(prosecutorText, "The prosecution rests. Jury, you have heard the evidence. Now deliberate.", 40);
+      
+      // Simulate deliberation (jury leans based on opinion)
+      setTimeout(() => {
+        let avgOpinion = jury.reduce((a,b)=>a+b.opinion,0)/jury.length;
+        let verdict = avgOpinion > 0.5 ? 'not_guilty' : 'guilty';
+        
+        dossier.verdict = verdict;
+        dossier.convictionDate = new Date().toISOString();
+        saveDossier();
+        
+        applyVerdict(verdict);
+        trialStep = 'concluded';
+        
+        let message = verdict === 'guilty' ? 
+          "GUILTY. This court finds you guilty of creative negligence. The file will remember this." :
+          "NOT GUILTY. You have convinced the jury. The file acknowledges your creative spirit.";
+        verdictDisplay.textContent = message;
+        
+        // Add watermark
+        let wm = document.createElement('div');
+        wm.className = 'watermark';
+        wm.textContent = verdict === 'guilty' ? 'CONVICTED' : 'ACQUITTED';
+        document.body.appendChild(wm);
+        
+        renderEvidence();
+      }, 3000);
+    }
+    
+    function applyVerdict(verdict) {
+      if(verdict === 'guilty') {
+        body.classList.add('convicted');
+        body.classList.remove('acquitted');
+        verdictDisplay.textContent = '⚖️ VERDICT: GUILTY ⚖️';
+        // Disable further testimony? We can just show conclusion
+        testimonyInput.disabled = true;
+        testifyBtn.disabled = true;
+        restCaseBtn.disabled = true;
+      } else {
+        body.classList.add('acquitted');
+        body.classList.remove('convicted');
+        verdictDisplay.textContent = '⚖️ VERDICT: NOT GUILTY ⚖️';
+        testimonyInput.disabled = true;
+        testifyBtn.disabled = true;
+        restCaseBtn.disabled = true;
+      }
+    }
+    
+    function renderEvidence() {
+      let html = '';
+      dossier.sessions.slice(0,5).forEach(s => {
+        html += `📅 ${new Date(s.date).toLocaleDateString()}: ${s.duration}min, ⌨️${s.keystrokes} keys, ⌫${s.backspaces} deletes<br>`;
+      });
+      if(dossier.verdict) {
+        html += `<br><strong>VERDICT: ${dossier.verdict.toUpperCase()} on ${new Date(dossier.convictionDate).toLocaleString()}</strong>`;
+      }
+      evidenceList.innerHTML = html;
+    }
+    
+    // Event listeners
+    testifyBtn.addEventListener('click', handleTestify);
+    restCaseBtn.addEventListener('click', restCase);
+    
+    // Also allow Ctrl+Enter to testify
+    testimonyInput.addEventListener('keydown', (e) => {
+      if(e.ctrlKey && e.key === 'Enter') {
+        handleTestify();
+        e.preventDefault();
+      }
+    });
+    
+    // Track this session for future trials
+    let sessionStart = Date.now();
+    let keystrokes = 0;
+    let backspaces = 0;
+    window.addEventListener('keydown', (e) => {
+      if(e.key === 'Backspace') backspaces++;
+      else if(e.key.length === 1) keystrokes++;
+    });
+    
+    window.addEventListener('beforeunload', () => {
+      let duration = Math.floor((Date.now() - sessionStart)/60000);
+      if(duration > 0.1) {
+        dossier.sessions.push({
+          date: Date.now(),
+          duration: Math.max(1, duration),
+          keystrokes,
+          backspaces,
+          saved: true
+        });
+        saveDossier();
+      }
+    });
+    
+    // Initialize
+    loadDossier();
+    if(!dossier.verdict) {
+      renderJury();
+    }
+    
+  })();
+</script>
+</body>
+</html>

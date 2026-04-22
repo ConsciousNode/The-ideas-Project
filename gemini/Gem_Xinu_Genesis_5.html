@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsciousNode SoftWorks | Xinu: Genesis v0.5</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: #e0e0e0;
+            --accent: #ff3366;
+            --grid: #1a1a1a;
+            --ui: #222;
+            --altar-glow: 0; 
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            transition: background-color 2s, color 2s;
+            box-shadow: inset 0 0 calc(var(--altar-glow) * 1px) rgba(204, 51, 255, 0.2);
+        }
+        header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            transition: border-color 2s;
+        }
+        button {
+            background-color: var(--bg);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background-color: var(--accent);
+            color: var(--bg);
+        }
+        #world-canvas {
+            background-color: var(--grid);
+            border: 1px solid #333;
+            image-rendering: pixelated;
+            cursor: crosshair;
+            transition: border-color 2s;
+        }
+        #log {
+            width: 100%;
+            max-width: 800px;
+            height: 220px;
+            overflow-y: auto;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            border: 1px dashed #333;
+            padding: 10px;
+            display: flex;
+            flex-direction: column-reverse;
+            transition: border-color 2s;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .sys-msg { color: #00ffcc; }
+        .speech { color: #ffcc00; font-style: italic; }
+        .scripture { color: #cc33ff; font-weight: bold; letter-spacing: 1px; }
+        .monument { color: #ffffff; background: #cc33ff; padding: 0 4px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>SYSTEM: XINU_GENESIS // UI_BLEED_PROTOCOL</div>
+        <button id="bind-btn">[ BIND CHRONICLE ]</button>
+        <div>EPOCH: <span id="epoch-counter">0</span> | ALTARS: <span id="altar-counter">0</span></div>
+    </header>
+
+    <canvas id="world-canvas" width="800" height="400"></canvas>
+    
+    <div id="log"></div>
+
+<script>
+/**
+ * CONSCIOUSNODE SOFTWORKS
+ * Xinu: Genesis v0.5 - The Monument Update
+ * Zero dependencies. Offline first. The UI is alive.
+ */
+
+const canvas = document.getElementById('world-canvas');
+const ctx = canvas.getContext('2d');
+const logEl = document.getElementById('log');
+const epochEl = document.getElementById('epoch-counter');
+const altarEl = document.getElementById('altar-counter');
+const bindBtn = document.getElementById('bind-btn');
+const rootStyle = document.documentElement.style;
+
+const GRID_SIZE = 10;
+const COLS = canvas.width / GRID_SIZE;
+const ROWS = canvas.height / GRID_SIZE;
+
+let epoch = 0;
+let isRunning = false;
+let fileHandle = null;
+let activeInterventions = [];
+let totalAltars = 0;
+
+// The tangible environment memory grid (0 = empty, 1 = Hallowed, 2 = Altar)
+let worldGrid = new Array(COLS).fill(0).map(() => new Array(ROWS).fill(0));
+
+const CONSONANTS = "ptkmnlsxrw";
+const VOWELS = "aeiou";
+
+function generateWord() {
+    return CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)] + 
+           VOWELS[Math.floor(Math.random() * VOWELS.length)] +
+           CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)] + 
+           VOWELS[Math.floor(Math.random() * VOWELS.length)];
+}
+
+class NeuralAgent {
+    constructor(name, symbol, color, x, y, state = null, lexicon = [], scripture = []) {
+        this.name = name;
+        this.symbol = symbol;
+        this.color = color;
+        this.x = x;
+        this.y = y;
+        this.state = state || [Math.random(), Math.random(), 0.0, Math.random()];
+        this.lexicon = lexicon; 
+        this.scripture = scripture; 
+        this.isTaVeren = (this.name === "Mat"); 
+    }
+
+    tick(neighbors, interventions) {
+        this.state[0] += 0.02; 
+        this.state[2] += 0.01; 
+        
+        // Flee anomalies
+        for (let anomaly of interventions) {
+            const dist = Math.abs(this.x - anomaly.x) + Math.abs(this.y - anomaly.y);
+            if (dist < 8) return this.witnessMiracle(anomaly);
+        }
+
+        // Architecture check: If on a Hallowed tile and devout (high chaos/scripture)
+        if (worldGrid[this.x][this.y] === 1 && this.scripture.length > 0 && this.state[2] < 0.8) {
+            worldGrid[this.x][this.y] = 2; // Construct Altar
+            this.state[2] += 0.5; // Massive fatigue from building
+            totalAltars++;
+            updateUIBleed();
+            return `<span class="monument">${this.name} erected an Altar at [${this.x},${this.y}].</span>`;
+        }
+
+        let actionForce = Math.tanh(this.state[1] * 2.0 - this.state[2]); 
+        
+        // Attraction to Altars
+        if (this.state[1] > 0.4) {
+            let nearestAltar = this.scanForAltar();
+            if (nearestAltar) {
+                this.x += (this.x < nearestAltar.x) ? 1 : (this.x > nearestAltar.x) ? -1 : 0;
+                this.y += (this.y < nearestAltar.y) ? 1 : (this.y > nearestAltar.y) ? -1 : 0;
+                this.state[1] -= 0.1; // Satisfy curiosity slightly
+                return null;
+            }
+        }
+
+        if (neighbors.length > 0 && this.state[1] > 0.5) return this.communicate(neighbors[0]);
+
+        if (this.state[3] > 0.8 || actionForce > 0.6 || (this.isTaVeren && Math.random() > 0.2)) {
+            this.moveRandomly();
+            this.state[3] = Math.random(); 
+            this.state[1] += 0.1; 
+            return null; 
+        }
+        
+        if (this.state[0] > 0.9) {
+            this.state[0] = 0.0; 
+            return null;
+        }
+        return null;
+    }
+
+    scanForAltar() {
+        for(let r = 1; r < 5; r++) { // Scan radius
+            for(let i = -r; i <= r; i++) {
+                for(let j = -r; j <= r; j++) {
+                    let cx = this.x + i, cy = this.y + j;
+                    if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS && worldGrid[cx][cy] === 2) {
+                        return {x: cx, y: cy};
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    witnessMiracle(anomaly) {
+        this.state[3] = 1.0; 
+        this.state[1] = 1.0; 
+        this.x += (this.x > anomaly.x) ? 1 : -1;
+        this.y += (this.y > anomaly.y) ? 1 : -1;
+
+        const holyWord = generateWord().toUpperCase();
+        const verse = `EPOCH ${epoch}: The Sky fractured at [${anomaly.x},${anomaly.y}]. We call it ${holyWord}.`;
+        
+        if (!this.scripture.includes(verse)) {
+            this.scripture.push(verse);
+            return `<span class="scripture">${this.name} witnessed the anomaly. Scripture recorded: "${holyWord}"</span>`;
+        }
+        return null;
+    }
+
+    communicate(target) {
+        this.state[1] = 0.0; 
+        let word = (this.lexicon.length === 0 || Math.random() > 0.7) ? generateWord() : this.lexicon[Math.floor(Math.random() * this.lexicon.length)];
+
+        if (!this.lexicon.includes(word)) this.lexicon.push(word);
+        if (!target.lexicon.includes(word)) target.lexicon.push(word);
+
+        if (this.scripture.length > 0 && Math.random() > 0.8) {
+            const verse = this.scripture[Math.floor(Math.random() * this.scripture.length)];
+            if (!target.scripture.includes(verse)) {
+                target.scripture.push(verse);
+                return `<span class="scripture">${this.name} preaches to ${target.name}.</span>`;
+            }
+        }
+        return `<span style="color:${this.color}">${this.name}</span> signals to ${target.name}: <span class="speech">"${word}"</span>`;
+    }
+
+    moveRandomly() {
+        const dirs = [[0,-1], [1,0], [0,1], [-1,0]];
+        const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+        this.x = Math.max(0, Math.min(COLS - 1, this.x + dx));
+        this.y = Math.max(0, Math.min(ROWS - 1, this.y + dy));
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.font = "12px Courier";
+        ctx.fillText(this.symbol, this.x * GRID_SIZE, this.y * GRID_SIZE + GRID_SIZE);
+    }
+}
+
+let entities = [];
+
+function logEvent(msg, type = 'normal') {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    if (type === 'sys') div.innerHTML = `> [SYS] <span class="sys-msg">${msg}</span>`;
+    else div.innerHTML = `> [T+${epoch}] ${msg}`;
+    logEl.prepend(div);
+}
+
+function updateUIBleed() {
+    altarEl.innerText = totalAltars;
+    // As altars increase, the UI gets corrupted by their faith
+    const corruptionLevel = Math.min(totalAltars * 2, 80); // Cap at 80%
+    const baseR = 5, baseG = 5, baseB = 5; // #050505
+    
+    // Shift background towards a deep, unholy purple
+    const newR = Math.floor(baseR + (204 - baseR) * (corruptionLevel / 100));
+    const newG = Math.floor(baseG + (51 - baseG) * (corruptionLevel / 100) * 0.2); 
+    const newB = Math.floor(baseB + (255 - baseB) * (corruptionLevel / 100));
+    
+    rootStyle.setProperty('--bg', `rgb(${newR}, ${newG}, ${newB})`);
+    rootStyle.setProperty('--accent', totalAltars > 10 ? '#ffffff' : '#ff3366');
+    rootStyle.setProperty('--altar-glow', totalAltars * 5);
+}
+
+function renderEnvironment() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Render the Grid Memory
+    for(let i=0; i<COLS; i++) {
+        for(let j=0; j<ROWS; j++) {
+            if (worldGrid[i][j] === 0) {
+                ctx.fillStyle = "rgba(34, 34, 34, 0.5)"; // Empty
+                ctx.fillRect(i*GRID_SIZE + 4, j*GRID_SIZE + 4, 2, 2);
+            } else if (worldGrid[i][j] === 1) {
+                ctx.fillStyle = "rgba(255, 51, 102, 0.3)"; // Hallowed ground
+                ctx.fillRect(i*GRID_SIZE + 2, j*GRID_SIZE + 2, 6, 6);
+            } else if (worldGrid[i][j] === 2) {
+                ctx.fillStyle = "#cc33ff"; // Altar
+                ctx.fillRect(i*GRID_SIZE + 1, j*GRID_SIZE + 1, 8, 8);
+            }
+        }
+    }
+
+    ctx.fillStyle = "rgba(255, 51, 102, 0.8)";
+    activeInterventions.forEach(anomaly => {
+        ctx.beginPath();
+        ctx.arc(anomaly.x * GRID_SIZE + 5, anomaly.y * GRID_SIZE + 5, anomaly.radius, 0, Math.PI * 2);
+        ctx.fill();
+        anomaly.radius += 2; 
+    });
+    activeInterventions = activeInterventions.filter(a => a.radius < 40);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const gridX = Math.floor((e.clientX - rect.left) / GRID_SIZE);
+    const gridY = Math.floor((e.clientY - rect.top) / GRID_SIZE);
+    
+    activeInterventions.push({ x: gridX, y: gridY, radius: 2 });
+    worldGrid[gridX][gridY] = 1; // Mark ground as Hallowed permanently
+    logEvent(`THE FIRMAMENT SHATTERS AT [${gridX}, ${gridY}]. Ground is Hallowed.`, 'sys');
+});
+
+async function bindChronicle() {
+    try {
+        fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'xinu_world_state.json',
+            types: [{ description: 'JSON World State', accept: {'application/json': ['.json']} }]
+        });
+        
+        bindBtn.innerText = "[ SYNC ACTIVE ]";
+        bindBtn.style.color = "#00ffcc";
+        bindBtn.style.borderColor = "#00ffcc";
+        
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        if (text) {
+            const data = JSON.parse(text);
+            epoch = data.epoch;
+            worldGrid = data.worldGrid || worldGrid;
+            totalAltars = data.totalAltars || 0;
+            entities = data.entities.map(e => new NeuralAgent(e.name, e.symbol, e.color, e.x, e.y, e.state, e.lexicon, e.scripture));
+            updateUIBleed();
+            logEvent("Timeline Resurrected. Grid memory loaded.", "sys");
+        } else {
+             entities = [
+                new NeuralAgent("Mara", "d", "#ff9900", Math.floor(COLS/2) - 5, Math.floor(ROWS/2)),
+                new NeuralAgent("Squeak", "b", "#33ccff", Math.floor(COLS/2) + 5, Math.floor(ROWS/2)),
+                new NeuralAgent("Mat", "M", "#cc33ff", Math.floor(COLS/2), Math.floor(ROWS/2))
+            ];
+            logEvent("New civilization seeded. The Canvas is pristine.", "sys");
+        }
+
+        if (!isRunning) {
+            isRunning = true;
+            requestAnimationFrame(loop);
+        }
+    } catch (err) {
+         logEvent("Binding cancelled.", "sys");
+    }
+}
+
+async function writeChronicle() {
+    if (!fileHandle) return;
+    try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify({ epoch, totalAltars, worldGrid, entities }));
+        await writable.close();
+    } catch (err) { }
+}
+
+bindBtn.addEventListener('click', bindChronicle);
+
+function loop() {
+    epoch++;
+    epochEl.innerText = epoch;
+    renderEnvironment();
+
+    entities.forEach(entity => {
+        const neighbors = entities.filter(e => e !== entity && Math.abs(e.x - entity.x) <= 1 && Math.abs(e.y - entity.y) <= 1);
+        const actionLog = entity.tick(neighbors, activeInterventions);
+        if (actionLog) logEvent(actionLog);
+        entity.draw();
+    });
+
+    if (epoch % 50 === 0) writeChronicle();
+
+    setTimeout(() => requestAnimationFrame(loop), 300);
+}
+
+logEvent("SYSTEM READY. Strike the canvas.", "sys");
+
+</script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cult.html — you accidentally started a doomsday cult</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      background: #0a0c12;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .cult-container {
+      max-width: 1100px;
+      width: 100%;
+      background: #0f1117;
+      border-radius: 2rem;
+      border: 1px solid #2a2e3a;
+      overflow: hidden;
+      box-shadow: 0 20px 30px -10px black;
+    }
+    .header {
+      background: #1a1d2b;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      border-bottom: 2px solid #8b5cf6;
+      font-family: monospace;
+    }
+    .title {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #e2e8f0;
+      letter-spacing: 2px;
+    }
+    .stats {
+      display: flex;
+      gap: 20px;
+      font-size: 0.8rem;
+      color: #a78bfa;
+    }
+    .main-panel {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .doctrine-panel {
+      flex: 1.2;
+      min-width: 280px;
+      background: #05070c;
+      padding: 20px;
+      border-right: 1px solid #252836;
+    }
+    .events-panel {
+      flex: 2;
+      min-width: 320px;
+      padding: 20px;
+      background: #0b0d12;
+    }
+    .card {
+      background: #10121a;
+      border-radius: 1.5rem;
+      padding: 16px;
+      margin-bottom: 20px;
+      border-left: 4px solid #8b5cf6;
+    }
+    .member-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .member {
+      background: #0a0c12;
+      border-radius: 1rem;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #252836;
+    }
+    .faith-bar {
+      width: 100px;
+      height: 6px;
+      background: #2a2e3a;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .faith-fill {
+      height: 100%;
+      background: #8b5cf6;
+      width: 0%;
+    }
+    button {
+      background: #2c2e3f;
+      border: none;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 40px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: 0.1s;
+      margin: 4px;
+    }
+    button.primary {
+      background: #5f3dc9;
+    }
+    button.danger {
+      background: #7f1a1a;
+    }
+    .event-log {
+      background: #010409;
+      border-radius: 1rem;
+      padding: 12px;
+      height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.75rem;
+    }
+    .question {
+      background: #1e1f2c;
+      padding: 12px;
+      border-radius: 1rem;
+      margin: 12px 0;
+    }
+    .heresy-warning {
+      color: #f87171;
+      font-weight: bold;
+    }
+    hr {
+      border-color: #252836;
+    }
+  </style>
+</head>
+<body>
+<div class="cult-container" id="cultRoot">
+  <div class="header">
+    <div class="title">🌑 THE VEILED CHILDREN</div>
+    <div class="stats">
+      <span>🧠 Faith: <span id="totalFaith">0</span></span>
+      <span>👥 Followers: <span id="memberCount">0</span></span>
+      <span>⚡ Heresy: <span id="heresyLevel">0</span></span>
+    </div>
+  </div>
+  <div class="main-panel">
+    <div class="doctrine-panel">
+      <div class="card">
+        <div style="font-weight:bold;">📜 CORE DOCTRINES</div>
+        <div id="doctrineList">—</div>
+        <button id="addDoctrineBtn" class="primary" style="margin-top:12px;">➕ DECLARE NEW DOCTRINE</button>
+        <div style="font-size:0.7rem; color:#aaa; margin-top:8px;">Doctrines shape belief. Inconsistent doctrines breed heresy.</div>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold;">👥 INNER CIRCLE</div>
+        <div id="memberList" class="member-list"></div>
+        <button id="recruitBtn">🌟 Recruit Follower</button>
+      </div>
+    </div>
+    <div class="events-panel">
+      <div class="card">
+        <div style="font-weight:bold;">🌠 THE PROPHET'S DUTY</div>
+        <div id="currentEvent">
+          <div class="question">You feel a presence. A member asks:</div>
+          <div id="questionText">"What is the nature of the coming dissolution?"</div>
+          <div id="answerButtons"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold;">📜 CHRONICLES OF THE END</div>
+        <div id="eventLog" class="event-log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  // cult.html — accidentally lead a doomsday cult.
+  // Faith, doctrine, heresy, loyalty. Every decision shapes the end.
+  // --------------------------------------------------------------
+  
+  class Cult {
+    constructor() {
+      this.doctrines = [
+        "The world will end in 2027",
+        "Silence is a form of prayer",
+        "The leader speaks for the Veiled One"
+      ];
+      this.members = [];
+      this.heresy = 0;
+      this.totalFaith = 30;
+      this.eventLog = [];
+      this.day = 0;
+      this.gameOver = false;
+      this.initMembers();
+    }
+    
+    initMembers() {
+      this.members = [
+        { name: "Elena", faith: 70, loyalty: 80, doubt: 10, isElder: true },
+        { name: "Marcus", faith: 55, loyalty: 60, doubt: 25, isElder: false },
+        { name: "Sylvie", faith: 85, loyalty: 70, doubt: 5, isElder: false }
+      ];
+      this.recalcTotalFaith();
+    }
+    
+    recalcTotalFaith() {
+      this.totalFaith = this.members.reduce((sum,m) => sum + m.faith, 0);
+    }
+    
+    addDoctrine(text) {
+      if(this.doctrines.includes(text)) return;
+      // check for contradictions with existing doctrines (simple word overlap heuristic)
+      let contradiction = false;
+      for(let d of this.doctrines) {
+        if(this.contradicts(d, text)) {
+          this.heresy += 15;
+          this.log(`⚠️ Heresy! New doctrine contradicts "${d}". Faith wavers.`);
+          contradiction = true;
+        }
+      }
+      this.doctrines.push(text);
+      if(!contradiction) {
+        // boost faith slightly
+        this.members.forEach(m => { m.faith = Math.min(100, m.faith + 5); m.doubt = Math.max(0, m.doubt - 5); });
+        this.log(`✨ A new truth is revealed: "${text}". Faith strengthens.`);
+      } else {
+        this.members.forEach(m => { m.faith = Math.max(0, m.faith - 8); m.doubt = Math.min(100, m.doubt + 10); });
+      }
+      this.recalcTotalFaith();
+      this.checkCultStatus();
+    }
+    
+    contradicts(d1, d2) {
+      // simple contradiction detection: opposite words or numeric conflict
+      const opposites = [["end","eternal"], ["silence","speak"], ["prayer","action"]];
+      for(let pair of opposites) {
+        if((d1.includes(pair[0]) && d2.includes(pair[1])) || (d1.includes(pair[1]) && d2.includes(pair[0]))) return true;
+      }
+      // year conflict
+      let yearMatch = d2.match(/\d{4}/);
+      if(yearMatch && d1.includes(yearMatch[0]) && !d1.includes(d2)) return true;
+      return false;
+    }
+    
+    recruit() {
+      let names = ["Kaelen", "Iris", "Dorian", "Luna", "Cassian", "Rowan", "Thalia", "Orin"];
+      let name = names[Math.floor(Math.random() * names.length)];
+      let faith = 30 + Math.random() * 40;
+      let doubt = 50 - faith + Math.random() * 20;
+      this.members.push({
+        name: name,
+        faith: Math.min(100, Math.max(0, faith)),
+        loyalty: 40 + Math.random() * 40,
+        doubt: Math.min(100, Math.max(0, doubt)),
+        isElder: false
+      });
+      this.log(`🌀 ${name} has joined the Veiled Children.`);
+      this.recalcTotalFaith();
+      this.checkCultStatus();
+    }
+    
+    heresyEvent(amount) {
+      this.heresy += amount;
+      this.log(`🔥 Heresy spreads! +${amount}`);
+      if(this.heresy >= 100) {
+        this.log("💀 HERESY OVERWHELMS THE CULT. The Veiled Children dissolve into infighting. You flee into the night. GAME OVER.");
+        this.gameOver = true;
+      }
+      this.checkCultStatus();
+    }
+    
+    handleQuestion(questionType) {
+      if(this.gameOver) return;
+      let q = this.generateQuestion(questionType);
+      this.presentQuestion(q);
+    }
+    
+    generateQuestion(type) {
+      const doctrinalQuestions = [
+        { text: "Is the end an escape or a punishment?", hereticOption: "Punishment", faithfulOption: "Escape" },
+        { text: "Should we reject all material possessions?", hereticOption: "No, keep comforts", faithfulOption: "Yes, total renunciation" },
+        { text: "Can outsiders be saved?", hereticOption: "No, they are lost", faithfulOption: "Only through us" },
+        { text: "Is doubt a sin or a path?", hereticOption: "A path", faithfulOption: "A sin" }
+      ];
+      const memberQuestions = [
+        { text: `A member asks: "${this.members[0]?.name || 'Elena'} is having visions. Should we make her a prophetess?"`, hereticOption: "Yes, share power", faithfulOption: "No, only the leader speaks" },
+        { text: `A member confesses: "I told an outsider about our rituals."`, hereticOption: "Forgive them", faithfulOption: "Punish them" }
+      ];
+      let pool = doctrinalQuestions;
+      if(Math.random() < 0.4) pool = memberQuestions;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+    
+    presentQuestion(q) {
+      const container = document.getElementById("questionText");
+      const btnContainer = document.getElementById("answerButtons");
+      container.innerText = q.text;
+      btnContainer.innerHTML = `
+        <button id="faithfulAnswer" class="primary">🙏 ${q.faithfulOption}</button>
+        <button id="hereticAnswer" class="danger">🌑 ${q.hereticOption}</button>
+      `;
+      document.getElementById("faithfulAnswer").onclick = () => {
+        this.answerQuestion(q, true);
+      };
+      document.getElementById("hereticAnswer").onclick = () => {
+        this.answerQuestion(q, false);
+      };
+    }
+    
+    answerQuestion(q, isFaithful) {
+      if(this.gameOver) return;
+      let faithChange = isFaithful ? 8 : -12;
+      let heresyChange = isFaithful ? -5 : 12;
+      let message = "";
+      if(isFaithful) {
+        message = `You answer: "${q.faithfulOption}". The faithful are inspired.`;
+        this.members.forEach(m => { m.faith = Math.min(100, m.faith + 5); m.doubt = Math.max(0, m.doubt - 8); });
+        this.heresy = Math.max(0, this.heresy - 3);
+      } else {
+        message = `You answer: "${q.hereticOption}". Murmurs of doubt ripple through the crowd.`;
+        this.members.forEach(m => { m.faith = Math.max(0, m.faith - 8); m.doubt = Math.min(100, m.doubt + 10); });
+        this.heresy += 12;
+        if(this.heresy >= 100) this.heresyEvent(0);
+      }
+      this.log(message);
+      this.recalcTotalFaith();
+      this.checkCultStatus();
+      this.randomEvent();
+    }
+    
+    randomEvent() {
+      // spontaneous events: member crisis, revelation, schism risk
+      let r = Math.random();
+      if(r < 0.3 && this.members.length > 0) {
+        let m = this.members[Math.floor(Math.random() * this.members.length)];
+        if(m.doubt > 60) {
+          this.log(`⚠️ ${m.name} is spreading doubt. Faith in the group declines.`);
+          this.members.forEach(mem => mem.faith = Math.max(0, mem.faith - 5));
+          this.heresy += 5;
+        } else if(m.faith < 30) {
+          this.log(`😞 ${m.name} has left the cult.`);
+          this.members = this.members.filter(mem => mem !== m);
+        } else {
+          this.log(`✨ A vision strengthens ${m.name}'s faith.`);
+          m.faith = Math.min(100, m.faith + 10);
+        }
+        this.recalcTotalFaith();
+      }
+      if(this.heresy > 70 && Math.random() < 0.2) {
+        this.log("💥 A faction demands a purge of heretics. Loyalty fractures.");
+        this.members = this.members.filter(m => m.loyalty > 40);
+        this.heresy += 10;
+      }
+      this.checkCultStatus();
+    }
+    
+    checkCultStatus() {
+      if(this.members.length === 0) {
+        this.log("💀 No followers remain. The cult is dead. GAME OVER.");
+        this.gameOver = true;
+      }
+      if(this.totalFaith <= 0) {
+        this.log("💀 Faith has collapsed. The cult dissolves. GAME OVER.");
+        this.gameOver = true;
+      }
+      if(this.heresy >= 100) {
+        this.log("💀 THE VEILED CHILDREN TEAR THEMSELVES APART. GAME OVER.");
+        this.gameOver = true;
+      }
+      if(this.totalFaith >= 300 && this.members.length >= 8 && !this.gameOver) {
+        this.log("🏆 ASCENSION: Your cult has become a worldwide movement. The old world trembles. YOU WIN (?)");
+        this.gameOver = true;
+      }
+      this.renderUI();
+    }
+    
+    log(msg) {
+      this.eventLog.unshift(`[Day ${++this.day}] ${msg}`);
+      if(this.eventLog.length > 30) this.eventLog.pop();
+      this.renderUI();
+    }
+    
+    renderUI() {
+      document.getElementById("totalFaith").innerText = Math.floor(this.totalFaith);
+      document.getElementById("memberCount").innerText = this.members.length;
+      document.getElementById("heresyLevel").innerText = Math.floor(this.heresy);
+      // doctrines
+      let doctrineHtml = this.doctrines.map(d => `<div>• ${d}</div>`).join('');
+      document.getElementById("doctrineList").innerHTML = doctrineHtml;
+      // members
+      let memberHtml = this.members.map(m => `
+        <div class="member">
+          <div><strong>${m.name}</strong> ${m.isElder ? '🌟' : ''}</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span style="font-size:0.7rem;">faith ${Math.floor(m.faith)}</span>
+            <div class="faith-bar"><div class="faith-fill" style="width:${m.faith}%"></div></div>
+          </div>
+        </div>
+      `).join('');
+      document.getElementById("memberList").innerHTML = memberHtml || "<div>No followers left.</div>";
+      // event log
+      document.getElementById("eventLog").innerHTML = this.eventLog.map(e => `<div>${e}</div>`).join('');
+      if(this.gameOver) {
+        document.getElementById("currentEvent").innerHTML = `<div class="heresy-warning">THE CULT HAS ENDED. Reload the page to start a new revelation.</div>`;
+      }
+    }
+  }
+  
+  // initialize
+  let cult = new Cult();
+  
+  function addDoctrineUI() {
+    let text = prompt("Declare a new doctrine:", "The stars are silent witnesses");
+    if(text && text.trim()) cult.addDoctrine(text.trim());
+  }
+  
+  function recruitUI() {
+    cult.recruit();
+  }
+  
+  // bind UI
+  document.getElementById("addDoctrineBtn").onclick = addDoctrineUI;
+  document.getElementById("recruitBtn").onclick = recruitUI;
+  
+  // start first question
+  cult.handleQuestion();
+  // set interval to generate new questions every 20 seconds or after answer
+  function nextQuestion() {
+    if(!cult.gameOver) cult.handleQuestion();
+  }
+  setInterval(nextQuestion, 20000);
+  
+  cult.log("The Veiled Children awaken. You are their reluctant prophet. Guide them — or be consumed.");
+  cult.renderUI();
+</script>
+</body>
+</html>

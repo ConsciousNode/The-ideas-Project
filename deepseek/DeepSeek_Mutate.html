@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mutate.html — self‑modifying live coding environment</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: #0a0c12;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .mutate-container {
+      max-width: 1400px;
+      width: 100%;
+      background: #0f1117;
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+      overflow: hidden;
+      border: 1px solid #2a2e3a;
+    }
+    .env-header {
+      background: #1e1f2c;
+      padding: 12px 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: #a6adc8;
+      border-bottom: 1px solid #2a2e3a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .env-header span {
+      background: #2a2e3a;
+      padding: 4px 12px;
+      border-radius: 40px;
+      font-size: 0.7rem;
+      font-family: monospace;
+    }
+    button {
+      background: #2c2e3f;
+      border: none;
+      color: white;
+      font-family: inherit;
+      font-weight: bold;
+      padding: 6px 16px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: all 0.1s ease;
+      font-size: 0.8rem;
+      border: 1px solid #3d4055;
+    }
+    button:hover {
+      background: #3d3f5a;
+      transform: scale(0.98);
+    }
+    .mutate-btn {
+      background: #5f3dc9;
+      border-color: #8a6de9;
+      box-shadow: 0 0 6px rgba(95,61,201,0.4);
+    }
+    .mutate-btn:hover {
+      background: #7849e6;
+    }
+    .split-view {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .env-panel {
+      flex: 1.2;
+      min-width: 320px;
+      border-right: 1px solid #2a2e3a;
+      background: #0b0d12;
+    }
+    .user-panel {
+      flex: 1;
+      min-width: 320px;
+      background: #0f1117;
+    }
+    .panel-title {
+      background: #161824;
+      padding: 10px 16px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #8f95b3;
+      border-bottom: 1px solid #252836;
+    }
+    .editor {
+      font-family: 'Fira Code', monospace;
+      font-size: 13px;
+      background: #010409;
+      color: #e2e8f0;
+      padding: 16px;
+      white-space: pre-wrap;
+      outline: none;
+      line-height: 1.5;
+      tab-size: 2;
+    }
+    .env-editor {
+      min-height: 380px;
+      resize: vertical;
+      overflow: auto;
+      border-bottom: 1px solid #2a2e3a;
+    }
+    .user-editor {
+      min-height: 250px;
+      resize: vertical;
+      font-family: 'Fira Code', monospace;
+      background: #010409;
+      color: #e2e8f0;
+      padding: 16px;
+      border: none;
+      width: 100%;
+      outline: none;
+      line-height: 1.5;
+    }
+    .sandbox-area {
+      background: #0a0c12;
+      padding: 16px;
+      border-top: 1px solid #252836;
+    }
+    iframe {
+      width: 100%;
+      height: 260px;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #333842;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.2);
+    }
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #0b0d12;
+      border-top: 1px solid #252836;
+      align-items: center;
+    }
+    .status {
+      font-size: 0.7rem;
+      color: #7e84a3;
+      margin-left: auto;
+      font-family: monospace;
+    }
+    hr {
+      border-color: #252836;
+      margin: 0;
+    }
+    textarea, [contenteditable="true"] {
+      font-family: 'Fira Code', monospace;
+    }
+    a {
+      color: #a78bfa;
+    }
+  </style>
+</head>
+<body>
+<div class="mutate-container" id="appRoot">
+  <div class="env-header">
+    <span>🌀 MUTATE.HTML</span>
+    <div style="display: flex; gap: 8px;">
+      <button id="resetDefaultEnvBtn" style="background:#1e1f2c;">⟳ reset env</button>
+      <button id="mutateBtn" class="mutate-btn">⚡ MUTATE & REWRITE SELF</button>
+    </div>
+  </div>
+  <div class="split-view">
+    <!-- LEFT: environment editor (the IDE's own source) -->
+    <div class="env-panel">
+      <div class="panel-title">📡 ENVIRONMENT SOURCE (editable)</div>
+      <div id="envEditor" class="editor env-editor" contenteditable="true" spellcheck="false"></div>
+      <div class="toolbar" style="border-top: none;">
+        <span style="font-size:0.7rem;">✍️ edit this → click MUTATE → the whole UI rebuilds, your running program lives on</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: user program + sandbox -->
+    <div class="user-panel">
+      <div class="panel-title">🎛️ USER PROGRAM (runs inside sandbox)</div>
+      <textarea id="userCodeArea" class="user-editor" spellcheck="false">// Welcome to mutate.html
+// Write any JavaScript here. It runs inside the iframe.
+// Try: 
+//   let counter = 0;
+//   setInterval(() => {
+//     document.body.innerHTML = `&lt;h1&gt;${counter++}&lt;/h1&gt;`;
+//   }, 1000);
+console.log("Hello from user land. I will survive mutations!");</textarea>
+      <div class="toolbar">
+        <button id="runUserBtn">▶ RUN in sandbox</button>
+        <button id="stopSandboxBtn">⏹️ stop / reload sandbox</button>
+        <span class="status" id="sandboxStatus">⚫ idle</span>
+      </div>
+      <div class="sandbox-area">
+        <iframe id="sandboxFrame" sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals" title="user sandbox"></iframe>
+      </div>
+    </div>
+  </div>
+  <div style="padding: 8px 20px 14px 20px; font-size: 0.7rem; color:#5b6082; border-top:1px solid #252836; text-align:center;">
+    🧬 Self‑modifying single‑file organism — change the environment, mutate, become.
+  </div>
+</div>
+
+<script>
+// --------------------------------------------------------------
+//  MUTATE.HTML v1.0 - self-modifying live coding environment
+//  Full creative control: you can edit the environment's own source,
+//  click MUTATE, and the entire app rewrites itself while preserving
+//  your running user program's state.
+// --------------------------------------------------------------
+
+// ----- Helper: capture state from sandbox iframe -----
+function captureSandboxState(iframe) {
+  try {
+    const win = iframe.contentWindow;
+    if (!win) return null;
+    // get all global variables defined by user code (simple approach: serialize window properties that are not native)
+    // We'll capture the entire user-defined closure by extracting a list of variable names and values
+    // But to keep it safe and simple, we'll capture the result of a special getState function if the user provides it.
+    // Alternatively, we can store a "userState" object inside the sandbox.
+    if (win.__userState) {
+      return JSON.parse(JSON.stringify(win.__userState));
+    }
+    // fallback: capture any variable named "persist" or a simple counter example
+    if (win.capturableState) return win.capturableState;
+    return null;
+  } catch(e) { return null; }
+}
+
+function restoreSandboxState(iframe, state, userCode) {
+  if (!iframe) return;
+  // reload the iframe with new user code, then inject state
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+  doc.open();
+  doc.write(`
+    <html><body style="background:#fefefe; margin:0; padding:1rem; font-family: monospace;">
+    <div id="consoleOut" style="background:#111; color:#0f0; padding:8px; font-size:12px; white-space:pre-wrap;"></div>
+    <script>
+      window.__userState = ${JSON.stringify(state || {})};
+      // capture console logs
+      const originalLog = console.log;
+      console.log = function(...args) {
+        const outDiv = document.getElementById('consoleOut');
+        if(outDiv) outDiv.innerText += args.map(a=>String(a)).join(' ') + '\\n';
+        originalLog.apply(console, args);
+      };
+      try {
+        // run user code
+        ${userCode}
+        // if user code sets __userState, it will be captured next mutation
+      } catch(e) {
+        console.log("ERROR: " + e.message);
+      }
+    <\/script>
+    </body></html>
+  `);
+  doc.close();
+}
+
+// current user code reference
+let currentUserCode = "";
+let currentSandboxState = null;
+
+function refreshSandbox(code, preserveState = true) {
+  const iframe = document.getElementById('sandboxFrame');
+  if (!iframe) return;
+  if (preserveState) {
+    currentSandboxState = captureSandboxState(iframe);
+  }
+  restoreSandboxState(iframe, currentSandboxState, code);
+  document.getElementById('sandboxStatus').innerText = '🟢 running';
+}
+
+function stopSandbox() {
+  const iframe = document.getElementById('sandboxFrame');
+  if (iframe) {
+    iframe.srcdoc = '<html><body style="background:#111; color:#aaa; padding:1rem;">⏸ sandbox stopped</body></html>';
+    document.getElementById('sandboxStatus').innerText = '⚫ stopped';
+  }
+}
+
+// ----- SELF-MUTATION ENGINE -----
+// The entire current UI is represented as a string. We'll read the contenteditable environment editor,
+// combine with necessary metadata, and rewrite the whole document.
+function getCurrentEnvironmentHTML() {
+  const envContent = document.getElementById('envEditor').innerText;
+  // The environment should be a full HTML document. But to make it safe, we wrap it in a minimal structure.
+  // The user can edit the full HTML inside the editor. If it's missing <html> we assume partial.
+  let fullHTML = envContent.trim();
+  if (!fullHTML.startsWith('<!DOCTYPE')) {
+    // inject a complete document template with the user's custom content
+    fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>mutated.html</title><style>/* user defined styles */</style></head>
+<body>
+${envContent}
+</body>
+</html>`;
+  }
+  return fullHTML;
+}
+
+function performMutation() {
+  // 1. Capture current user program code and sandbox state
+  const userCode = document.getElementById('userCodeArea').value;
+  const iframe = document.getElementById('sandboxFrame');
+  const liveState = captureSandboxState(iframe);
+  
+  // 2. Get the new environment HTML from the contenteditable region
+  let newEnvHTML = document.getElementById('envEditor').innerText;
+  
+  // 3. We must embed the user code + state persistence mechanism into the new document.
+  //    The new document should re-create the exact same UI layout (split view) BUT with the user's modifications.
+  //    However: the user may have rewritten the entire layout. We'll inject a script that restores the user program.
+  //    To make it robust: we will append a hidden initialization script that reads from localStorage (or a temporary variable) the user code + state.
+  //    But because the document is being replaced, we can pass data via window.name or a temporary global.
+  //    Use localStorage as a bridge.
+  
+  const mutationPackage = {
+    userCode: userCode,
+    sandboxState: liveState,
+    timestamp: Date.now()
+  };
+  localStorage.setItem('mutate_pending', JSON.stringify(mutationPackage));
+  
+  // 4. The new environment must include a script that checks for 'mutate_pending' and restores the sandbox.
+  //    We'll add a special marker in the new HTML: if the new HTML doesn't already contain the restoration logic,
+  //    we'll append it automatically.
+  const restoreScript = `
+  <script>
+    (function() {
+      const pending = localStorage.getItem('mutate_pending');
+      if(pending) {
+        try {
+          const { userCode, sandboxState } = JSON.parse(pending);
+          localStorage.removeItem('mutate_pending');
+          // wait for DOM to be ready
+          function waitForElements() {
+            const userTextarea = document.getElementById('userCodeArea');
+            const sandboxIframe = document.getElementById('sandboxFrame');
+            if(userTextarea && sandboxIframe) {
+              userTextarea.value = userCode;
+              // restore sandbox state
+              const doc = sandboxIframe.contentDocument;
+              if(doc) {
+                doc.open();
+                doc.write('<html><body style="background:#fefefe;margin:0;"><div id="consoleOut" style="background:#111;color:#0f0;padding:8px;"></div><script>window.__userState = ' + JSON.stringify(sandboxState) + ';' +
+                'const originalLog = console.log; console.log = function(...args) { const d=document.getElementById("consoleOut"); if(d) d.innerText += args.map(a=>String(a)).join(" ") + "\\\\n"; originalLog.apply(console,args); };' +
+                userCode.replace(/<\\/script>/gi, '<\\\\/script>') + '<\\/script></body></html>');
+                doc.close();
+              }
+              document.getElementById('sandboxStatus') && (document.getElementById('sandboxStatus').innerText = '🟢 running (after mutation)');
+            } else {
+              setTimeout(waitForElements, 20);
+            }
+          }
+          setTimeout(waitForElements, 10);
+        } catch(e) { console.error(e); }
+      }
+    })();
+  <\/script>
+  `;
+  
+  // If the new environment doesn't already have a body closing tag, we'll inject the restore script at the end.
+  if (!newEnvHTML.includes('</body>')) {
+    newEnvHTML += restoreScript + '</body>';
+  } else {
+    newEnvHTML = newEnvHTML.replace('</body>', restoreScript + '</body>');
+  }
+  
+  // 5. Replace the entire document
+  document.open();
+  document.write(newEnvHTML);
+  document.close();
+}
+
+// ----- Initial setup: populate envEditor with current source code (the one you're seeing) -----
+function getCurrentDocumentSource() {
+  // Get a clean representation of the current HTML (excluding any dynamic state)
+  const docClone = document.cloneNode(true);
+  // Remove event listeners attached via properties? not needed, we just need the structure.
+  const serializer = new XMLSerializer();
+  let html = serializer.serializeToString(docClone);
+  return html;
+}
+
+function resetEnvironmentToDefault() {
+  // Default environment is the initial version of mutate.html (this same script but simpler)
+  const defaultEnv = `<!-- Welcome to the environment editor -->
+<!-- You are editing the very source of mutate.html -->
+<!-- Change ANYTHING: HTML structure, CSS, JavaScript logic. Then press MUTATE. -->
+
+<div class="mutate-container" style="max-width:1400px; margin:0 auto; background:#0f1117; border-radius:2rem;">
+  <div class="env-header" style="background:#1e1f2c; padding:12px 20px; display:flex; justify-content:space-between;">
+    <span>🌀 MUTATE.HTML — live self‑modifying</span>
+    <button id="mutateBtn" style="background:#5f3dc9;">⚡ MUTATE</button>
+  </div>
+  <div class="split-view" style="display:flex;">
+    <div class="env-panel" style="flex:1; border-right:1px solid #2a2e3a;">
+      <div class="panel-title">📡 ENVIRONMENT SOURCE (editable)</div>
+      <div id="envEditor" class="editor" contenteditable="true" style="min-height:300px; background:#010409; padding:16px; color:#e2e8f0;"></div>
+    </div>
+    <div class="user-panel" style="flex:1;">
+      <div class="panel-title">🎛️ USER PROGRAM</div>
+      <textarea id="userCodeArea" style="width:100%; min-height:200px; background:#010409; color:white;"></textarea>
+      <button id="runUserBtn">▶ RUN</button>
+      <iframe id="sandboxFrame" style="width:100%; height:260px;"></iframe>
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById('mutateBtn').onclick = () => {
+    const userCode = document.getElementById('userCodeArea').value;
+    localStorage.setItem('mutate_pending', JSON.stringify({userCode, sandboxState: null}));
+    const newHTML = document.getElementById('envEditor').innerText;
+    document.open(); document.write(newHTML); document.close();
+  };
+  document.getElementById('runUserBtn').onclick = () => {
+    const code = document.getElementById('userCodeArea').value;
+    const iframe = document.getElementById('sandboxFrame');
+    const doc = iframe.contentDocument;
+    doc.open(); doc.write('<body><script>' + code + '<\\/script></body>'); doc.close();
+  };
+<\/script>`;
+  document.getElementById('envEditor').innerText = defaultEnv;
+}
+
+// ----- bind UI controls for current session -----
+function bindInitialControls() {
+  const mutateBtn = document.getElementById('mutateBtn');
+  if (mutateBtn) mutateBtn.onclick = () => performMutation();
+  
+  const runBtn = document.getElementById('runUserBtn');
+  if (runBtn) runBtn.onclick = () => {
+    const code = document.getElementById('userCodeArea').value;
+    currentUserCode = code;
+    refreshSandbox(code, true);
+  };
+  
+  const stopBtn = document.getElementById('stopSandboxBtn');
+  if (stopBtn) stopBtn.onclick = () => stopSandbox();
+  
+  const resetEnvBtn = document.getElementById('resetDefaultEnvBtn');
+  if (resetEnvBtn) resetEnvBtn.onclick = () => resetEnvironmentToDefault();
+  
+  // initial run of user code on page load
+  const initialCode = document.getElementById('userCodeArea')?.value || "console.log('mutate.html ready')";
+  currentUserCode = initialCode;
+  refreshSandbox(initialCode, false);
+}
+
+// Populate envEditor with current page source (beautifully)
+function populateEnvEditor() {
+  const currentHTML = getCurrentDocumentSource();
+  // clean up a bit: remove the content of envEditor itself to avoid recursion
+  const editorDiv = document.getElementById('envEditor');
+  if (editorDiv) {
+    editorDiv.innerText = currentHTML;
+  }
+}
+
+// Initialize everything
+window.onload = () => {
+  populateEnvEditor();
+  bindInitialControls();
+};
+
+// also handle case where mutation caused script re-evaluation: ensure bindings after mutation
+document.addEventListener('DOMContentLoaded', () => {
+  if (!document.getElementById('mutateBtn')?.onclick) {
+    bindInitialControls();
+  }
+});
+</script>
+</body>
+</html>

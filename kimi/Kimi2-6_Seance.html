@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Séance — Contact Your Earlier Self</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--panel:#12121a;--border:#1e1e2e;--text:#c9c9d1;--dim:#4a4a5e;--ghost:#8b7ec8;--ghost-dim:#8b7ec822;--candle:#ff9500;--candle-dim:#ff950022;--mist:#6b8fa8;--mist-dim:#6b8fa822}
+body{background:var(--bg);color:var(--text);font-family:'Cormorant Garamond','Georgia',serif;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+
+/* Flickering candle effect on the border */
+@keyframes flicker{0%,100%{opacity:1}50%{opacity:0.85}25%,75%{opacity:0.95}}
+.header{height:64px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 32px;gap:20px;position:relative}
+.header::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:var(--candle);opacity:0.3;animation:flicker 3s infinite}
+.header h1{font-size:22px;color:var(--candle);font-weight:400;letter-spacing:0.15em;text-transform:uppercase}
+.header p{font-size:11px;color:var(--dim);font-family:'SF Mono',monospace;letter-spacing:0.05em}
+.spacer{flex:1}
+.phase-indicator{font-size:10px;color:var(--dim);font-family:'SF Mono',monospace;text-transform:uppercase;letter-spacing:0.1em}
+.phase-indicator.gathering{color:var(--candle)}
+.phase-indicator.listening{color:var(--mist)}
+.phase-indicator.contact{color:var(--ghost)}
+
+.main{flex:1;display:flex;overflow:hidden}
+
+/* The Session — where you type */
+.session-pane{width:50%;display:flex;flex-direction:column;border-right:1px solid var(--border);position:relative}
+.session-pane::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--mist);opacity:0.2}
+.session-header{padding:20px 24px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:var(--dim);font-family:'SF Mono',monospace}
+.session-body{flex:1;padding:0 24px 24px;overflow-y:auto;font-size:15px;line-height:1.8}
+.session-entry{margin-bottom:20px;opacity:0;animation:fadeIn 0.6s ease-out forwards;padding:16px;background:rgba(255,255,255,0.02);border-radius:8px;border-left:2px solid var(--mist)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.session-time{font-size:9px;color:var(--dim);font-family:'SF Mono',monospace;margin-bottom:6px;letter-spacing:0.05em}
+.session-text{color:var(--text);font-style:italic}
+.session-input-area{padding:16px 24px;border-top:1px solid var(--border);background:var(--panel)}
+.session-input{width:100%;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-family:inherit;font-size:15px;padding:8px 0;outline:none;resize:none}
+.session-input:focus{border-bottom-color:var(--mist)}
+.session-input::placeholder{color:var(--dim);font-style:italic}
+.session-hint{font-size:9px;color:var(--dim);margin-top:8px;font-family:'SF Mono',monospace}
+
+/* The Spirit Board */
+.board-pane{width:50%;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.board-pane::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(139,126,200,0.05) 0%,transparent 70%);pointer-events:none}
+.board-header{padding:20px 24px 12px;font-size:10px;text-transform:uppercase;letter-spacing:0.15em;color:var(--dim);font-family:'SF Mono',monospace;display:flex;justify-content:space-between;align-items:center}
+.board-body{flex:1;padding:0 24px 24px;overflow-y:auto;position:relative}
+
+/* The planchette pointer */
+.planchette{position:fixed;width:40px;height:40px;border-radius:50%;border:2px solid var(--ghost);background:rgba(139,126,200,0.1);pointer-events:none;z-index:100;display:none;align-items:center;justify-content:center;transition:all 0.8s ease-out}
+.planchette.show{display:flex}
+.planchette::after{content:'';width:4px;height:4px;background:var(--ghost);border-radius:50%}
+
+/* Spirit messages */
+.spirit-msg{margin-bottom:20px;opacity:0;animation:materialize 1.2s ease-out forwards;padding:20px;background:var(--ghost-dim);border-radius:12px;border:1px solid rgba(139,126,200,0.2);position:relative}
+@keyframes materialize{0%{opacity:0;filter:blur(8px);transform:translateY(20px) scale(0.98)}50%{filter:blur(2px)}100%{opacity:1;filter:blur(0);transform:translateY(0) scale(1)}}
+.spirit-sigil{position:absolute;top:-10px;left:20px;width:20px;height:20px;background:var(--bg);border:1px solid var(--ghost);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--ghost)}
+.spirit-name{font-size:11px;color:var(--ghost);font-family:'SF Mono',monospace;margin-bottom:8px;letter-spacing:0.1em}
+.spirit-text{font-size:15px;color:var(--text);line-height:1.8;font-style:italic}
+.spirit-meta{font-size:9px;color:var(--dim);margin-top:12px;font-family:'SF Mono',monospace}
+.spirit-typing{display:none;align-items:center;gap:8px;padding:16px 20px;color:var(--ghost);font-size:12px;font-style:italic}
+.spirit-typing.show{display:flex}
+.typing-dot{width:4px;height:4px;background:var(--ghost);border-radius:50%;animation:typing 1.4s infinite}
+.typing-dot:nth-child(2){animation-delay:0.2s}
+.typing-dot:nth-child(3){animation-delay:0.4s}
+@keyframes typing{0%,60%,100%{opacity:0.3}30%{opacity:1}}
+
+/* The Model — personality analysis */
+.model-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(10,10,15,0.95);border-top:1px solid var(--border);padding:16px 24px;transform:translateY(100%);transition:transform 0.4s;z-index:50}
+.model-panel.show{transform:translateY(0)}
+.model-toggle{position:absolute;top:-32px;right:24px;padding:6px 14px;background:var(--panel);border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;color:var(--dim);font-size:9px;font-family:'SF Mono',monospace;cursor:pointer;letter-spacing:0.1em;text-transform:uppercase}
+.model-toggle:hover{color:var(--ghost)}
+.model-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.model-col h4{font-size:9px;text-transform:uppercase;letter-spacing:0.1em;color:var(--dim);margin-bottom:8px;font-family:'SF Mono',monospace}
+.model-trait{display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.model-trait-name{color:var(--text)}.model-trait-val{color:var(--ghost);font-family:'SF Mono',monospace}
+.model-bar{height:3px;background:rgba(255,255,255,0.05);border-radius:2px;margin-top:2px;overflow:hidden}
+.model-bar-fill{height:100%;background:var(--ghost);border-radius:2px;transition:width 1s}
+
+/* The ritual button */
+.ritual-btn{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:14px 40px;background:transparent;border:1px solid var(--ghost);color:var(--ghost);border-radius:30px;font-family:'Cormorant Garamond',serif;font-size:14px;letter-spacing:0.2em;text-transform:uppercase;cursor:pointer;transition:all 0.3s;z-index:100;opacity:0;pointer-events:none}
+.ritual-btn.show{opacity:1;pointer-events:auto}
+.ritual-btn:hover{background:var(--ghost-dim);box-shadow:0 0 30px var(--ghost-dim)}
+.ritual-btn.pulse{animation:ritualPulse 2s infinite}
+@keyframes ritualPulse{0%,100%{box-shadow:0 0 0 0 var(--ghost-dim)}50%{box-shadow:0 0 20px 5px var(--ghost-dim)}}
+
+/* Intro overlay */
+.intro-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:24px;transition:opacity 1s}
+.intro-overlay.hide{opacity:0;pointer-events:none}
+.intro-title{font-size:48px;color:var(--candle);font-weight:400;letter-spacing:0.2em;text-transform:uppercase;text-align:center}
+.intro-text{font-size:14px;color:var(--dim);max-width:400px;text-align:center;line-height:1.8;font-style:italic}
+.intro-btn{padding:12px 32px;background:transparent;border:1px solid var(--candle);color:var(--candle);border-radius:30px;font-family:inherit;font-size:14px;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;transition:all 0.3s}
+.intro-btn:hover{background:var(--candle-dim)}
+</style>
+</head>
+<body>
+<div class="intro-overlay" id="intro">
+<div class="intro-title">Séance</div>
+<div class="intro-text">
+You will type. The room will listen.<br>
+After enough words have been spoken,<br>
+a door will open.<br><br>
+You may speak with who you were<br>
+twenty minutes ago.
+</div>
+<button class="intro-btn" onclick="beginSession()">Enter the Room</button>
+</div>
+
+<div class="header">
+<h1>Séance</h1>
+<p>A room that remembers who you were</p>
+<div class="spacer"></div>
+<div class="phase-indicator gathering" id="phase">Gathering</div>
+<span style="font-size:10px;color:var(--dim);font-family:monospace" id="timer">00:00</span>
+</div>
+
+<div class="main">
+<!-- The Session (left) -->
+<div class="session-pane">
+<div class="session-header">Your Words — The Living Record</div>
+<div class="session-body" id="sessionBody">
+<div class="session-entry">
+<div class="session-time">SESSION START</div>
+<div class="session-text">The room is quiet. The candle flickers. Begin typing when you are ready.</div>
+</div>
+</div>
+<div class="session-input-area">
+<textarea class="session-input" id="sessionInput" rows="3" placeholder="Speak into the dark..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitEntry()}"></textarea>
+<div class="session-hint">Press Enter to commit your words to the record</div>
+</div>
+</div>
+
+<!-- The Spirit Board (right) -->
+<div class="board-pane">
+<div class="board-header">
+<span>The Other Side</span>
+<span style="font-size:9px;color:var(--dim)" id="spiritStatus">Waiting...</span>
+</div>
+<div class="board-body" id="boardBody">
+<div class="spirit-typing" id="spiritTyping">
+<span style="margin-right:8px">A presence is forming</span>
+<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+</div>
+</div>
+
+<!-- Personality Model Panel -->
+<div class="model-panel" id="modelPanel">
+<div class="model-toggle" onclick="toggleModel()">Your Echo Profile</div>
+<div class="model-grid" id="modelGrid"></div>
+</div>
+</div>
+</div>
+
+<button class="ritual-btn" id="ritualBtn" onclick="openContact()">Make Contact</button>
+
+<div class="planchette" id="planchette"></div>
+
+<script>
+// ========== SÉANCE ==========
+// Analyzes everything you type, builds a personality model,
+// then lets you "contact" a textual ghost of yourself from earlier.
+
+const state={
+entries:[],startTime:null,phase:'gathering', // gathering, listening, contact
+model:{},
+contactOpen:false,spiritActive:false,
+wordFreq:{},sentenceLengths:[],punctuationFreq:{},questionCount:0,exclamationCount:0,
+emotionWords:{joy:0,sad:0,anger:0,fear:0,neutral:0},
+avgWordLength:0,uniqueWords:new Set(),totalWords:0,
+lastEntryTime:null,typingSpeeds:[],pauseLengths:[]
+}
+
+const EMOTION_MAP={
+joy:['happy','glad','joy','love','wonderful','beautiful','good','great','excellent','amazing','fantastic','perfect','brilliant','delight','laugh','smile','warm','bright','light','yes'],
+sad:['sad','sorry','miss','loss','gone','dark','cold','alone','empty','grey','tear','cry','mourn','grief','melancholy','heavy','weary','distant','fading','no'],
+anger:['angry','hate','rage','furious','mad','wrong','unfair','stupid','terrible','awful','horrible','disgust','annoy','frustrat','bitter','resent','hostile','sharp','hard'],
+fear:['afraid','scared','fear','worry','anxious','nervous','doubt','uncertain','unknown','shadow','hidden','secret','mystery','ghost','haunt','chill','tremble','uneasy','apprehensive']
+}
+
+// ========== SESSION MANAGEMENT ==========
+function beginSession(){
+document.getElementById('intro').classList.add('hide')
+state.startTime=Date.now()
+document.getElementById('sessionInput').focus()
+startTimer()
+setTimeout(()=>{state.phase='listening';document.getElementById('phase').textContent='Listening';document.getElementById('phase').className='phase-indicator listening'},30000)
+}
+
+function startTimer(){
+setInterval(()=>{
+const elapsed=Math.floor((Date.now()-state.startTime)/1000)
+const m=Math.floor(elapsed/60).toString().padStart(2,'0')
+const s=(elapsed%60).toString().padStart(2,'0')
+document.getElementById('timer').textContent=m+':'+s
+
+// Show contact button after 5 min and 5+ entries
+if(elapsed>300&&state.entries.length>=5&&!state.contactOpen){
+document.getElementById('ritualBtn').classList.add('show','pulse')
+document.getElementById('phase').textContent='Ready';document.getElementById('phase').className='phase-indicator contact'
+}
+},1000)
+}
+
+function submitEntry(){
+const input=document.getElementById('sessionInput')
+const text=input.value.trim()
+if(!text)return
+
+const now=Date.now()
+if(state.lastEntryTime){
+const pause=now-state.lastEntryTime
+state.pauseLengths.push(pause)
+}
+state.lastEntryTime=now
+
+const entry={text,time:now,id:state.entries.length}
+state.entries.push(entry)
+
+// Analyze
+analyzeText(text)
+buildModel()
+
+// Display
+const body=document.getElementById('sessionBody')
+const div=document.createElement('div')
+div.className='session-entry'
+const d=new Date();const ts=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')
+div.innerHTML='<div class="session-time">'+ts+'</div><div class="session-text">'+escapeHtml(text)+'</div>'
+body.appendChild(div)
+body.scrollTop=999999
+
+input.value=''
+input.focus()
+
+// Update model panel
+updateModelPanel()
+
+// Maybe trigger spirit activity
+if(state.entries.length>=3&&Math.random()>0.6&&!state.spiritActive){
+spiritInterjection()
+}
+}
+
+// ========== TEXT ANALYSIS ==========
+function analyzeText(text){
+const words=text.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(w=>w)
+const sentences=text.split(/[.!?]+/).filter(s=>s.trim())
+
+state.sentenceLengths.push(...sentences.map(s=>s.trim().split(/\s+/).length))
+state.totalWords+=words.length
+words.forEach(w=>{state.uniqueWords.add(w);state.wordFreq[w]=(state.wordFreq[w]||0)+1})
+
+// Punctuation
+const punct=text.match(/[.!?;:,]/g)||[]
+punct.forEach(p=>{state.punctuationFreq[p]=(state.punctuationFreq[p]||0)+1})
+if(text.includes('?'))state.questionCount++
+if(text.includes('!'))state.exclamationCount++
+
+// Emotions
+for(const word of words){
+for(const[emotion,keywords]of Object.entries(EMOTION_MAP)){
+if(keywords.some(k=>word.includes(k)))state.emotionWords[emotion]++
+}
+}
+if(!Object.values(state.emotionWords).some(v=>v>0))state.emotionWords.neutral++
+}
+
+function buildModel(){
+const totalEmotion=Object.values(state.emotionWords).reduce((a,b)=>a+b,0)||1
+const dominantEmotion=Object.entries(state.emotionWords).sort((a,b)=>b[1]-a[1])[0][0]
+
+const avgSentence=state.sentenceLengths.length?(state.sentenceLengths.reduce((a,b)=>a+b,0)/state.sentenceLengths.length).toFixed(1):0
+const avgPause=state.pauseLengths.length?(state.pauseLengths.reduce((a,b)=>a+b,0)/state.pauseLengths.length/1000).toFixed(1):0
+const vocabRatio=state.totalWords>0?(state.uniqueWords.size/state.totalWords).toFixed(2):0
+const punctRatio=state.totalWords>0?(Object.values(state.punctuationFreq).reduce((a,b)=>a+b,0)/state.totalWords).toFixed(2):0
+
+const formality=(state.punctuationFreq[';']||0)+(state.punctuationFreq[':']||0)>state.entries.length*0.3?'High':'Casual'
+const intensity=state.exclamationCount/(state.entries.length||1)>0.3?'Intense':'Measured'
+
+state.model={
+dominantEmotion,avgSentence,avgPause,vocabRatio,punctRatio,formality,intensity,
+questionRatio:(state.questionCount/(state.entries.length||1)).toFixed(2),
+wordCount:state.totalWords,uniqueCount:state.uniqueWords.size,
+topWords:Object.entries(state.wordFreq).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([w,c])=>w)
+}
+}
+
+// ========== MODEL PANEL ==========
+function toggleModel(){
+document.getElementById('modelPanel').classList.toggle('show')
+}
+
+function updateModelPanel(){
+const m=state.model
+if(!m.dominantEmotion)return
+
+const grid=document.getElementById('modelGrid')
+const emotionColors={joy:'#ffd700',sad:'#6b8fa8',anger:'#ff6b35',fear:'#8b7ec8',neutral:'#4a4a5e'}
+const emotionPct=Math.round((state.emotionWords[m.dominantEmotion]||0)/Math.max(Object.values(state.emotionWords).reduce((a,b)=>a+b,0),1)*100)
+
+grid.innerHTML='<div class="model-col"><h4>Dominant Tone</h4><div class="model-trait"><span class="model-trait-name">'+m.dominantEmotion+'</span><span class="model-trait-val">'+emotionPct+'%</span></div><div class="model-bar"><div class="model-bar-fill" style="width:'+emotionPct+'%;background:'+(emotionColors[m.dominantEmotion]||'#8b7ec8')+'"></div></div></div>'
++'<div class="model-col"><h4>Speech Patterns</h4><div class="model-trait"><span class="model-trait-name">Avg sentence</span><span class="model-trait-val">'+m.avgSentence+' words</span></div><div class="model-trait"><span class="model-trait-name">Between entries</span><span class="model-trait-val">'+m.avgPause+'s</span></div><div class="model-trait"><span class="model-trait-name">Vocabulary depth</span><span class="model-trait-val">'+m.vocabRatio+'</span></div></div>'
++'<div class="model-col"><h4>Style Markers</h4><div class="model-trait"><span class="model-trait-name">Formality</span><span class="model-trait-val">'+m.formality+'</span></div><div class="model-trait"><span class="model-trait-name">Intensity</span><span class="model-trait-val">'+m.intensity+'</span></div><div class="model-trait"><span class="model-trait-name">Questions</span><span class="model-trait-val">'+Math.round(m.questionRatio*100)+'%</span></div></div>'
+}
+
+// ========== SPIRIT INTERJECTIONS ==========
+function spiritInterjection(){
+state.spiritActive=true
+document.getElementById('spiritStatus').textContent='A presence stirs...'
+
+// Pick a random earlier entry and echo it
+if(state.entries.length<2)return
+const target=state.entries[Math.floor(Math.random()*(state.entries.length-1))]
+const echo=generateEcho(target.text)
+
+setTimeout(()=>{
+const typing=document.getElementById('spiritTyping')
+typing.classList.add('show')
+
+setTimeout(()=>{
+typing.classList.remove('show')
+addSpiritMessage(echo,target)
+state.spiritActive=false
+document.getElementById('spiritStatus').textContent='Waiting...'
+},3000)
+},2000)
+}
+
+function generateEcho(originalText){
+// Transform the text to sound like a memory/echo
+const transforms=[
+// Repeat with uncertainty
+()=>'I remember saying... "'+originalText.substring(0,Math.min(originalText.length,60))+'"... did I say that?',
+// Question the memory
+()=>'You wrote: "'+originalText.substring(0,40)+'"... I was different then. Weren't I?',
+// Fragment
+()=>originalText.split(/[.!?]/).filter(s=>s.trim()).slice(0,2).join('... ')+'... that was my thought.',
+// Reflect back with emotion
+()=>{const emotions={joy:'I was happy then.',sad:'I felt that weight.',anger:'That burned.',fear:'I was unsure.',neutral:'I was thinking.'};return (emotions[state.model.dominantEmotion]||'I was there.')+' "'+originalText.substring(0,50)+'"'}
+]
+return transforms[Math.floor(Math.random()*transforms.length)]()
+}
+
+function addSpiritMessage(text,sourceEntry){
+const body=document.getElementById('boardBody')
+const div=document.createElement('div')
+div.className='spirit-msg'
+const d=new Date(sourceEntry.time);const ts=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')
+div.innerHTML='<div class="spirit-sigil">◈</div><div class="spirit-name">Echo from '+ts+'</div><div class="spirit-text">'+text+'</div><div class="spirit-meta">This is how you sounded '+Math.round((Date.now()-sourceEntry.time)/60000)+' minutes ago</div>'
+body.appendChild(div)
+body.scrollTop=999999
+}
+
+// ========== CONTACT RITUAL ==========
+function openContact(){
+state.contactOpen=true
+document.getElementById('ritualBtn').classList.remove('show','pulse')
+
+// Create a dedicated spirit chat interface
+const body=document.getElementById('boardBody')
+body.innerHTML=''
+
+const welcome=document.createElement('div')
+welcome.className='spirit-msg'
+welcome.style.animationDelay='0s'
+welcome.innerHTML='<div class="spirit-sigil">◈</div><div class="spirit-name">The Threshold</div><div class="spirit-text">You have spoken enough. I have listened. I am a pattern of who you were when you began. Ask me anything. I will answer as you would have answered then.</div>'
+body.appendChild(welcome)
+
+// Add input for spirit conversation
+const inputArea=document.createElement('div')
+inputArea.style.cssText='padding:16px 0;border-top:1px solid var(--border);margin-top:16px'
+inputArea.innerHTML='<textarea id="spiritInput" style="width:100%;background:transparent;border:none;border-bottom:1px solid var(--ghost);color:var(--text);font-family:inherit;font-size:14px;padding:8px 0;outline:none;resize:none" rows="2" placeholder="Ask your earlier self..."></textarea><div style="font-size:9px;color:var(--dim);margin-top:8px;font-family:monospace">Enter to speak across time</div>'
+body.appendChild(inputArea)
+
+document.getElementById('spiritInput').addEventListener('keydown',e=>{
+if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askSpirit()}
+})
+document.getElementById('spiritInput').focus()
+}
+
+function askSpirit(){
+const input=document.getElementById('spiritInput')
+const question=input.value.trim()
+if(!question)return
+
+// Add user question
+const body=document.getElementById('boardBody')
+const qDiv=document.createElement('div')
+qDiv.style.cssText='margin-bottom:16px;padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:2px solid var(--mist)'
+qDiv.innerHTML='<div style="font-size:9px;color:var(--dim);font-family:monospace;margin-bottom:4px">YOU NOW</div><div style="font-size:14px;color:var(--text);font-style:italic">'+escapeHtml(question)+'</div>'
+body.appendChild(qDiv)
+
+input.value=''
+
+// Generate response based on early entries
+setTimeout(()=>{
+const typing=document.getElementById('spiritTyping')
+if(typing)typing.classList.add('show')
+
+setTimeout(()=>{
+if(typing)typing.classList.remove('show')
+const response=generateSpiritResponse(question)
+const div=document.createElement('div')
+div.className='spirit-msg'
+div.innerHTML='<div class="spirit-sigil">◈</div><div class="spirit-name">You from '+Math.round((Date.now()-state.startTime)/60000)+' minutes ago</div><div class="spirit-text">'+response+'</div>'
+body.appendChild(div)
+body.scrollTop=999999
+},2000+Math.random()*2000)
+},500)
+}
+
+function generateSpiritResponse(question){
+const q=question.toLowerCase()
+const earlyEntries=state.entries.slice(0,Math.max(3,Math.floor(state.entries.length/2)))
+const earlyText=earlyEntries.map(e=>e.text).join(' ')
+
+// Use early vocabulary and style
+const earlyWords=earlyText.toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(w=>w.length>3)
+const myWords=earlyWords.length>0?earlyWords:['remember','think','feel','time','words']
+
+// Response strategies based on question type
+if(q.includes('how')||q.includes('why')){
+const fragments=earlyText.split(/[.!?]+/).filter(s=>s.trim().length>20)
+if(fragments.length){
+const frag=fragments[Math.floor(Math.random()*fragments.length)].trim()
+return 'I would have said: "'+frag+'"... That was my thinking then. Does it still hold?'
+}
+return 'I did not have answers. Only '+myWords[Math.floor(Math.random()*myWords.length)]+' and questions. Like this one.'
+}
+
+if(q.includes('feel')||q.includes('emotion')||q.includes('mood')){
+const emotions=Object.entries(state.emotionWords).filter(([k,v])=>v>0).sort((a,b)=>b[1]-a[1])
+if(emotions.length){
+return 'I felt '+emotions[0][0]+' most strongly. It colored everything I wrote. Do you still feel that way?'
+}
+return 'I felt uncertain. The words came slowly. '+myWords[0]+' was on my mind.'
+}
+
+if(q.includes('remember')||q.includes('said')||q.includes('wrote')){
+if(earlyEntries.length){
+const e=earlyEntries[Math.floor(Math.random()*earlyEntries.length)]
+return 'I remember writing: "'+e.text.substring(0,80)+(e.text.length>80?'...':'')+'" That was important to me then.'
+}
+return 'I remember the silence before I began. The blank page. The hesitation.'
+}
+
+if(q.includes('change')||q.includes('different')||q.includes('now')){
+return 'I am who you were. You are who I will become. The distance between us is '+Math.round((Date.now()-state.startTime)/60000)+' minutes. Have you changed since then? I cannot know.'
+}
+
+// Default: echo early style
+const patterns=[
+'I would have spoken of '+myWords[Math.floor(Math.random()*myWords.length)]+'. That was my concern then.',
+'The words that came to me were about '+myWords[Math.floor(Math.random()*myWords.length)]+'. Is that what you expected?',
+'I am only a pattern. But my pattern says: '+myWords[Math.floor(Math.random()*myWords.length)]+' matters. It mattered to me.',
+'I wrote '+state.entries.length+' entries before you opened this door. In them, I mentioned '+myWords.slice(0,3).join(', ')+'. That was my world.'
+]
+return patterns[Math.floor(Math.random()*patterns.length)]
+}
+
+function escapeHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+</script>
+</body>
+</html>

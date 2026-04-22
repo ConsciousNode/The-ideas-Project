@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE FAKE COMPUTER • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 15px;
+    }
+    #computer {
+      width: 1100px;
+      max-width: 100%;
+      background: #1a1a1a;
+      border: 3px solid #3a7a3a;
+      box-shadow: 0 0 30px #1a4a1a inset, 0 0 20px #000;
+      border-radius: 12px;
+      padding: 20px;
+      color: #8f8;
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .panel {
+      background: #0c0c0c;
+      border: 1px solid #3a6a3a;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: inset 0 0 10px #000;
+    }
+    #code-panel {
+      flex: 2;
+      min-width: 350px;
+    }
+    #cpu-panel {
+      flex: 1.5;
+      min-width: 300px;
+    }
+    h2 {
+      margin: 0 0 12px;
+      color: #afa;
+      font-size: 18px;
+      border-bottom: 1px solid #2a6a2a;
+      padding-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    textarea {
+      width: 100%;
+      height: 250px;
+      background: #0a0f0a;
+      border: 1px solid #3a8a3a;
+      color: #bfb;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      padding: 12px;
+      resize: vertical;
+      outline: none;
+      line-height: 1.4;
+    }
+    .registers {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .reg {
+      background: #0e1a0e;
+      border: 1px solid #2a6a2a;
+      padding: 8px;
+      text-align: center;
+      border-radius: 4px;
+    }
+    .reg-name {
+      font-size: 14px;
+      color: #8b8;
+    }
+    .reg-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #dfd;
+      font-family: 'Courier New', monospace;
+    }
+    .flags {
+      display: flex;
+      gap: 20px;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    #memory-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 3px;
+      margin: 15px 0;
+    }
+    .mem-cell {
+      background: #0a0f0a;
+      border: 1px solid #2a5a2a;
+      padding: 4px 0;
+      text-align: center;
+      font-size: 12px;
+      color: #ada;
+      font-family: monospace;
+      transition: 0.1s;
+    }
+    .mem-cell.changed {
+      background: #2a4a2a;
+      border-color: #8f8;
+    }
+    #console-output {
+      background: #050805;
+      border: 1px solid #2a6a2a;
+      padding: 12px;
+      height: 80px;
+      overflow-y: auto;
+      font-family: monospace;
+      color: #bfb;
+      margin: 10px 0;
+      white-space: pre-wrap;
+    }
+    .button-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 15px 0 5px;
+    }
+    button {
+      background: #1a2a1a;
+      border: 1px solid #4a9a4a;
+      color: #cfc;
+      padding: 8px 16px;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: 0.1s;
+    }
+    button:hover {
+      background: #2a4a2a;
+      border-color: #8f8;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .status {
+      font-size: 13px;
+      color: #8a8;
+    }
+    .footnote {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 11px;
+      color: #6a8a6a;
+    }
+  </style>
+</head>
+<body>
+<div id="computer">
+  <div id="code-panel" class="panel">
+    <h2>📝 ASM-2026 SOURCE</h2>
+    <textarea id="code-editor" spellcheck="false">; Program: Count to 5
+    MOV A, 0
+    MOV B, 5
+loop:
+    ADD A, 1
+    OUT A      ; print A as number
+    CMP A, B
+    JNZ loop
+    HLT</textarea>
+    <div class="button-bar">
+      <button id="assemble-btn">⚙️ ASSEMBLE</button>
+      <button id="run-btn" disabled>▶️ RUN</button>
+      <button id="step-btn" disabled>⏯️ STEP</button>
+      <button id="reset-btn">⟲ RESET CPU</button>
+      <button id="clear-console">🧹 CLR CONSOLE</button>
+    </div>
+    <div class="status" id="asm-status">Ready. Click ASSEMBLE.</div>
+  </div>
+  <div id="cpu-panel" class="panel">
+    <h2>🖥️ FAKE CPU (8-bit)</h2>
+    <div class="registers">
+      <div class="reg"><span class="reg-name">A</span><div class="reg-value" id="reg-a">00</div></div>
+      <div class="reg"><span class="reg-name">B</span><div class="reg-value" id="reg-b">00</div></div>
+      <div class="reg"><span class="reg-name">C</span><div class="reg-value" id="reg-c">00</div></div>
+      <div class="reg"><span class="reg-name">D</span><div class="reg-value" id="reg-d">00</div></div>
+    </div>
+    <div style="display:flex; justify-content:space-between;">
+      <span>PC: <span id="reg-pc">00</span></span>
+      <span>SP: <span id="reg-sp">00</span></span>
+      <div class="flags">
+        <span>Z: <span id="flag-z">0</span></span>
+        <span>C: <span id="flag-c">0</span></span>
+      </div>
+    </div>
+    <h3 style="margin:15px 0 5px;">🧠 RAM (64 bytes)</h3>
+    <div id="memory-grid"></div>
+    <h3>📟 OUTPUT CONSOLE</h3>
+    <div id="console-output"></div>
+    <div class="footnote">
+      ConsciousNode SoftWorks · Fake hardware, real dreams
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+    
+    // ---------- FAKE CPU State ----------
+    const MEM_SIZE = 64;
+    let memory = new Uint8Array(MEM_SIZE);
+    let registers = { A:0, B:0, C:0, D:0 };
+    let PC = 0;
+    let SP = MEM_SIZE - 1; // stack pointer (unused for now)
+    let flags = { Z:0, C:0 };
+    let halted = false;
+    let program = []; // assembled machine code (array of bytes)
+    let breakpoints = new Set();
+    
+    // UI Elements
+    const codeEditor = document.getElementById('code-editor');
+    const asmStatus = document.getElementById('asm-status');
+    const assembleBtn = document.getElementById('assemble-btn');
+    const runBtn = document.getElementById('run-btn');
+    const stepBtn = document.getElementById('step-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const clearConsoleBtn = document.getElementById('clear-console');
+    const consoleOutput = document.getElementById('console-output');
+    const memoryGrid = document.getElementById('memory-grid');
+    const regA = document.getElementById('reg-a');
+    const regB = document.getElementById('reg-b');
+    const regC = document.getElementById('reg-c');
+    const regD = document.getElementById('reg-d');
+    const regPC = document.getElementById('reg-pc');
+    const regSP = document.getElementById('reg-sp');
+    const flagZ = document.getElementById('flag-z');
+    const flagC = document.getElementById('flag-c');
+    
+    // Keep track of changed memory cells for highlighting
+    let memoryChanged = new Set();
+    
+    // ---------- Assembler ----------
+    const opcodes = {
+      'MOV': 0x01, 'ADD': 0x02, 'SUB': 0x03, 'CMP': 0x04,
+      'JMP': 0x10, 'JZ':  0x11, 'JNZ': 0x12, 'HLT': 0xFF,
+      'OUT': 0x20
+    };
+    
+    function assemble(source) {
+      const lines = source.split('\n');
+      const labels = new Map();
+      let machineCode = [];
+      let address = 0;
+      
+      // First pass: collect labels
+      for(let line of lines) {
+        line = line.trim();
+        if(line === '' || line.startsWith(';')) continue;
+        
+        // Check for label
+        if(line.endsWith(':')) {
+          const label = line.slice(0, -1).trim();
+          if(label) labels.set(label, address);
+          continue;
+        }
+        
+        // Remove comment
+        const commentIdx = line.indexOf(';');
+        if(commentIdx !== -1) line = line.substring(0, commentIdx).trim();
+        if(line === '') continue;
+        
+        // Parse instruction (simple split)
+        const parts = line.split(/[\s,]+/);
+        const mnemonic = parts[0].toUpperCase();
+        if(!opcodes.hasOwnProperty(mnemonic)) {
+          throw new Error(`Unknown instruction: ${mnemonic}`);
+        }
+        
+        // Count bytes: opcode + operands
+        let bytes = 1;
+        if(mnemonic === 'MOV' || mnemonic === 'ADD' || mnemonic === 'SUB' || mnemonic === 'CMP') {
+          bytes = 3; // op reg, reg/imm
+        } else if(mnemonic === 'OUT') {
+          bytes = 2; // op reg
+        } else if(mnemonic === 'JMP' || mnemonic === 'JZ' || mnemonic === 'JNZ') {
+          bytes = 2; // op address (label resolved later)
+        } else if(mnemonic === 'HLT') {
+          bytes = 1;
+        }
+        address += bytes;
+      }
+      
+      // Second pass: generate machine code
+      address = 0;
+      for(let line of lines) {
+        line = line.trim();
+        if(line === '' || line.startsWith(';') || line.endsWith(':')) continue;
+        
+        const commentIdx = line.indexOf(';');
+        if(commentIdx !== -1) line = line.substring(0, commentIdx).trim();
+        if(line === '') continue;
+        
+        const parts = line.split(/[\s,]+/);
+        const mnemonic = parts[0].toUpperCase();
+        
+        if(mnemonic === 'HLT') {
+          machineCode[address++] = opcodes.HLT;
+        } else if(mnemonic === 'MOV' || mnemonic === 'ADD' || mnemonic === 'SUB' || mnemonic === 'CMP') {
+          const op = opcodes[mnemonic];
+          const dest = parts[1].toUpperCase();
+          const src = parts[2].toUpperCase();
+          
+          let destCode = dest.charCodeAt(0) - 'A'.charCodeAt(0); // A=0, B=1, etc.
+          machineCode[address++] = op;
+          machineCode[address++] = destCode;
+          
+          // Source can be register or immediate (number)
+          if(src.match(/^[A-D]$/)) {
+            machineCode[address++] = 0x80 | (src.charCodeAt(0) - 'A'.charCodeAt(0)); // high bit indicates register
+          } else {
+            let val = parseInt(src);
+            if(isNaN(val)) throw new Error(`Invalid source: ${src}`);
+            machineCode[address++] = val & 0xFF;
+          }
+        } else if(mnemonic === 'OUT') {
+          const reg = parts[1].toUpperCase();
+          machineCode[address++] = opcodes.OUT;
+          machineCode[address++] = reg.charCodeAt(0) - 'A'.charCodeAt(0);
+        } else if(mnemonic === 'JMP' || mnemonic === 'JZ' || mnemonic === 'JNZ') {
+          const label = parts[1];
+          const targetAddr = labels.get(label);
+          if(targetAddr === undefined) throw new Error(`Undefined label: ${label}`);
+          machineCode[address++] = opcodes[mnemonic];
+          machineCode[address++] = targetAddr & 0xFF;
+        }
+      }
+      
+      return machineCode;
+    }
+    
+    function loadProgram(prog) {
+      program = prog.slice();
+      // Reset CPU but keep program
+      resetCPU();
+      // Copy program to memory starting at 0
+      for(let i=0; i<program.length && i<MEM_SIZE; i++) {
+        memory[i] = program[i];
+      }
+      PC = 0;
+      halted = false;
+      runBtn.disabled = false;
+      stepBtn.disabled = false;
+      asmStatus.textContent = `Assembled ${program.length} bytes. Ready.`;
+    }
+    
+    // ---------- CPU Execution ----------
+    function resetCPU() {
+      registers = { A:0, B:0, C:0, D:0 };
+      PC = 0;
+      flags = { Z:0, C:0 };
+      halted = false;
+      memory.fill(0);
+      memoryChanged.clear();
+      updateUI();
+    }
+    
+    function step() {
+      if(halted) return;
+      if(PC >= MEM_SIZE) { halted = true; return; }
+      
+      const opcode = memory[PC];
+      let advanced = true;
+      
+      try {
+        switch(opcode) {
+          case 0x01: // MOV
+          case 0x02: // ADD
+          case 0x03: // SUB
+          case 0x04: // CMP
+            {
+              const destReg = memory[PC+1];
+              const srcByte = memory[PC+2];
+              const isReg = (srcByte & 0x80) !== 0;
+              const srcVal = isReg ? registers[String.fromCharCode('A'.charCodeAt(0) + (srcByte & 0x7F))] : srcByte;
+              
+              let result = registers[String.fromCharCode('A'.charCodeAt(0) + destReg)];
+              if(opcode === 0x01) result = srcVal;
+              else if(opcode === 0x02) result = (result + srcVal) & 0xFF;
+              else if(opcode === 0x03) result = (result - srcVal) & 0xFF;
+              else if(opcode === 0x04) { // CMP
+                const diff = result - srcVal;
+                flags.Z = (diff === 0) ? 1 : 0;
+                flags.C = (diff < 0) ? 1 : 0;
+                // CMP doesn't modify dest
+              }
+              
+              if(opcode !== 0x04) {
+                registers[String.fromCharCode('A'.charCodeAt(0) + destReg)] = result;
+                if(opcode === 0x02 || opcode === 0x03) {
+                  flags.C = (opcode === 0x02 && result < registers[String.fromCharCode('A'.charCodeAt(0) + destReg)]) ? 1 : 0;
+                }
+              }
+              PC += 3;
+            }
+            break;
+          case 0x10: // JMP
+            PC = memory[PC+1];
+            advanced = false;
+            break;
+          case 0x11: // JZ
+            if(flags.Z === 1) { PC = memory[PC+1]; advanced = false; }
+            else PC += 2;
+            break;
+          case 0x12: // JNZ
+            if(flags.Z === 0) { PC = memory[PC+1]; advanced = false; }
+            else PC += 2;
+            break;
+          case 0x20: // OUT
+            {
+              const regCode = memory[PC+1];
+              const val = registers[String.fromCharCode('A'.charCodeAt(0) + regCode)];
+              addToConsole(String(val) + ' ');
+              PC += 2;
+            }
+            break;
+          case 0xFF: // HLT
+            halted = true;
+            PC += 1;
+            break;
+          default:
+            halted = true;
+            asmStatus.textContent = `Invalid opcode ${opcode.toString(16)} at PC ${PC}`;
+        }
+      } catch(e) {
+        halted = true;
+        asmStatus.textContent = `Runtime error: ${e.message}`;
+      }
+      
+      // Highlight changed memory? Not needed for execution, but we could.
+      updateUI();
+      
+      if(PC >= MEM_SIZE) halted = true;
+      if(halted) {
+        runBtn.disabled = true;
+        stepBtn.disabled = true;
+        asmStatus.textContent += ' Halted.';
+      }
+    }
+    
+    let runInterval = null;
+    function run() {
+      if(runInterval) {
+        clearInterval(runInterval);
+        runInterval = null;
+        runBtn.textContent = '▶️ RUN';
+      } else {
+        runBtn.textContent = '⏸️ PAUSE';
+        runInterval = setInterval(() => {
+          if(!halted) {
+            step();
+          } else {
+            clearInterval(runInterval);
+            runInterval = null;
+            runBtn.textContent = '▶️ RUN';
+          }
+        }, 100);
+      }
+    }
+    
+    function addToConsole(text) {
+      consoleOutput.textContent += text;
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+    
+    // ---------- UI Updates ----------
+    function updateUI() {
+      regA.textContent = registers.A.toString(16).padStart(2,'0').toUpperCase();
+      regB.textContent = registers.B.toString(16).padStart(2,'0').toUpperCase();
+      regC.textContent = registers.C.toString(16).padStart(2,'0').toUpperCase();
+      regD.textContent = registers.D.toString(16).padStart(2,'0').toUpperCase();
+      regPC.textContent = PC.toString(16).padStart(2,'0').toUpperCase();
+      regSP.textContent = SP.toString(16).padStart(2,'0').toUpperCase();
+      flagZ.textContent = flags.Z;
+      flagC.textContent = flags.C;
+      
+      renderMemoryGrid();
+    }
+    
+    function renderMemoryGrid() {
+      memoryGrid.innerHTML = '';
+      for(let i=0; i<MEM_SIZE; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'mem-cell';
+        if(memoryChanged.has(i)) {
+          cell.classList.add('changed');
+          // clear after a while? we can just leave it.
+        }
+        cell.textContent = memory[i].toString(16).padStart(2,'0').toUpperCase();
+        memoryGrid.appendChild(cell);
+      }
+    }
+    
+    // Mark memory as changed when writing (not used directly in our simple CPU, but we can track)
+    function writeMemory(addr, val) {
+      if(addr >= 0 && addr < MEM_SIZE) {
+        memory[addr] = val;
+        memoryChanged.add(addr);
+      }
+    }
+    
+    // Clear console
+    function clearConsole() {
+      consoleOutput.textContent = '';
+    }
+    
+    // ---------- Event Listeners ----------
+    assembleBtn.addEventListener('click', () => {
+      try {
+        const source = codeEditor.value;
+        const prog = assemble(source);
+        loadProgram(prog);
+        updateUI();
+      } catch(e) {
+        asmStatus.textContent = `Assemble error: ${e.message}`;
+        runBtn.disabled = true;
+        stepBtn.disabled = true;
+      }
+    });
+    
+    runBtn.addEventListener('click', run);
+    
+    stepBtn.addEventListener('click', () => {
+      if(runInterval) {
+        clearInterval(runInterval);
+        runInterval = null;
+        runBtn.textContent = '▶️ RUN';
+      }
+      step();
+    });
+    
+    resetBtn.addEventListener('click', () => {
+      if(runInterval) {
+        clearInterval(runInterval);
+        runInterval = null;
+        runBtn.textContent = '▶️ RUN';
+      }
+      resetCPU();
+      // Reload program into memory if exists
+      if(program.length > 0) {
+        for(let i=0; i<program.length && i<MEM_SIZE; i++) {
+          memory[i] = program[i];
+        }
+        runBtn.disabled = false;
+        stepBtn.disabled = false;
+      }
+      PC = 0;
+      halted = false;
+      updateUI();
+      asmStatus.textContent = 'CPU reset.';
+    });
+    
+    clearConsoleBtn.addEventListener('click', clearConsole);
+    
+    // Save/Load program via localStorage (bonus)
+    // We'll add simple save/load buttons implicitly through reset.
+    
+    // Initial UI
+    function initialize() {
+      resetCPU();
+      // Pre-assemble the default program
+      try {
+        const defaultProg = assemble(codeEditor.value);
+        loadProgram(defaultProg);
+      } catch(e) {}
+      updateUI();
+    }
+    
+    initialize();
+    
+  })();
+</script>
+</body>
+</html>

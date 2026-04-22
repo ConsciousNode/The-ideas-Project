@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mirror — It Learns You</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a10;--panel:#12121a;--border:#1e1e2e;--text:#e0e0e8;--dim:#5a5a6e;--accent:#00e5ff;--accent-dim:#00e5ff22;--warm:#ff6b35;--warm-dim:#ff6b3522;--growth:#00e676;--predict:#b829dd;--predict-dim:#b829dd33}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono',monospace;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.header{height:48px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
+.header h1{font-size:14px;color:var(--accent)}.header p{font-size:10px;color:var(--dim)}
+.spacer{flex:1}
+.brain-status{display:flex;align-items:center;gap:8px;font-size:10px}
+.brain-dot{width:6px;height:6px;border-radius:50%;background:var(--dim);transition:all 0.3s}
+.brain-dot.active{background:var(--growth);animation:pulse 1.5s infinite}
+.brain-dot.predicting{background:var(--predict);animation:pulse 0.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.main{flex:1;display:flex;overflow:hidden}
+
+/* The Workspace */
+.workspace{flex:1;display:flex;flex-direction:column;padding:20px;gap:16px;overflow-y:auto}
+.tool-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.tool-btn{aspect-ratio:1;background:var(--panel);border:1px solid var(--border);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all 0.2s;font-size:10px;color:var(--dim);position:relative}
+.tool-btn:hover{border-color:var(--accent);color:var(--text);transform:translateY(-2px)}
+.tool-btn:active{transform:scale(0.95)}
+.tool-btn.predicted{border-color:var(--predict);background:var(--predict-dim);box-shadow:0 0 20px var(--predict-dim);animation:glow 2s infinite}
+.tool-btn.predicted::after{content:"PREDICTED";position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--predict);color:#fff;font-size:8px;padding:2px 8px;border-radius:4px;letter-spacing:0.1em}
+@keyframes glow{0%,100%{box-shadow:0 0 20px var(--predict-dim)}50%{box-shadow:0 0 40px var(--predict-dim)}}
+.tool-icon{font-size:24px}
+
+/* The Canvas Area */
+.canvas-area{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:12px;position:relative;overflow:hidden;min-height:300px}
+#drawCanvas{width:100%;height:100%;cursor:crosshair}
+
+/* The Prediction Panel */
+.prediction-panel{position:absolute;bottom:16px;left:16px;right:16px;background:rgba(10,10,15,0.95);border:1px solid var(--predict);border-radius:12px;padding:16px;display:none;backdrop-filter:blur(8px);z-index:100}
+.prediction-panel.show{display:block;animation:slideUp 0.3s ease-out}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.pred-title{font-size:10px;text-transform:uppercase;color:var(--predict);letter-spacing:0.1em;margin-bottom:8px}
+.pred-text{font-size:12px;color:var(--text);line-height:1.5}
+.pred-confidence{font-size:10px;color:var(--dim);margin-top:8px}
+
+/* Sidebar */
+.sidebar{width:340px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--dim);margin-bottom:12px}
+
+/* Neural Network Viz */
+.nn-viz{height:180px;position:relative;background:var(--bg);border-radius:8px;border:1px solid var(--border);overflow:hidden}
+.nn-canvas{width:100%;height:100%}
+
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.stat-value{font-size:18px;color:var(--accent);font-weight:600}
+.stat-label{font-size:9px;color:var(--dim);margin-top:4px;text-transform:uppercase;letter-spacing:0.05em}
+
+/* Behavior Log */
+.behavior-log{flex:1;overflow-y:auto;max-height:200px}
+.behavior-log h3{font-size:10px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;letter-spacing:0.1em}
+.log-entry{display:flex;gap:12px;padding:4px 0;font-size:9px;border-bottom:1px solid var(--border);opacity:0;animation:fadeIn 0.3s forwards}
+@keyframes fadeIn{to{opacity:1}}
+.log-time{color:var(--dim);min-width:45px}.log-action{color:var(--text)}.log-target{color:var(--accent)}
+
+/* Model Info */
+.model-info{font-size:10px;color:var(--dim);line-height:1.6}
+.model-info span{color:var(--text)}
+
+/* Reset */
+.reset-btn{width:100%;padding:10px;background:transparent;border:1px solid var(--border);color:var(--dim);border-radius:6px;font-family:inherit;font-size:10px;cursor:pointer;transition:all 0.2s}
+.reset-btn:hover{border-color:var(--warm);color:var(--warm)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>🪞 Mirror</h1>
+<p>It watches. It learns. After an hour, it knows you.</p>
+<div class="spacer"></div>
+<div class="brain-status">
+<div class="brain-dot" id="brainDot"></div>
+<span id="brainState">Observing</span>
+</div>
+<span style="font-size:10px;color:var(--dim)" id="sessionTime">00:00</span>
+</div>
+
+<div class="main">
+<div class="workspace">
+<div class="tool-grid" id="toolGrid">
+<div class="tool-btn" data-tool="brush" onclick="useTool('brush')">
+<div class="tool-icon">🖌</div><span>Brush</span>
+</div>
+<div class="tool-btn" data-tool="eraser" onclick="useTool('eraser')">
+<div class="tool-icon">🧼</div><span>Eraser</span>
+</div>
+<div class="tool-btn" data-tool="line" onclick="useTool('line')">
+<div class="tool-icon">╱</div><span>Line</span>
+</div>
+<div class="tool-btn" data-tool="rect" onclick="useTool('rect')">
+<div class="tool-icon">▭</div><span>Rect</span>
+</div>
+<div class="tool-btn" data-tool="circle" onclick="useTool('circle')">
+<div class="tool-icon">◯</div><span>Circle</span>
+</div>
+<div class="tool-btn" data-tool="text" onclick="useTool('text')">
+<div class="tool-icon">T</div><span>Text</span>
+</div>
+<div class="tool-btn" data-tool="undo" onclick="useTool('undo')">
+<div class="tool-icon">↶</div><span>Undo</span>
+</div>
+<div class="tool-btn" data-tool="redo" onclick="useTool('redo')">
+<div class="tool-icon">↷</div><span>Redo</span>
+</div>
+<div class="tool-btn" data-tool="clear" onclick="useTool('clear')">
+<div class="tool-icon">✕</div><span>Clear</span>
+</div>
+<div class="tool-btn" data-tool="save" onclick="useTool('save')">
+<div class="tool-icon">💾</div><span>Save</span>
+</div>
+<div class="tool-btn" data-tool="color" onclick="useTool('color')">
+<div class="tool-icon">🎨</div><span>Color</span>
+</div>
+<div class="tool-btn" data-tool="size" onclick="useTool('size')">
+<div class="tool-icon">◎</div><span>Size</span>
+</div>
+</div>
+
+<div class="canvas-area" id="canvasArea">
+<canvas id="drawCanvas"></canvas>
+<div class="prediction-panel" id="predPanel">
+<div class="pred-title">🔮 Prediction</div>
+<div class="pred-text" id="predText">Analyzing your patterns...</div>
+<div class="pred-confidence" id="predConf">Confidence: 0%</div>
+</div>
+</div>
+</div>
+
+<div class="sidebar">
+<div class="sidebar-section">
+<div class="sidebar-title">Neural Network</div>
+<div class="nn-viz">
+<canvas id="nnCanvas" class="nn-canvas"></canvas>
+</div>
+</div>
+
+<div class="sidebar-section">
+<div class="sidebar-title">Learning Stats</div>
+<div class="stat-grid">
+<div class="stat-box">
+<div class="stat-value" id="samples">0</div>
+<div class="stat-label">Samples</div>
+</div>
+<div class="stat-box">
+<div class="stat-value" id="accuracy">0%</div>
+<div class="stat-label">Accuracy</div>
+</div>
+<div class="stat-box">
+<div class="stat-value" id="patterns">0</div>
+<div class="stat-label">Patterns</div>
+</div>
+<div class="stat-box">
+<div class="stat-value" id="predictions">0</div>
+<div class="stat-label">Predictions</div>
+</div>
+</div>
+</div>
+
+<div class="sidebar-section">
+<div class="sidebar-title">What It Knows</div>
+<div class="model-info" id="modelInfo">
+<span>Time of day preference:</span> Unknown<br>
+<span>Tool sequence patterns:</span> Unknown<br>
+<span>Idle behavior:</span> Unknown<br>
+<span>Color preference:</span> Unknown<br>
+<span>Stroke speed:</span> Unknown
+</div>
+</div>
+
+<div class="sidebar-section" style="flex:1;display:flex;flex-direction:column">
+<div class="sidebar-title">Behavior Log</div>
+<div class="behavior-log" id="behaviorLog">
+</div>
+</div>
+
+<div class="sidebar-section">
+<button class="reset-btn" onclick="resetModel()">🗑 Reset Model (Forget Everything)</button>
+</div>
+</div>
+</div>
+
+<script>
+// ========== MIRROR: BEHAVIORAL PREDICTION ENGINE ==========
+// A tiny neural network that learns your patterns in real time.
+// No API calls. No external data. Just you and the math.
+
+// ========== TINY NEURAL NET ==========
+class TinyNet {
+constructor(inputSize,hiddenSize,outputSize){
+this.inputSize=inputSize;this.hiddenSize=hiddenSize;this.outputSize=outputSize
+this.W1=randMat(hiddenSize,inputSize);this.b1=new Array(hiddenSize).fill(0)
+this.W2=randMat(outputSize,hiddenSize);this.b2=new Array(outputSize).fill(0)
+this.lr=0.01;this.momentum=0.9
+this.vW1=zeroMat(hiddenSize,inputSize);this.vb1=new Array(hiddenSize).fill(0)
+this.vW2=zeroMat(outputSize,hiddenSize);this.vb2=new Array(outputSize).fill(0)
+}
+forward(x){
+this.x=x;this.h1=addVec(matVecMul(this.W1,x),this.b1).map(relu)
+this.out=addVec(matVecMul(this.W2,this.h1),this.b2).map(softmax)
+return this.out
+}
+backward(target){
+const dOut=zip(this.out,target).map(([o,t])=>o-t)
+const dW2=outer(dOut,this.h1);const db2=dOut
+const dH1=vecMatMul(dOut,this.W2).map((v,i)=>v*(this.h1[i]>0?1:0))
+const dW1=outer(dH1,this.x);const db1=dH1
+// Momentum update
+for(let i=0;i<this.W2.length;i++)for(let j=0;j<this.W2[0].length;j++){this.vW2[i][j]=this.momentum*this.vW2[i][j]-this.lr*dW2[i][j];this.W2[i][j]+=this.vW2[i][j]}
+for(let i=0;i<this.b2.length;i++){this.vb2[i]=this.momentum*this.vb2[i]-this.lr*db2[i];this.b2[i]+=this.vb2[i]}
+for(let i=0;i<this.W1.length;i++)for(let j=0;j<this.W1[0].length;j++){this.vW1[i][j]=this.momentum*this.vW1[i][j]-this.lr*dW1[i][j];this.W1[i][j]+=this.vW1[i][j]}
+for(let i=0;i<this.b1.length;i++){this.vb1[i]=this.momentum*this.vb1[i]-this.lr*db1[i];this.b1[i]+=this.vb1[i]}
+}
+}
+
+function randn(){let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function randMat(rows,cols){return Array.from({length:rows},()=>Array.from({length:cols},()=>randn()*0.1))}
+function zeroMat(rows,cols){return Array.from({length:rows},()=>Array(cols).fill(0))}
+function relu(x){return Math.max(0,x)}
+function softmax(arr){const max=Math.max(...arr);const exps=arr.map(x=>Math.exp(x-max));const sum=exps.reduce((a,b)=>a+b,0);return exps.map(e=>e/sum)}
+function addVec(a,b){return a.map((v,i)=>v+b[i])}
+function matVecMul(m,v){return m.map(row=>row.reduce((s,w,i)=>s+w*v[i],0))}
+function vecMatMul(v,m){return m[0].map((_,j)=>v.reduce((s,vi,i)=>s+vi*m[i][j],0))}
+function outer(a,b){return a.map(ai=>b.map(bi=>ai*bi))}
+function zip(a,b){return a.map((v,i)=>[v,b[i]])}
+
+// ========== STATE ==========
+const TOOLS=['brush','eraser','line','rect','circle','text','undo','redo','clear','save','color','size']
+const net=new TinyNet(8,16,12) // 8 inputs, 16 hidden, 12 outputs (tools)
+const state={
+samples:0,correct:0,predictions:0,patterns:0,
+sequence:[],toolCounts:{},hourCounts:new Array(24).fill(0),
+lastTool:null,lastTime:Date.now(),strokeSpeeds:[],
+colorsUsed:{},idleTimes:[],sessionStart:Date.now(),
+currentTool:'brush',isDrawing:false,lastX:0,lastY:0,
+undoStack:[],redoStack:[],predictedTool:null
+}
+
+// ========== FEATURE EXTRACTION ==========
+function extractFeatures(){
+const now=new Date();const hour=now.getHours()
+const timeOfDay=hour/24
+const sinceLast=Math.min((now-state.lastTime)/1000,60)/60
+const lastToolIdx=state.lastTool?TOOLS.indexOf(state.lastTool):-1
+const lastToolOneHot=TOOLS.map((_,i)=>i===lastToolIdx?1:0)
+const freqFeatures=TOOLS.map(t=>(state.toolCounts[t]||0)/Math.max(state.samples,1))
+const hourPref=state.hourCounts[hour]/Math.max(state.samples,1)
+const seqLen=Math.min(state.sequence.length,5)/5
+const avgSpeed=state.strokeSpeeds.length?state.strokeSpeeds.reduce((a,b)=>a+b,0)/state.strokeSpeeds.length:0.5
+return [timeOfDay,sinceLast,...freqFeatures.slice(0,2),hourPref,seqLen,avgSpeed,Math.random()*0.1]
+}
+
+function targetVector(tool){
+return TOOLS.map(t=>t===tool?1:0)
+}
+
+// ========== CANVAS SETUP ==========
+const canvas=document.getElementById('drawCanvas')
+const ctx=canvas.getContext('2d')
+const nnCanvas=document.getElementById('nnCanvas')
+const nnCtx=nnCanvas.getContext('2d')
+
+function resizeCanvas(){
+const rect=canvas.parentElement.getBoundingClientRect()
+canvas.width=rect.width;canvas.height=rect.height
+ctx.strokeStyle='#00e5ff';ctx.lineWidth=2;ctx.lineCap='round'
+}
+
+// ========== DRAWING ==========
+let drawing=false
+
+function getPos(e){
+const rect=canvas.getBoundingClientRect()
+return{x:e.clientX-rect.left,y:e.clientY-rect.top}
+}
+
+canvas.addEventListener('mousedown',e=>{
+drawing=true;const p=getPos(e);state.lastX=p.x;state.lastY=p.y;state.isDrawing=true
+if(state.currentTool==='brush'||state.currentTool==='eraser'){
+ctx.beginPath();ctx.moveTo(p.x,p.y)
+ctx.strokeStyle=state.currentTool==='eraser'?'#0a0a10':'#00e5ff'
+ctx.lineWidth=state.currentTool==='eraser'?20:2
+}
+})
+
+canvas.addEventListener('mousemove',e=>{
+if(!drawing)return;const p=getPos(e)
+const dist=Math.hypot(p.x-state.lastX,p.y-state.lastY)
+const speed=dist/16 // px per ms approx
+state.strokeSpeeds.push(Math.min(speed,10));if(state.strokeSpeeds.length>100)state.strokeSpeeds.shift()
+
+if(state.currentTool==='brush'||state.currentTool==='eraser'){
+ctx.lineTo(p.x,p.y);ctx.stroke()
+}else if(state.currentTool==='line'||state.currentTool==='rect'||state.currentTool==='circle'){
+// Preview would go here - keeping simple
+}
+state.lastX=p.x;state.lastY=p.y
+})
+
+canvas.addEventListener('mouseup',()=>{drawing=false;state.isDrawing=false;if(state.currentTool!=='eraser')saveState()})
+canvas.addEventListener('mouseleave',()=>{drawing=false;state.isDrawing=false})
+
+function saveState(){
+state.undoStack.push(canvas.toDataURL());if(state.undoStack.length>20)state.undoStack.shift()
+}
+
+// ========== TOOL SYSTEM ==========
+function useTool(tool){
+const prev=state.currentTool;state.currentTool=tool;state.lastTool=prev;state.lastTime=Date.now()
+state.toolCounts[tool]=(state.toolCounts[tool]||0)+1;state.sequence.push(tool)
+if(state.sequence.length>20)state.sequence.shift()
+state.samples++
+
+const hour=new Date().getHours();state.hourCounts[hour]++
+
+// Train on this choice
+const features=extractFeatures();const target=targetVector(tool)
+net.forward(features);net.backward(target)
+
+// Log
+logBehavior('Used',tool)
+
+// Update UI
+updateToolButtons()
+updateStats()
+drawNN()
+
+// Check if prediction was correct
+if(state.predictedTool===tool)state.correct++
+
+// Make new prediction
+predictNext()
+}
+
+function updateToolButtons(){
+document.querySelectorAll('.tool-btn').forEach(btn=>{
+btn.classList.remove('predicted')
+if(btn.dataset.tool===state.currentTool)btn.style.borderColor='var(--accent)'
+else btn.style.borderColor=''
+})
+}
+
+// ========== PREDICTION ==========
+function predictNext(){
+if(state.samples<5)return // Need some data first
+
+const features=extractFeatures()
+const probs=net.forward(features)
+const maxIdx=probs.indexOf(Math.max(...probs))
+const confidence=probs[maxIdx]
+
+if(confidence>0.15){
+state.predictedTool=TOOLS[maxIdx]
+state.predictions++
+
+// Highlight predicted button
+const btn=document.querySelector('[data-tool="'+state.predictedTool+'"]')
+if(btn)btn.classList.add('predicted')
+
+// Show prediction panel
+const panel=document.getElementById('predPanel')
+const text=document.getElementById('predText')
+const conf=document.getElementById('predConf')
+
+const reasons=[]
+if(state.sequence.length>=2&&state.sequence[state.sequence.length-1]===state.sequence[state.sequence.length-2])reasons.push('You often use '+state.sequence[state.sequence.length-1]+' twice in a row')
+const hour=new Date().getHours()
+if(state.hourCounts[hour]>state.samples*0.3)reasons.push('This is a peak activity hour for you')
+if(state.toolCounts[state.predictedTool]>state.samples*0.2)reasons.push('Your most used tool lately')
+
+panel.classList.add('show')
+text.textContent='Next tool: '+state.predictedTool+(reasons.length?'. '+reasons.join('. ')+'.':'')
+conf.textContent='Confidence: '+(confidence*100).toFixed(1)+'%'
+
+// Update brain status
+document.getElementById('brainDot').className='brain-dot predicting'
+document.getElementById('brainState').textContent='Predicting'
+setTimeout(()=>{document.getElementById('brainDot').className='brain-dot active';document.getElementById('brainState').textContent='Learning'},2000)
+}else{
+state.predictedTool=null
+}
+}
+
+// ========== VISUALIZATION ==========
+function drawNN(){
+const w=nnCanvas.width=nnCanvas.offsetWidth;const h=nnCanvas.height=nnCanvas.offsetHeight
+nnCtx.clearRect(0,0,w,h)
+
+const layers=[8,16,12]
+const layerX=[w*0.15,w*0.5,w*0.85]
+const neurons=[]
+
+for(let l=0;l<layers.length;l++){
+neurons[l]=[];const count=layers[l];const spacing=h/(count+1)
+for(let i=0;i<count;i++){
+neurons[l].push({x:layerX[l],y:spacing*(i+1)})
+}
+}
+
+// Draw connections
+for(let l=0;l<layers.length-1;l++){
+const W=l===0?net.W1:net.W2
+for(let i=0;i<neurons[l].length;i++){
+for(let j=0;j<neurons[l+1].length;j++){
+const weight=W[j][i]||0
+const alpha=Math.min(Math.abs(weight)*3,0.6)
+if(alpha<0.05)continue
+nnCtx.strokeStyle=weight>0?'rgba(0,229,255,'+alpha+')':'rgba(255,51,102,'+alpha+')'
+nnCtx.lineWidth=Math.max(Math.abs(weight)*1.5,0.5)
+nnCtx.beginPath();nnCtx.moveTo(neurons[l][i].x,neurons[l][i].y);nnCtx.lineTo(neurons[l+1][j].x,neurons[l+1][j].y);nnCtx.stroke()
+}
+}
+}
+
+// Draw neurons
+for(let l=0;l<layers.length;l++){
+for(let i=0;i<neurons[l].length;i++){
+const n=neurons[l][i]
+nnCtx.beginPath();nnCtx.arc(n.x,n.y,4,0,Math.PI*2)
+nnCtx.fillStyle=l===0?'#00e5ff':l===layers.length-1?'#ff6b35':'#e0e0e8'
+nnCtx.fill()
+}
+}
+
+// Layer labels
+nnCtx.fillStyle='var(--dim)';nnCtx.font='9px monospace';nnCtx.textAlign='center'
+nnCtx.fillText('INPUT',layerX[0],h-10);nnCtx.fillText('HIDDEN',layerX[1],h-10);nnCtx.fillText('OUTPUT',layerX[2],h-10)
+}
+
+// ========== STATS ==========
+function updateStats(){
+document.getElementById('samples').textContent=state.samples
+document.getElementById('accuracy').textContent=state.predictions>0?(state.correct/state.predictions*100).toFixed(0)+'%':'0%'
+document.getElementById('patterns').textContent=detectPatterns()
+document.getElementById('predictions').textContent=state.predictions
+
+const hour=new Date().getHours()
+const topHour=state.hourCounts.indexOf(Math.max(...state.hourCounts))
+const topTool=Object.entries(state.toolCounts).sort((a,b)=>b[1]-a[1])[0]
+const avgSpeed=state.strokeSpeeds.length?(state.strokeSpeeds.reduce((a,b)=>a+b,0)/state.strokeSpeeds.length).toFixed(1):'Unknown'
+
+const topColor=Object.entries(state.colorsUsed).sort((a,b)=>b[1]-a[1])[0]
+
+document.getElementById('modelInfo').innerHTML=
+'<span>Time of day preference:</span> '+(topHour>=0?topHour+':00 ('+state.hourCounts[topHour]+' uses)':'Unknown')+'<br>'+
+'<span>Tool sequence patterns:</span> '+(detectPatterns()>0?detectPatterns()+' detected':'Unknown')+'<br>'+
+'<span>Idle behavior:</span> '+(state.idleTimes.length?(state.idleTimes.reduce((a,b)=>a+b,0)/state.idleTimes.length/1000).toFixed(1)+'s avg':'Unknown')+'<br>'+
+'<span>Stroke speed:</span> '+avgSpeed+' px/ms<br>'+
+'<span>Most used tool:</span> '+(topTool?topTool[0]+' ('+topTool[1]+'x)':'Unknown')
+}
+
+function detectPatterns(){
+let count=0
+for(let i=0;i<state.sequence.length-2;i++){
+if(state.sequence[i]===state.sequence[i+1]&&state.sequence[i]===state.sequence[i+2])count++
+}
+// Check for common pairs
+const pairs={};for(let i=0;i<state.sequence.length-1;i++){const p=state.sequence[i]+'->'+state.sequence[i+1];pairs[p]=(pairs[p]||0)+1}
+const frequentPairs=Object.values(pairs).filter(c=>c>=2).length
+return count+frequentPairs
+}
+
+// ========== LOGGING ==========
+function logBehavior(action,target){
+const now=new Date();const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0')
+const log=document.getElementById('behaviorLog')
+const div=document.createElement('div');div.className='log-entry'
+div.innerHTML='<span class="log-time">'+time+'</span><span class="log-action">'+action+'</span><span class="log-target">'+target+'</span>'
+log.insertBefore(div,log.firstChild);if(log.children.length>30)log.lastChild.remove()
+}
+
+// ========== IDLE TRACKING ==========
+let idleStart=Date.now()
+document.addEventListener('mousemove',()=>{
+const idle=Date.now()-idleStart
+if(idle>2000)state.idleTimes.push(idle)
+if(state.idleTimes.length>50)state.idleTimes.shift()
+idleStart=Date.now()
+})
+
+// ========== TIME TRACKING ==========
+setInterval(()=>{
+const elapsed=Math.floor((Date.now()-state.sessionStart)/1000)
+const m=Math.floor(elapsed/60).toString().padStart(2,'0')
+const s=(elapsed%60).toString().padStart(2,'0')
+document.getElementById('sessionTime').textContent=m+':'+s
+},1000)
+
+// ========== RESET ==========
+function resetModel(){
+if(!confirm('This will erase everything Mirror has learned about you. Continue?'))return
+location.reload()
+}
+
+// ========== INIT ==========
+window.addEventListener('load',()=>{
+resizeCanvas();window.addEventListener('resize',resizeCanvas)
+drawNN();updateStats()
+logBehavior('System','Mirror initialized')
+document.getElementById('brainDot').className='brain-dot active'
+})
+</script>
+</body>
+</html>

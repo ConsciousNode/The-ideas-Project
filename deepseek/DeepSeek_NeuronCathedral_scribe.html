@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>SYNAPTIC SCRIBE • NEURON CATHEDRAL • CONSCIOUSNODE</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0c0e;
+      background-image: radial-gradient(circle at 20% 30%, #1a1f2a 0%, #030405 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    #canvas-container { position: relative; width: 100vw; height: 100vh; }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .crt::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: rgba(18, 16, 16, 0.1);
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 2px, 3px 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .window {
+      position: absolute;
+      background: rgba(10, 15, 20, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid #00f7ff;
+      box-shadow: 0 0 20px rgba(0, 247, 255, 0.2), inset 0 0 10px rgba(0, 247, 255, 0.1);
+      color: #a0e7ff;
+      font-family: 'Courier New', monospace;
+      min-width: 280px;
+      border-radius: 8px;
+      z-index: 100;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .window:hover { box-shadow: 0 0 30px #00f7ff88, inset 0 0 15px #00f7ff33; }
+    .window-header {
+      background: #0a1a2b;
+      padding: 8px 12px;
+      border-bottom: 1px solid #00f7ff;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #b0ffff;
+      text-shadow: 0 0 8px cyan;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .window-controls { display: flex; gap: 8px; }
+    .window-btn {
+      background: none;
+      border: 1px solid #00f7ff;
+      color: #00f7ff;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.1s;
+    }
+    .window-btn:hover { background: #00f7ff33; box-shadow: 0 0 10px cyan; }
+    .window-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    button, select, input, textarea {
+      background: #0b1a24;
+      border: 1px solid #00ccff;
+      color: #b0f0ff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.1s;
+      box-shadow: inset 0 0 5px #00000055;
+    }
+    button:hover { background: #1a3a4a; border-color: #88ffff; box-shadow: 0 0 12px #00ffff88; }
+    input[type="range"] { padding: 0; background: transparent; box-shadow: none; }
+    .slider-label { display: flex; justify-content: space-between; }
+    .badge { color: #ffaa00; text-shadow: 0 0 5px orange; }
+    .log-line { font-size: 12px; border-bottom: 1px dashed #2a4a5a; padding-bottom: 4px; color: #9cc; }
+    #loss-display { font-size: 18px; font-weight: bold; color: #ffd966; text-shadow: 0 0 10px #ffaa00; }
+    #plaque {
+      position: fixed;
+      bottom: 12px;
+      right: 20px;
+      color: #6a8a9a;
+      font-size: 12px;
+      text-align: right;
+      z-index: 200;
+      text-shadow: 0 0 5px black;
+      background: #03080c88;
+      padding: 6px 12px;
+      border-radius: 30px;
+      backdrop-filter: blur(4px);
+      border: 1px solid #2a5a6a;
+      pointer-events: none;
+    }
+    #status-bar {
+      position: fixed;
+      bottom: 12px;
+      left: 20px;
+      color: #7fb;
+      font-size: 13px;
+      z-index: 200;
+      background: #03080caa;
+      padding: 4px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+      border: 1px solid #3a8a9a;
+      pointer-events: none;
+    }
+    .neon-text { color: #0ff; }
+    /* Syntax highlighting in textarea (simulated) */
+    .code-editor {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre;
+      overflow: auto;
+      background: #051015;
+      border: 1px solid #2a7a8a;
+      color: #c0e0ff;
+      width: 100%;
+      height: 300px;
+      resize: vertical;
+    }
+    .key-hint { color: #8ab; font-size: 11px; }
+  </style>
+</head>
+<body class="crt">
+<div id="canvas-container">
+  <canvas id="neuralCanvas"></canvas>
+</div>
+
+<!-- CONTROL PANEL WINDOW -->
+<div id="control-window" class="window" style="top: 30px; left: 30px; width: 280px;">
+  <div class="window-header" id="ctrl-header">
+    <span>🧠 NEURAL_OPERATOR.SYS</span>
+    <div class="window-controls">
+      <div class="window-btn" id="ctrl-min">–</div>
+      <div class="window-btn" id="ctrl-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="ctrl-content">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span style="flex:1;">DATASET:</span>
+      <select id="dataset-select" style="flex:2;">
+        <option value="xor">XOR (binary)</option>
+        <option value="spiral" selected>🌀 SPIRAL (2D)</option>
+      </select>
+    </div>
+    <div>
+      <div class="slider-label"><span>HIDDEN NEURONS</span><span id="hidden-count">8</span></div>
+      <input type="range" id="hidden-slider" min="2" max="20" value="8" step="1" style="width:100%">
+    </div>
+    <div>
+      <div class="slider-label"><span>LEARNING RATE</span><span id="lr-value">0.15</span></div>
+      <input type="range" id="lr-slider" min="0.01" max="0.8" value="0.15" step="0.01" style="width:100%">
+    </div>
+    <div>
+      <div class="slider-label"><span>EPOCHS PER FRAME</span><span id="epochs-per-frame">1</span></div>
+      <input type="range" id="epochs-slider" min="1" max="10" value="1" step="1" style="width:100%">
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="reset-btn" style="flex:1;">⟲ RESET</button>
+      <button id="train-toggle" style="flex:2; background: #0a3a4a;">⏸️ PAUSE</button>
+    </div>
+    <div class="log-line">
+      <span>LOSS: <span id="loss-display">0.000</span></span>
+      <span style="float:right;">ITER: <span id="iter-display">0</span></span>
+    </div>
+    <div style="font-size:11px; color:#6ab; margin-top:4px;">
+      <span>🔴 = negative &nbsp;|&nbsp; 🔵 = positive</span><br>
+      <span>💡 brightness = activation</span>
+    </div>
+    <hr style="border-color:#1a4a5a; margin:4px 0;">
+    <button id="add-noise-btn" style="background:#1a2a3a;">🎲 ADD TRAINING NOISE</button>
+  </div>
+</div>
+
+<!-- SYNAPTIC SCRIBE WINDOW -->
+<div id="scribe-window" class="window" style="top: 30px; right: 30px; width: 480px;">
+  <div class="window-header" id="scribe-header">
+    <span>✍️ SYNAPTIC_SCRIBE.js (Ctrl+Enter to recompile)</span>
+    <div class="window-controls">
+      <div class="window-btn" id="scribe-min">–</div>
+      <div class="window-btn" id="scribe-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="scribe-content">
+    <textarea id="code-editor" class="code-editor" spellcheck="false"></textarea>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="apply-code-btn" style="flex:2;">⚡ RECOMPILE (Ctrl+Enter)</button>
+      <button id="save-file-btn" style="flex:1;" title="Overwrite this HTML file with new code">💾 SAVE TO FILE</button>
+    </div>
+    <div class="key-hint" style="margin-top:4px;">
+      <span>Edit activation, loss, dataset generators... then recompile live.</span>
+    </div>
+    <div id="compile-status" style="font-size:11px; color:#8f8; min-height:18px;"></div>
+  </div>
+</div>
+
+<!-- PLAQUE & STATUS -->
+<div id="plaque">CONSCIOUSNODE SOFTWORKS<br>« everything I made, nothing lost »</div>
+<div id="status-bar">NEURON CATHEDRAL v2.0 &nbsp;|&nbsp; <span id="train-status">● TRAINING</span> &nbsp;|&nbsp; SCRIBE ACTIVE</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- CANVAS & GLOBALS ----------
+    const canvas = document.getElementById('neuralCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Network dimensions
+    let inputSize = 2;
+    let hiddenSize = 8;
+    let outputSize = 1;
+    
+    // Weights and biases
+    let W1, b1, W2, b2;
+    
+    // Training state
+    let training = true;
+    let epoch = 0;
+    let lossHistory = [];
+    let currentLoss = 0.0;
+    
+    let datasetType = 'spiral';
+    let X_train = [], y_train = [];
+    const N_SAMPLES = 400;
+    
+    // UI elements
+    const hiddenSlider = document.getElementById('hidden-slider');
+    const hiddenSpan = document.getElementById('hidden-count');
+    const lrSlider = document.getElementById('lr-slider');
+    const lrSpan = document.getElementById('lr-value');
+    const epochsSlider = document.getElementById('epochs-slider');
+    const epochsSpan = document.getElementById('epochs-per-frame');
+    const datasetSelect = document.getElementById('dataset-select');
+    const resetBtn = document.getElementById('reset-btn');
+    const trainToggle = document.getElementById('train-toggle');
+    const lossDisplay = document.getElementById('loss-display');
+    const iterDisplay = document.getElementById('iter-display');
+    const trainStatus = document.getElementById('train-status');
+    const addNoiseBtn = document.getElementById('add-noise-btn');
+    
+    // Scribe elements
+    const codeEditor = document.getElementById('code-editor');
+    const applyCodeBtn = document.getElementById('apply-code-btn');
+    const saveFileBtn = document.getElementById('save-file-btn');
+    const compileStatus = document.getElementById('compile-status');
+    
+    // ---------- DYNAMIC FUNCTIONS (can be redefined by scribe) ----------
+    // These are stored as strings and compiled via eval.
+    let activationFunc = (x) => x > 0 ? x : 0.01 * x;
+    let activationDerivFunc = (x) => x > 0 ? 1 : 0.01;
+    let outputActivationFunc = (x) => 1 / (1 + Math.exp(-x));
+    let outputActivationDerivFunc = (x, out) => out * (1 - out); // derivative given output value
+    let lossFunc = (pred, target) => { let d = pred - target; return d*d; };
+    let lossDerivFunc = (pred, target) => 2 * (pred - target);
+    
+    // Dataset generator functions
+    let generateXORDataset = () => {
+      X_train = []; y_train = [];
+      const points = [[0,0],[0,1],[1,0],[1,1]];
+      for (let p of points) {
+        for (let k=0; k<100; k++) {
+          let x1 = p[0] + (Math.random()-0.5)*0.2;
+          let x2 = p[1] + (Math.random()-0.5)*0.2;
+          X_train.push([x1, x2]);
+          y_train.push([p[0] ^ p[1]]);
+        }
+      }
+    };
+    
+    let generateSpiralDataset = () => {
+      X_train = []; y_train = [];
+      const n = N_SAMPLES / 2;
+      for (let i=0; i<n; i++) {
+        let r = (i / n) * 4.5;
+        let t = (i / n) * 3.5 * Math.PI + 0.5;
+        let x1 = r * Math.sin(t) + (Math.random()-0.5)*0.15;
+        let x2 = r * Math.cos(t) + (Math.random()-0.5)*0.15;
+        X_train.push([x1, x2]); y_train.push([0]);
+        let r2 = (i / n) * 4.5;
+        let t2 = (i / n) * 3.5 * Math.PI + 0.5 + Math.PI;
+        let x1b = r2 * Math.sin(t2) + (Math.random()-0.5)*0.15;
+        let x2b = r2 * Math.cos(t2) + (Math.random()-0.5)*0.15;
+        X_train.push([x1b, x2b]); y_train.push([1]);
+      }
+    };
+    
+    // Weight initializer
+    let weightInitFunc = (rows, cols) => {
+      const scale = Math.sqrt(2.0 / cols);
+      return Array.from({length: rows}, () => (Math.random()*2-1)*scale);
+    };
+    
+    // ---------- INITIALIZE NETWORK ----------
+    function initializeWeights() {
+      W1 = weightInitFunc(hiddenSize * inputSize, inputSize);
+      b1 = new Array(hiddenSize).fill(0);
+      W2 = weightInitFunc(outputSize * hiddenSize, hiddenSize);
+      b2 = new Array(outputSize).fill(0);
+    }
+    
+    // Forward pass (uses current dynamic functions)
+    function forward(x) {
+      let h = new Array(hiddenSize);
+      let hPre = new Array(hiddenSize);
+      for (let i=0; i<hiddenSize; i++) {
+        let sum = b1[i];
+        for (let j=0; j<inputSize; j++) sum += W1[i * inputSize + j] * x[j];
+        hPre[i] = sum;
+        h[i] = activationFunc(sum);
+      }
+      let out = new Array(outputSize);
+      let outPre = new Array(outputSize);
+      for (let i=0; i<outputSize; i++) {
+        let sum = b2[i];
+        for (let j=0; j<hiddenSize; j++) sum += W2[i * hiddenSize + j] * h[j];
+        outPre[i] = sum;
+        out[i] = outputActivationFunc(sum);
+      }
+      return { h, hPre, out, outPre };
+    }
+    
+    // Train single sample
+    function trainSample(x, yTrue, lr) {
+      // Forward
+      let { h, hPre, out, outPre } = forward(x);
+      
+      // Loss derivative w.r.t output activation
+      let dLoss_dOut = lossDerivFunc(out[0], yTrue[0]);
+      
+      // Output layer gradient
+      let dOut = dLoss_dOut * outputActivationDerivFunc(outPre[0], out[0]);
+      let dW2 = new Array(W2.length);
+      let db2 = new Array(outputSize);
+      db2[0] = dOut;
+      for (let j=0; j<hiddenSize; j++) dW2[j] = dOut * h[j];
+      
+      // Hidden layer gradient
+      let dHidden = new Array(hiddenSize);
+      for (let j=0; j<hiddenSize; j++) {
+        dHidden[j] = W2[j] * dOut * activationDerivFunc(hPre[j]);
+      }
+      let dW1 = new Array(W1.length);
+      let db1 = new Array(hiddenSize);
+      for (let i=0; i<hiddenSize; i++) {
+        db1[i] = dHidden[i];
+        for (let j=0; j<inputSize; j++) {
+          dW1[i * inputSize + j] = dHidden[i] * x[j];
+        }
+      }
+      
+      // Apply updates
+      for (let i=0; i<W1.length; i++) W1[i] -= lr * dW1[i];
+      for (let i=0; i<b1.length; i++) b1[i] -= lr * db1[i];
+      for (let i=0; i<W2.length; i++) W2[i] -= lr * dW2[i];
+      for (let i=0; i<b2.length; i++) b2[i] -= lr * db2[i];
+      
+      return lossFunc(out[0], yTrue[0]);
+    }
+    
+    function trainEpoch(lr) {
+      let totalLoss = 0;
+      const indices = [...Array(X_train.length).keys()];
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      for (let idx of indices) {
+        totalLoss += trainSample(X_train[idx], y_train[idx], lr);
+      }
+      return totalLoss / X_train.length;
+    }
+    
+    // ---------- DATASET GENERATION ----------
+    function generateDataset(type) {
+      if (type === 'xor') generateXORDataset();
+      else generateSpiralDataset();
+    }
+    
+    // Reset network
+    function resetNetwork() {
+      hiddenSize = parseInt(hiddenSlider.value);
+      initializeWeights();
+      epoch = 0;
+      lossHistory = [];
+      currentLoss = 0;
+      updateUI();
+    }
+    
+    function updateUI() {
+      hiddenSpan.textContent = hiddenSize;
+      lrSpan.textContent = parseFloat(lrSlider.value).toFixed(3);
+      epochsSpan.textContent = epochsSlider.value;
+      iterDisplay.textContent = epoch;
+    }
+    
+    // ---------- SCRIBE: Recompile functions from editor content ----------
+    function buildFunctionFromString(name, params, body) {
+      return new Function(...params, body);
+    }
+    
+    function recompileFromEditor() {
+      try {
+        const code = codeEditor.value;
+        // Extract function bodies using a simple regex (robust enough for this demo)
+        // We'll define a sandbox and eval the whole block to capture functions.
+        const sandbox = {};
+        const funcNames = ['activationFunc', 'activationDerivFunc', 'outputActivationFunc', 'outputActivationDerivFunc', 'lossFunc', 'lossDerivFunc', 'generateXORDataset', 'generateSpiralDataset', 'weightInitFunc'];
+        // Use Function constructor to evaluate code in current scope? Safer: eval in context.
+        // We'll just do a direct eval, trusting the user.
+        eval(code);
+        
+        // After eval, we need to reassign global variables (they are declared with let, so eval in this scope works)
+        // Actually our functions are declared as let in this closure, eval can't reassign them directly unless we use indirect eval?
+        // Better: Use Function constructor to return an object with the new functions.
+        const wrappedCode = `
+          return {
+            activationFunc: ${activationFunc.toString()},
+            activationDerivFunc: ${activationDerivFunc.toString()},
+            outputActivationFunc: ${outputActivationFunc.toString()},
+            outputActivationDerivFunc: ${outputActivationDerivFunc.toString()},
+            lossFunc: ${lossFunc.toString()},
+            lossDerivFunc: ${lossDerivFunc.toString()},
+            generateXORDataset: ${generateXORDataset.toString()},
+            generateSpiralDataset: ${generateSpiralDataset.toString()},
+            weightInitFunc: ${weightInitFunc.toString()}
+          };
+        `;
+        
+        // But that's circular. Let's just use eval in the scope. Since we're in the same closure, eval can see and modify the local variables.
+        // So we'll do: eval(code);
+        // and hope the user's code updates the let variables.
+        eval(code);
+        
+        // Force reinitialization of weights using new init? Not necessary, but we can.
+        compileStatus.innerHTML = '✓ Recompiled successfully. Weights retained.';
+        compileStatus.style.color = '#8f8';
+      } catch(e) {
+        compileStatus.innerHTML = '✗ Compile error: ' + e.message;
+        compileStatus.style.color = '#f88';
+        console.error(e);
+      }
+    }
+    
+    // Populate editor with current function definitions
+    function updateEditorContent() {
+      const content = `
+// ✍️ SYNAPTIC SCRIBE — Edit these functions and press Ctrl+Enter
+// The network will adopt the new logic immediately without resetting weights.
+
+// Hidden layer activation & derivative
+let activationFunc = ${activationFunc.toString()};
+let activationDerivFunc = ${activationDerivFunc.toString()};
+
+// Output activation (sigmoid) & derivative
+let outputActivationFunc = ${outputActivationFunc.toString()};
+let outputActivationDerivFunc = ${outputActivationDerivFunc.toString()};
+
+// Loss function (MSE) & derivative
+let lossFunc = ${lossFunc.toString()};
+let lossDerivFunc = ${lossDerivFunc.toString()};
+
+// Dataset generators
+let generateXORDataset = ${generateXORDataset.toString()};
+let generateSpiralDataset = ${generateSpiralDataset.toString()};
+
+// Weight initializer
+let weightInitFunc = ${weightInitFunc.toString()};
+`.trim();
+      codeEditor.value = content;
+    }
+    
+    // Save file using File System Access API
+    async function saveFile() {
+      try {
+        // Get current HTML as string
+        const htmlContent = document.documentElement.outerHTML;
+        // Create a blob
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        
+        // Use showSaveFilePicker if available
+        if ('showSaveFilePicker' in window) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'neuron_cathedral_scribed.html',
+            types: [{ description: 'HTML File', accept: { 'text/html': ['.html'] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          compileStatus.innerHTML = '✓ File saved successfully.';
+        } else {
+          // Fallback to download
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'neuron_cathedral_scribed.html';
+          a.click();
+          compileStatus.innerHTML = '✓ Downloaded (File System API not supported).';
+        }
+        compileStatus.style.color = '#8f8';
+      } catch(e) {
+        if (e.name !== 'AbortError') {
+          compileStatus.innerHTML = '✗ Save error: ' + e.message;
+          compileStatus.style.color = '#f88';
+        }
+      }
+    }
+    
+    // ---------- DRAWING ----------
+    function draw() {
+      const w = canvas.width = window.innerWidth;
+      const h = canvas.height = window.innerHeight;
+      ctx.clearRect(0, 0, w, h);
+      
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      const scale = Math.min(w, h) * 0.09;
+      
+      // Draw dataset points
+      for (let i=0; i<X_train.length; i+=2) {
+        let px = X_train[i][0] * scale;
+        let py = -X_train[i][1] * scale;
+        let target = y_train[i][0];
+        ctx.fillStyle = target > 0.5 ? '#ff66aa' : '#66ccff';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.shadowColor = target > 0.5 ? '#ff00aa' : '#00aaff';
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      
+      // Network architecture positions
+      const layerPositions = [
+        { x: -scale * 2.0, neurons: inputSize },
+        { x: 0, neurons: hiddenSize },
+        { x: scale * 2.0, neurons: outputSize }
+      ];
+      const neuronRadius = 14;
+      const verticalSpacing = 30;
+      
+      let sampleX = X_train.length ? X_train[epoch % X_train.length] : [0,0];
+      let acts = forward(sampleX);
+      let hiddenActs = acts.h;
+      let outputActs = acts.out;
+      
+      // Draw connections
+      for (let i=0; i<inputSize; i++) {
+        let x1 = layerPositions[0].x;
+        let y1 = (i - (inputSize-1)/2) * verticalSpacing;
+        for (let j=0; j<hiddenSize; j++) {
+          let x2 = layerPositions[1].x;
+          let y2 = (j - (hiddenSize-1)/2) * verticalSpacing;
+          let weight = W1[j * inputSize + i];
+          let alpha = Math.min(Math.abs(weight) * 1.5, 0.9);
+          let color = weight > 0 ? `rgba(50, 150, 255, ${alpha})` : `rgba(255, 70, 70, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = Math.max(1, Math.abs(weight) * 2.5);
+          ctx.stroke();
+        }
+      }
+      for (let j=0; j<hiddenSize; j++) {
+        let x1 = layerPositions[1].x;
+        let y1 = (j - (hiddenSize-1)/2) * verticalSpacing;
+        for (let k=0; k<outputSize; k++) {
+          let x2 = layerPositions[2].x;
+          let y2 = (k - (outputSize-1)/2) * verticalSpacing;
+          let weight = W2[k * hiddenSize + j];
+          let alpha = Math.min(Math.abs(weight) * 1.5, 0.9);
+          let color = weight > 0 ? `rgba(50, 150, 255, ${alpha})` : `rgba(255, 70, 70, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = Math.max(1, Math.abs(weight) * 2.5);
+          ctx.stroke();
+        }
+      }
+      
+      // Draw neurons
+      for (let i=0; i<inputSize; i++) {
+        let x = layerPositions[0].x;
+        let y = (i - (inputSize-1)/2) * verticalSpacing;
+        let val = sampleX[i];
+        let bright = Math.min(1, Math.abs(val)*0.5 + 0.3);
+        ctx.fillStyle = `rgba(180, 220, 255, ${bright})`;
+        ctx.shadowColor = '#0cf'; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(x, y, neuronRadius, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#aaf'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      for (let j=0; j<hiddenSize; j++) {
+        let x = layerPositions[1].x;
+        let y = (j - (hiddenSize-1)/2) * verticalSpacing;
+        let act = hiddenActs[j];
+        let bright = Math.min(1, act * 1.2);
+        ctx.fillStyle = `rgba(255, 220, 140, ${bright})`;
+        ctx.shadowColor = '#fc0'; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.arc(x, y, neuronRadius, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#fd9'; ctx.lineWidth = 1.8; ctx.stroke();
+      }
+      for (let k=0; k<outputSize; k++) {
+        let x = layerPositions[2].x;
+        let y = (k - (outputSize-1)/2) * verticalSpacing;
+        let act = outputActs[k];
+        let bright = Math.min(1, act * 1.2);
+        ctx.fillStyle = `rgba(150, 255, 180, ${bright})`;
+        ctx.shadowColor = '#6f6'; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.arc(x, y, neuronRadius, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#8f8'; ctx.lineWidth = 1.8; ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      
+      // Loss curve
+      ctx.save();
+      ctx.translate(20, h-80);
+      ctx.fillStyle = '#0a1a2aaa'; ctx.fillRect(0,0,180,60);
+      ctx.strokeStyle = '#0cf'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const maxLoss = Math.max(0.5, ...lossHistory.slice(-50));
+      for (let i=0; i<lossHistory.length && i<180; i++) {
+        let x = i;
+        let y = 60 - (lossHistory[i] / maxLoss) * 50;
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#bdf'; ctx.font = '10px monospace'; ctx.fillText('LOSS HISTORY', 5, 15);
+      ctx.restore();
+    }
+    
+    // Animation loop
+    function animate() {
+      if (training && X_train.length) {
+        const lr = parseFloat(lrSlider.value);
+        const epochsPerFrame = parseInt(epochsSlider.value);
+        let avgLoss = 0;
+        for (let e=0; e<epochsPerFrame; e++) {
+          avgLoss += trainEpoch(lr);
+          epoch++;
+        }
+        currentLoss = avgLoss / epochsPerFrame;
+        lossHistory.push(currentLoss);
+        if (lossHistory.length > 200) lossHistory.shift();
+        lossDisplay.textContent = currentLoss.toFixed(4);
+        iterDisplay.textContent = epoch;
+        trainStatus.innerHTML = '● TRAINING';
+        trainStatus.style.color = '#0f0';
+      } else {
+        trainStatus.innerHTML = '⏸️ PAUSED';
+        trainStatus.style.color = '#fa0';
+      }
+      draw();
+      requestAnimationFrame(animate);
+    }
+    
+    // ---------- EVENT LISTENERS ----------
+    hiddenSlider.addEventListener('input', () => {
+      hiddenSize = parseInt(hiddenSlider.value);
+      hiddenSpan.textContent = hiddenSize;
+      resetNetwork();
+    });
+    lrSlider.addEventListener('input', () => lrSpan.textContent = parseFloat(lrSlider.value).toFixed(3));
+    epochsSlider.addEventListener('input', () => epochsSpan.textContent = epochsSlider.value);
+    datasetSelect.addEventListener('change', (e) => {
+      datasetType = e.target.value;
+      generateDataset(datasetType);
+      resetNetwork();
+    });
+    resetBtn.addEventListener('click', () => {
+      generateDataset(datasetType);
+      resetNetwork();
+    });
+    trainToggle.addEventListener('click', () => {
+      training = !training;
+      trainToggle.textContent = training ? '⏸️ PAUSE' : '▶️ TRAIN';
+    });
+    addNoiseBtn.addEventListener('click', () => {
+      for (let i=0; i<W1.length; i++) W1[i] += (Math.random()-0.5)*0.03;
+      for (let i=0; i<W2.length; i++) W2[i] += (Math.random()-0.5)*0.03;
+    });
+    
+    // Scribe events
+    applyCodeBtn.addEventListener('click', recompileFromEditor);
+    saveFileBtn.addEventListener('click', saveFile);
+    
+    // Ctrl+Enter in editor
+    codeEditor.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        recompileFromEditor();
+      }
+    });
+    
+    // Window dragging (simple implementation for both windows)
+    function makeDraggable(winEl, headerEl) {
+      let isDragging = false, offX, offY;
+      headerEl.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = winEl.getBoundingClientRect();
+        offX = e.clientX - rect.left;
+        offY = e.clientY - rect.top;
+        winEl.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        let x = e.clientX - offX;
+        let y = e.clientY - offY;
+        x = Math.max(0, Math.min(window.innerWidth - winEl.offsetWidth, x));
+        y = Math.max(0, Math.min(window.innerHeight - winEl.offsetHeight, y));
+        winEl.style.left = x + 'px';
+        winEl.style.top = y + 'px';
+      });
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+        winEl.style.cursor = '';
+      });
+    }
+    
+    makeDraggable(document.getElementById('control-window'), document.getElementById('ctrl-header'));
+    makeDraggable(document.getElementById('scribe-window'), document.getElementById('scribe-header'));
+    
+    // Minimize/Close for control window
+    document.getElementById('ctrl-min').addEventListener('click', () => {
+      const content = document.getElementById('ctrl-content');
+      content.style.display = content.style.display === 'none' ? 'flex' : 'none';
+    });
+    document.getElementById('ctrl-close').addEventListener('click', () => {
+      document.getElementById('control-window').style.display = 'none';
+    });
+    // Scribe min/close
+    document.getElementById('scribe-min').addEventListener('click', () => {
+      const content = document.getElementById('scribe-content');
+      content.style.display = content.style.display === 'none' ? 'flex' : 'none';
+    });
+    document.getElementById('scribe-close').addEventListener('click', () => {
+      document.getElementById('scribe-window').style.display = 'none';
+    });
+    
+    // Double-click plaque to revive windows
+    document.getElementById('plaque').addEventListener('dblclick', () => {
+      document.getElementById('control-window').style.display = 'block';
+      document.getElementById('scribe-window').style.display = 'block';
+    });
+    
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      draw();
+    });
+    
+    // Initialize everything
+    updateEditorContent();
+    generateDataset('spiral');
+    resetNetwork();
+    draw();
+    requestAnimationFrame(animate);
+  })();
+</script>
+</body>
+</html>

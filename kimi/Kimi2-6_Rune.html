@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rune Compiler</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a10;--panel:#12121c;--border:#1e1e2e;--text:#e0e0e8;--dim:#5a5a6e;--accent:#ff6b35;--cyan:#00e5ff;--green:#00e676;--purple:#b829dd;--yellow:#ffd600}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono',monospace;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.header{height:48px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px}
+.header h1{font-size:14px;color:var(--accent)}.header p{font-size:10px;color:var(--dim)}
+.spacer{flex:1}.btn{padding:6px 14px;background:transparent;border:1px solid var(--border);color:var(--text);border-radius:4px;font-family:inherit;font-size:10px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}.btn.c{border-color:var(--cyan);color:var(--cyan)}
+.main{flex:1;display:flex;overflow:hidden}
+.editor-pane{width:35%;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+.editor-header{padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:10px;text-transform:uppercase;color:var(--dim)}
+.editor-container{flex:1;position:relative;overflow:hidden}
+#codeInput,#codeHL{width:100%;height:100%;background:var(--bg);border:none;font-family:inherit;font-size:12px;line-height:1.6;padding:16px;position:absolute;top:0;left:0}
+#codeInput{color:transparent;caret-color:var(--text);z-index:2;resize:none;outline:none;tab-size:2}
+#codeHL{color:var(--text);z-index:1;pointer-events:none;white-space:pre;overflow:auto}
+.ast-pane{width:30%;display:flex;flex-direction:column;border-right:1px solid var(--border)}
+.tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--border)}
+.tab{padding:8px 14px;font-size:10px;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent}
+.tab:hover{color:var(--text)}.tab.a{color:var(--cyan);border-bottom-color:var(--cyan);background:#00e5ff11}
+.ast-body,.out-body{flex:1;overflow:auto;padding:16px;font-size:11px}
+.token{display:flex;gap:12px;padding:4px 8px;border-radius:4px;font-size:10px}
+.token:hover{background:var(--border)}.tt{color:var(--cyan);min-width:80px;text-transform:uppercase;font-size:9px}
+.tv{color:var(--text)}.tl{color:var(--dim);margin-left:auto;font-size:9px}
+.ast-node{margin-left:16px;border-left:1px solid var(--border);padding-left:8px;margin-bottom:4px}
+.ast-h{display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 0}.ast-h:hover{color:var(--cyan)}
+.ast-t{color:var(--purple);font-weight:600}.ast-v{color:var(--yellow)}
+.out-pane{width:35%;display:flex;flex-direction:column}
+.out-tab.a{color:var(--green);border-bottom-color:var(--green);background:#00e67611}
+.console{font-family:inherit;line-height:1.6}.cl{margin-bottom:4px;padding:2px 0}
+.cp{color:var(--green);margin-right:8px}.ce{color:var(--accent);background:#ff6b3511;padding:4px 8px;border-radius:4px;border-left:2px solid var(--accent)}
+.cr{color:var(--cyan)}
+.err-panel{max-height:120px;background:var(--panel);border-top:1px solid var(--border);overflow-y:auto;padding:8px 16px}
+.err{display:flex;gap:12px;padding:4px 0;font-size:10px;border-bottom:1px solid var(--border)}
+.es{color:var(--accent);font-weight:600;min-width:50px}.em{color:var(--text)}
+.js-out{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:10px;line-height:1.6;white-space:pre-wrap;word-break:break-all;color:var(--dim)}
+.status{height:24px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 16px;font-size:10px;color:var(--dim);gap:16px}
+.ok{color:var(--green)}.bad{color:var(--accent)}
+.hl-kw{color:var(--accent);font-weight:600}.hl-str{color:var(--green)}.hl-num{color:var(--yellow)}.hl-cmt{color:var(--dim);font-style:italic}
+.hl-op{color:var(--cyan)}.hl-id{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>Rune Compiler</h1>
+<p>A language toolchain in one file</p>
+<div class="spacer"></div>
+<span style="font-size:10px;color:var(--dim)">Ctrl+Enter to compile</span>
+<button class="btn c" onclick="go()">Compile & Run</button>
+<button class="btn" onclick="ex('fib')">Fib</button>
+<button class="btn" onclick="ex('fact')">Fact</button>
+</div>
+<div class="main">
+<div class="editor-pane">
+<div class="editor-header"><span>Source.rune</span><span id="pos">Ln 1, Col 1</span></div>
+<div class="editor-container">
+<div id="codeHL"></div>
+<textarea id="codeInput" spellcheck="false">;; Welcome to Rune
+;; A Lisp-flavored language that compiles to JS
+
+(defn greet [name]
+  (str "Hello, " name "!"))
+
+(def x 10)
+(def y 20)
+
+(defn abs [n]
+  (if (< n 0)
+    (- 0 n)
+    n))
+
+(defn factorial [n]
+  (if (<= n 1)
+    1
+    (* n (factorial (- n 1)))))
+
+(print "Factorial of 5:" (factorial 5))
+(print "Absolute of -42:" (abs -42))
+</textarea>
+</div>
+</div>
+<div class="ast-pane">
+<div class="tabs">
+<div class="tab a" onclick="st(this,'tok')">Tokens</div>
+<div class="tab" onclick="st(this,'ast')">AST</div>
+<div class="tab" onclick="st(this,'sym')">Symbols</div>
+</div>
+<div class="ast-body" id="ab">
+<div id="toks" style="display:flex;flex-direction:column;gap:2px">
+<div style="color:var(--dim);font-size:11px">Type code and press Ctrl+Enter...</div>
+</div>
+<div id="astv" style="display:none"></div>
+</div>
+</div>
+<div class="out-pane">
+<div class="tabs">
+<div class="tab a" onclick="ot(this,'con')">Console</div>
+<div class="tab" onclick="ot(this,'js')">Generated JS</div>
+<div class="tab" onclick="ot(this,'perf')">Perf</div>
+</div>
+<div class="out-body" id="ob">
+<div class="console" id="con">
+<div class="cl"><span class="cp">ᚱ</span>Ready. Press Ctrl+Enter to compile.</div>
+</div>
+</div>
+</div>
+</div>
+<div class="err-panel" id="errp"></div>
+<div class="status">
+<span id="st" class="ok">Ready</span>
+<span id="tc">0 tokens</span>
+<span id="an">0 nodes</span>
+<span id="ct">0ms</span>
+</div>
+
+<script>
+class Lexer{constructor(s){this.s=s;this.p=0;this.l=1;this.c=1;this.t=[]}peek(o=0){return this.s[this.p+o]||'\0'}adv(){const ch=this.s[this.p++];if(ch=='\n'){this.l++;this.c=1}else this.c++;return ch}skip(){while(' \t\n\r'.includes(this.peek()))this.adv()}com(){if(this.peek()==';'&&this.peek(1)==';')while(this.peek()!='\n'&&this.peek()!='\0')this.adv()}str(){const sl=this.l,sc=this.c;this.adv();let v='';while(this.peek()!='"'&&this.peek()!='\0'){if(this.peek()=='\\'){this.adv();const e=this.adv();v+=e=='n'?'\n':e=='t'?'\t':e}else v+=this.adv()}if(this.peek()=='"')this.adv();return{type:'STRING',value:v,line:sl,col:sc}}num(){const sl=this.l,sc=this.c;let v='',hd=false;while(/[0-9.]/.test(this.peek())){if(this.peek()=='.'){if(hd)break;hd=true}v+=this.adv()}return{type:'NUMBER',value:parseFloat(v),raw:v,line:sl,col:sc}}id(){const sl=this.l,sc=this.c;let v='';while(/[a-zA-Z0-9_!?+\-*/<>=]/.test(this.peek())&&!'()[]{}'.includes(this.peek()))v+=this.adv();const kw=['def','defn','if','let','do','fn','print','str','list','map','filter','reduce','and','or','not','true','false','nil'];return{type:kw.includes(v)?'KEYWORD':'IDENTIFIER',value:v,line:sl,col:sc}}tok(){while(this.peek()!='\0'){this.skip();this.com();this.skip();if(this.peek()=='\0')break;const ch=this.peek(),ln=this.l,co=this.c;if(ch=='('){this.adv();this.t.push({type:'LPAREN',value:'(',line:ln,col:co})}else if(ch==')'){this.adv();this.t.push({type:'RPAREN',value:')',line:ln,col:co})}else if(ch=='['){this.adv();this.t.push({type:'LBRACKET',value:'[',line:ln,col:co})}else if(ch==']'){this.adv();this.t.push({type:'RBRACKET',value:']',line:ln,col:co})}else if(ch=='"')this.t.push(this.str())else if(/[0-9]/.test(ch)||(ch=='-'&&/[0-9]/.test(this.peek(1))))this.t.push(this.num())else if(/[a-zA-Z_+\-*/<>=!]/.test(ch))this.t.push(this.id())else{this.t.push({type:'ERROR',value:'Bad char: '+ch,line:ln,col:co});this.adv()}}this.t.push({type:'EOF',value:'\0',line:this.l,col:this.c});return this.t}}
+
+class Parser{constructor(t){this.t=t;this.p=0;this.e=[]}peek(){return this.t[this.p]||{type:'EOF'}}adv(){return this.t[this.p++]}exp(type){const tk=this.peek();if(tk.type!=type){this.e.push('Expected '+type+' got '+tk.type+' L'+tk.line);return null}return this.adv()}parse(){const x=[];while(this.peek().type!='EOF'){const e=this.expr();if(e)x.push(e)}return{type:'Program',body:x,errors:this.e}}expr(){const tk=this.peek();if(tk.type=='LPAREN')return this.list();if(tk.type=='LBRACKET')return this.vec();if(['STRING','NUMBER','IDENTIFIER','KEYWORD'].includes(tk.type))return this.atom();if(tk.type=='RPAREN'||tk.type=='RBRACKET'){this.adv();return null}this.e.push('Unexpected '+tk.type+' L'+tk.line);this.adv();return null}list(){const lp=this.exp('LPAREN');if(!lp)return null;const tk=this.peek();if(tk.type=='EOF'||tk.type=='RPAREN'){this.exp('RPAREN');return{type:'List',elements:[],line:lp.line}}if(tk.type=='KEYWORD'){const k=tk.value;if(k=='def')return this.pdef();if(k=='defn')return this.pdefn();if(k=='if')return this.pif();if(k=='let')return this.plet();if(k=='fn')return this.pfn();if(k=='do')return this.pdo()}const el=[];while(this.peek().type!='RPAREN'&&this.peek().type!='EOF'){const e=this.expr();if(e)el.push(e)}this.exp('RPAREN');return{type:'Call',elements:el,line:lp.line}}vec(){const lb=this.exp('LBRACKET');const el=[];while(this.peek().type!='RBRACKET'&&this.peek().type!='EOF'){const e=this.expr();if(e)el.push(e)}this.exp('RBRACKET');return{type:'Vector',elements:el,line:lb.line}}atom(){const tk=this.adv();if(tk.type=='NUMBER')return{type:'NumberLiteral',value:tk.value,line:tk.line};if(tk.type=='STRING')return{type:'StringLiteral',value:tk.value,line:tk.line};if(tk.type=='KEYWORD'){if(tk.value=='true')return{type:'BooleanLiteral',value:true,line:tk.line};if(tk.value=='false')return{type:'BooleanLiteral',value:false,line:tk.line};if(tk.value=='nil')return{type:'NilLiteral',line:tk.line}}return{type:'Identifier',name:tk.value,line:tk.line}}pdef(){this.adv();const n=this.exp('IDENTIFIER');if(!n)return null;const v=this.expr();this.exp('RPAREN');return{type:'Def',name:n.value,value:v,line:n.line}}pdefn(){this.adv();const n=this.exp('IDENTIFIER');if(!n)return null;const p=this.vec();const b=[];while(this.peek().type!='RPAREN'&&this.peek().type!='EOF'){const e=this.expr();if(e)b.push(e)}this.exp('RPAREN');return{type:'Defn',name:n.value,params:p.elements.map(x=>x.name),body:b,line:n.line}}pif(){this.adv();const c=this.expr(),t=this.expr(),a=this.expr();this.exp('RPAREN');return{type:'If',condition:c,consequent:t,alternate:a,line:c.line}}plet(){this.adv();const b=this.vec();const bd=[];while(this.peek().type!='RPAREN'&&this.peek().type!='EOF'){const e=this.expr();if(e)bd.push(e)}this.exp('RPAREN');return{type:'Let',bindings:b.elements,body:bd,line:b.line}}pfn(){this.adv();const p=this.vec();const b=[];while(this.peek().type!='RPAREN'&&this.peek().type!='EOF'){const e=this.expr();if(e)b.push(e)}this.exp('RPAREN');return{type:'Lambda',params:p.elements.map(x=>x.name),body:b,line:p.line}}pdo(){this.adv();const x=[];while(this.peek().type!='RPAREN'&&this.peek().type!='EOF'){const e=this.expr();if(e)x.push(e)}this.exp('RPAREN');return{type:'Do',expressions:x,line:x[0]?.line||0}}}
+
+class CG{constructor(){this.i=0;this.o=''}em(c){this.o+='  '.repeat(this.i)+c}el(c){this.o+='  '.repeat(this.i)+c+'\n'}gen(ast){this.o='';this.el('// Generated by Rune');this.el('const _e={};');this.el('const _p=(...a)=>console.log(...a);');this.el('const _s=(...a)=>a.join("");');this.el('const _l=(...a)=>a;');this.el('const _m=(a,f)=>a.map(f);');this.el('');for(const e of ast.body)this.ge(e);return this.o}ge(n){if(!n)return;switch(n.type){case'Program':for(const e of n.body)this.ge(e);break;case'NumberLiteral':this.em(n.value.toString());break;case'StringLiteral':this.em('"'+n.value.replace(/"/g,'\\"')+'"');break;case'BooleanLiteral':this.em(n.value.toString());break;case'NilLiteral':this.em('null');break;case'Identifier':this.em('_e["'+n.name+'"]||'+n.name);break;case'Vector':this.em('[');for(let i=0;i<n.elements.length;i++){if(i>0)this.em(',');this.ge(n.elements[i])}this.em(']');break;case'List':this.em('[');for(let i=0;i<n.elements.length;i++){if(i>0)this.em(',');this.ge(n.elements[i])}this.em(']');break;case'Def':this.el('_e["'+n.name+'"]=');this.ge(n.value);this.em(';');this.el('');break;case'Defn':this.el('function '+n.name+'('+n.params.join(',')+'){');this.i++;for(let j=0;j<n.body.length;j++){if(j==n.body.length-1){this.em('return ');this.ge(n.body[j]);this.em(';')}else{this.ge(n.body[j]);this.em(';')}this.el('')}this.i--;this.el('}');this.el('_e["'+n.name+'"]='+n.name+';');break;case'If':this.em('(');this.ge(n.condition);this.em('?');this.ge(n.consequent);this.em(':');this.ge(n.alternate);this.em(')');break;case'Let':this.em('(function(){');this.i++;for(let i=0;i<n.bindings.length;i+=2){this.el('const '+n.bindings[i].name+'=');this.ge(n.bindings[i+1]);this.em(';')}for(let i=0;i<n.body.length;i++){if(i==n.body.length-1){this.em('return ');this.ge(n.body[i])}else{this.ge(n.body[i])}this.em(';')}this.i--;this.em('})()');break;case'Lambda':this.em('(function('+n.params.join(',')+'){');this.i++;for(let i=0;i<n.body.length;i++){if(i==n.body.length-1){this.em('return ');this.ge(n.body[i])}else{this.ge(n.body[i])}this.em(';')}this.i--;this.em('})');break;case'Do':this.em('(function(){');this.i++;for(const e of n.expressions){this.ge(e);this.em(';')}this.i--;this.em('})()');break;case'Call':this.gc(n);break}}gc(n){const el=n.elements;if(!el.length){this.em('null');return}const op=el[0];const nm=(op.name||op.value||'');const bp={'+':'+','-':'-','*':'*','/':'/','%':'%','<':'<','>':'>','<=':'<=','>=':'>=','=':'===','!=':'!==','and':'&&','or':'||'};if(bp[nm]&&el.length==3){this.em('(');this.ge(el[1]);this.em(' '+bp[nm]+' ');this.ge(el[2]);this.em(')');return}if(nm=='not'&&el.length==2){this.em('(!');this.ge(el[1]);this.em(')');return}if(nm=='print'){this.em('_p(');for(let i=1;i<el.length;i++){if(i>1)this.em(',');this.ge(el[i])}this.em(')');return}if(nm=='str'){this.em('_s(');for(let i=1;i<el.length;i++){if(i>1)this.em(',');this.ge(el[i])}this.em(')');return}if(nm=='list'){this.em('[');for(let i=1;i<el.length;i++){if(i>1)this.em(',');this.ge(el[i])}this.em(']');return}if(nm=='map'&&el.length>=3){this.em('_m(');this.ge(el[1]);this.em(',function(x){return ');this.ge(el[2]);this.em('})');return}this.em('(');this.ge(el[0]);this.em(')(');for(let i=1;i<el.length;i++){if(i>1)this.em(',');this.ge(el[i])}this.em(')')}}
+
+function run(js){try{const f=new Function('const _e={};const _p=(...a)=>out.push(a);const _s=(...a)=>a.join("");const _l=(...a)=>a;const _m=(a,f)=>a.map(f);'+js+'return out;');const out=[];f.call({out});return{ok:true,out}}catch(e){return{ok:false,err:e.message}}}
+
+let toks=[],ast=null,js=''
+function go(){const t0=performance.now();const src=inp.value;const L=new Lexer(src);toks=L.tok();const P=new Parser(toks);ast=P.parse();const errs=ast.errors||[];toks.filter(t=>t.type=='ERROR').forEach(e=>errs.push(e.value+' L'+e.line));if(errs.length){showErr(errs);document.getElementById('st').textContent=errs.length+' errors';document.getElementById('st').className='bad';return}const G=new CG();js=G.gen(ast);const r=run(js);const dt=Math.round(performance.now()-t0);const con=document.getElementById('con');con.innerHTML='';if(r.ok){for(const ln of r.out){const d=document.createElement('div');d.className='cl';d.textContent=ln.join(' ');con.appendChild(d)}if(!r.out.length)con.innerHTML='<div class="cl"><span class="cp">ᚱ</span><span class="cr">OK (no output)</span></div>';document.getElementById('st').textContent='OK';document.getElementById('st').className='ok'}else{const d=document.createElement('div');d.className='cl ce';d.textContent='Runtime: '+r.err;con.appendChild(d);document.getElementById('st').textContent='Runtime error';document.getElementById('st').className='bad'}document.getElementById('tc').textContent=toks.filter(t=>t.type!='EOF').length+' tokens';document.getElementById('an').textContent=cn(ast)+' nodes';document.getElementById('ct').textContent=dt+'ms';showTok();showAst();showJS()}
+function cn(n){if(!n)return 0;let c=1;for(const k of Object.keys(n)){if(Array.isArray(n[k]))for(const x of n[k])c+=cn(x);else if(n[k]&&typeof n[k]=='object'&&n[k].type)c+=cn(n[k])}return c}
+function showErr(e){const p=document.getElementById('errp');p.innerHTML='';for(const x of e){const d=document.createElement('div');d.className='err';d.innerHTML='<span class="es">ERR</span><span class="em">'+x+'</span>';p.appendChild(d)}}
+function showTok(){const l=document.getElementById('toks');l.innerHTML='';for(const t of toks){if(t.type=='EOF')continue;const d=document.createElement('div');d.className='token';let v=t.value;if(typeof v=='string'&&v.length>30)v=v.substring(0,30)+'...';d.innerHTML='<span class="tt">'+t.type+'</span><span class="tv">'+v+'</span><span class="tl">L'+t.line+':'+t.col+'</span>';l.appendChild(d)}}
+function showAst(){const b=document.getElementById('astv');b.innerHTML='';if(!ast)return;const t=ran(ast);b.appendChild(t)}
+function ran(n,d=0){const x=document.createElement('div');x.className='ast-node';x.style.marginLeft=(d*16)+'px';const h=document.createElement('div');h.className='ast-h';const ts=document.createElement('span');ts.className='ast-t';ts.textContent=n.type;h.appendChild(ts);if(n.name){const ns=document.createElement('span');ns.className='ast-v';ns.textContent=n.name;h.appendChild(ns)}if(n.value!==undefined&&n.value!==null){const vs=document.createElement('span');vs.className='ast-v';vs.textContent=JSON.stringify(n.value);h.appendChild(vs)}x.appendChild(h);for(const k of['body','elements','expressions','value','condition','consequent','alternate']){if(n[k]){if(Array.isArray(n[k]))for(const c of n[k])if(c&&typeof c=='object')x.appendChild(ran(c,d+1));else if(typeof n[k]=='object')x.appendChild(ran(n[k],d+1))}}return x}
+function showJS(){const b=document.getElementById('ob');const a=document.querySelector('.out-tab.a')?.textContent||'';if(a.includes('JS'))b.innerHTML='<div class="js-out">'+esc(js)+'</div>';else if(a.includes('Perf'))b.innerHTML='<div style="color:var(--dim);font-size:11px">Tokens:'+toks.filter(t=>t.type!='EOF').length+'<br>Nodes:'+cn(ast)+'<br>JS:'+js.length+' chars<br>Source:'+inp.value.length+' bytes</div>'}
+function esc(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+const inp=document.getElementById('codeInput'),hl=document.getElementById('codeHL')
+function sh(){const c=inp.value;let h='',is=false,ic=false,i=0;while(i<c.length){const ch=c[i],nx=c[i+1]||'';if(ic){if(ch=='\n'){h+='</span>'+ch;ic=false}else h+=ch;i++;continue}if(is){if(ch=='"'&&c[i-1]!='\\'){h+=ch+'</span>';is=false}else h+=ch;i++;continue}if(ch==';'&&nx==';'){h+='<span class="hl-cmt">';ic=true;h+=ch;i++;continue}if(ch=='"'){h+='<span class="hl-str">'+ch;is=true;i++;continue}if(/[0-9]/.test(ch)||(ch=='-'&&/[0-9]/.test(nx))){let n=ch;i++;while(/[0-9.]/.test(c[i]))n+=c[i++];h+='<span class="hl-num">'+n+'</span>';continue}if(/[a-zA-Z_+\-*/<>=!]/.test(ch)){let w=ch;i++;while(/[a-zA-Z0-9_+\-*/<>=!]/.test(c[i])&&!'()[]{}'.includes(c[i]))w+=c[i++];const kw=['def','defn','if','let','do','fn','print','str','list','map','filter','reduce','and','or','not','true','false','nil'];h+='<span class="'+(kw.includes(w)?'hl-kw':'hl-id')+'">'+w+'</span>';continue}if('()[]{}'.includes(ch))h+='<span class="hl-op">'+ch+'</span>';else h+=ch;i++}hl.innerHTML=h}
+
+function st(el,tab){document.querySelectorAll('.ast-pane .tab').forEach(t=>t.classList.remove('a'));el.classList.add('a');document.getElementById('toks').style.display=tab=='tok'?'flex':'none';document.getElementById('astv').style.display=tab=='ast'?'block':'none';if(tab=='ast')showAst()}
+function ot(el,tab){document.querySelectorAll('.out-pane .tab').forEach(t=>t.classList.remove('a'));el.classList.add('a');if(tab=='con')document.getElementById('ob').innerHTML='<div class="console" id="con"></div>';showJS()}
+
+function ex(name){const exs={fib:`;; Fibonacci\n(defn fib [n]\n  (if (<= n 1)\n    n\n    (+ (fib (- n 1)) (fib (- n 2)))))\n\n(print (fib 10))`,fact:`;; Factorial\n(defn fact [n]\n  (if (<= n 1)\n    1\n    (* n (fact (- n 1)))))\n\n(print "5! =" (fact 5))\n(print "10! =" (fact 10))`,sort:`;; QuickSort\n(defn qsort [arr]\n  (if (<= (count arr) 1)\n    arr\n    (let [p (first arr)]\n      (concat\n        (qsort (filter (rest arr) [x] (< x p)))\n        [p]\n        (qsort (filter (rest arr) [x] (>= x p)))))))\n\n(def nums [5 2 8 1 9])\n(print "Sorted:" (qsort nums))`};inp.value=exs[name]||'';sh();go()}
+
+inp.addEventListener('input',sh);inp.addEventListener('scroll',()=>hl.scrollTop=inp.scrollTop);inp.addEventListener('keydown',e=>{if(e.key=='Tab'){e.preventDefault();const s=inp.selectionStart;inp.value=inp.value.substring(0,s)+'  '+inp.value.substring(inp.selectionEnd);inp.selectionStart=inp.selectionEnd=s+2;sh()}if(e.key=='Enter'&&e.ctrlKey){e.preventDefault();go()}});inp.addEventListener('click',cp);inp.addEventListener('keyup',cp);function cp(){const v=inp.value.substring(0,inp.selectionStart);const ls=v.split('\n');document.getElementById('pos').textContent='Ln '+ls.length+', Col '+(ls[ls.length-1].length+1)}
+window.addEventListener('load',()=>{sh();go()})
+</script>
+</body>
+</html>

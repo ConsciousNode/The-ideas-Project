@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autopoiesis — It Rewrites Itself</title>
+    <style id="self-style">
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0d0d12;
+            --panel: #151520;
+            --border: #222233;
+            --text: #e0e0e8;
+            --text-dim: #5a5a6e;
+            --accent: #ff3366;
+            --accent-dim: #ff336633;
+            --cyan: #00e5ff;
+            --cyan-dim: #00e5ff33;
+            --green: #00e676;
+            --green-dim: #00e67633;
+            --yellow: #ffd600;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            height: 48px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 16px;
+        }
+        .header h1 {
+            font-size: 14px;
+            color: var(--accent);
+        }
+        .header p {
+            font-size: 10px;
+            color: var(--text-dim);
+        }
+        .header-spacer { flex: 1; }
+        .header-btn {
+            padding: 6px 14px;
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .header-btn:hover { border-color: var(--accent); }
+        .header-btn.danger {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .header-btn.danger:hover { background: var(--accent); color: var(--bg); }
+        .header-btn.cyan {
+            background: var(--cyan-dim);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--green);
+        }
+        .live-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Main layout */
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Left: The Live App */
+        .live-pane {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            padding: 20px;
+        }
+        #liveContainer {
+            min-height: 100%;
+            position: relative;
+        }
+
+        /* Right: Source + Editor */
+        .source-pane {
+            width: 50%;
+            background: var(--panel);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .source-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .source-tab {
+            padding: 10px 16px;
+            font-size: 11px;
+            color: var(--text-dim);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .source-tab:hover { color: var(--text); }
+        .source-tab.active {
+            color: var(--cyan);
+            border-bottom-color: var(--cyan);
+            background: var(--cyan-dim);
+        }
+        .source-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .source-editor {
+            flex: 1;
+            background: var(--bg);
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 11px;
+            line-height: 1.6;
+            padding: 16px;
+            resize: none;
+            outline: none;
+            tab-size: 2;
+        }
+        .source-diff {
+            height: 120px;
+            background: var(--bg);
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+            font-size: 10px;
+            overflow-y: auto;
+            color: var(--text-dim);
+        }
+        .diff-line {
+            font-family: inherit;
+            margin-bottom: 2px;
+        }
+        .diff-add { color: var(--green); }
+        .diff-del { color: var(--accent); text-decoration: line-through; }
+        .diff-ctx { color: var(--text-dim); }
+
+        /* The Mutation Log */
+        .mutation-log {
+            height: 160px;
+            background: var(--panel);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+        .log-header {
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .log-header h3 {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+        }
+        .log-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 16px;
+            font-size: 10px;
+        }
+        .log-entry {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 4px;
+            opacity: 0;
+            animation: fadeIn 0.3s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        .log-time { color: var(--text-dim); min-width: 50px; }
+        .log-action { color: var(--cyan); }
+        .log-target { color: var(--yellow); }
+        .log-detail { color: var(--text-dim); }
+
+        /* UI Builder Overlay */
+        .builder-bar {
+            position: absolute;
+            top: 16px; right: 16px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            z-index: 100;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        .builder-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .builder-btn {
+            padding: 8px 12px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.15s;
+        }
+        .builder-btn:hover {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+        }
+
+        /* Elements in the live app */
+        .live-element {
+            position: relative;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            transition: border-color 0.2s;
+        }
+        .live-element:hover {
+            border-color: var(--cyan);
+        }
+        .live-element.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent-dim);
+        }
+        .element-toolbar {
+            position: absolute;
+            top: -24px;
+            right: 0;
+            display: none;
+            gap: 4px;
+        }
+        .live-element:hover .element-toolbar,
+        .live-element.selected .element-toolbar {
+            display: flex;
+        }
+        .element-tool {
+            padding: 2px 8px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            border-radius: 4px;
+            font-size: 9px;
+            cursor: pointer;
+        }
+        .element-tool:hover { color: var(--accent); border-color: var(--accent); }
+
+        /* Code syntax hints in editor */
+        .editor-hint {
+            position: absolute;
+            bottom: 8px; right: 16px;
+            font-size: 9px;
+            color: var(--text-dim);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧬 Autopoiesis</h1>
+        <p>This file rewrites itself. What you build becomes code.</p>
+        <div class="header-spacer"></div>
+        <div class="live-indicator">
+            <div class="live-dot"></div>
+            <span id="mutationCount">0 mutations</span>
+        </div>
+        <button class="header-btn cyan" onclick="downloadSelf()">💾 Save .html</button>
+        <button class="header-btn danger" onclick="resetToOriginal()">↺ Reset</button>
+    </div>
+
+    <div class="main">
+        <!-- The Live Application (what the user builds) -->
+        <div class="live-pane">
+            <div class="builder-bar">
+                <div class="builder-title">Add Element</div>
+                <button class="builder-btn" onclick="addElement('heading')">+ Heading</button>
+                <button class="builder-btn" onclick="addElement('text')">+ Text Block</button>
+                <button class="builder-btn" onclick="addElement('button')">+ Button</button>
+                <button class="builder-btn" onclick="addElement('input')">+ Input Field</button>
+                <button class="builder-btn" onclick="addElement('card')">+ Card Container</button>
+                <button class="builder-btn" onclick="addElement('divider')">+ Divider</button>
+                <div class="builder-title" style="margin-top:8px">Add Behavior</div>
+                <button class="builder-btn" onclick="addBehavior('counter')">+ Click Counter</button>
+                <button class="builder-btn" onclick="addBehavior('toggle')">+ Toggle Theme</button>
+                <button class="builder-btn" onclick="addBehavior('random')">+ Random Color</button>
+                <button class="builder-btn" onclick="addBehavior('typewriter')">+ Typewriter</button>
+            </div>
+
+            <div id="liveContainer">
+                <!-- Default starter content -->
+                <div class="live-element" data-type="heading" data-id="el_1">
+                    <div class="element-toolbar">
+                        <span class="element-tool" onclick="editElement('el_1')">✎ Edit</span>
+                        <span class="element-tool" onclick="moveUp('el_1')">↑</span>
+                        <span class="element-tool" onclick="moveDown('el_1')">↓</span>
+                        <span class="element-tool" onclick="deleteElement('el_1')">×</span>
+                    </div>
+                    <h2 style="color:var(--accent);font-size:24px;margin-bottom:8px;">Welcome to Autopoiesis</h2>
+                    <p style="color:var(--text-dim);font-size:12px;">This page is alive. Every change you make writes code into this very file.</p>
+                </div>
+
+                <div class="live-element" data-type="text" data-id="el_2">
+                    <div class="element-toolbar">
+                        <span class="element-tool" onclick="editElement('el_2')">✎ Edit</span>
+                        <span class="element-tool" onclick="moveUp('el_2')">↑</span>
+                        <span class="element-tool" onclick="moveDown('el_2')">↓</span>
+                        <span class="element-tool" onclick="deleteElement('el_2')">×</span>
+                    </div>
+                    <p>This is a self-modifying live coding environment. Add elements from the toolbar, edit their content, and watch the source code update in real time. When you save, the HTML file contains everything — including the changes you made.</p>
+                </div>
+
+                <div class="live-element" data-type="button" data-id="el_3" data-behavior="counter">
+                    <div class="element-toolbar">
+                        <span class="element-tool" onclick="editElement('el_3')">✎ Edit</span>
+                        <span class="element-tool" onclick="moveUp('el_3')">↑</span>
+                        <span class="element-tool" onclick="moveDown('el_3')">↓</span>
+                        <span class="element-tool" onclick="deleteElement('el_3')">×</span>
+                    </div>
+                    <button id="btn_el_3" style="padding:10px 20px;background:var(--cyan);color:var(--bg);border:none;border-radius:6px;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600;">
+                        Clicked 0 times
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- The Source Code Pane -->
+        <div class="source-pane">
+            <div class="source-tabs">
+                <div class="source-tab active" onclick="showTab('html')">HTML Structure</div>
+                <div class="source-tab" onclick="showTab('css')">Self-Style</div>
+                <div class="source-tab" onclick="showTab('js')">Logic Engine</div>
+                <div class="source-tab" onclick="showTab('diff')">Mutation Diff</div>
+            </div>
+            <div class="source-body">
+                <textarea class="source-editor" id="sourceEditor" spellcheck="false"></textarea>
+                <div class="editor-hint">Ctrl+Enter to apply changes · Tab to indent</div>
+            </div>
+            <div class="source-diff" id="diffView">
+                <div class="diff-ctx">No mutations yet. The file is pristine.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mutation Log -->
+    <div class="mutation-log">
+        <div class="log-header">
+            <h3>🧬 Mutation Log</h3>
+            <span style="font-size:10px;color:var(--text-dim);" id="logStats">0 events</span>
+        </div>
+        <div class="log-body" id="logBody">
+            <div class="log-entry">
+                <span class="log-time">00:00:00</span>
+                <span class="log-action">INIT</span>
+                <span class="log-target">autopoiesis.html</span>
+                <span class="log-detail">System born. Ready to mutate.</span>
+            </div>
+        </div>
+    </div>
+
+    <script id="self-logic">
+        // ==================== AUTOPOIESIS CORE ====================
+        // This script manages the self-modification system.
+        // It reads the current DOM, generates the new source code,
+        // and prepares it for export. The exported file IS the mutated state.
+
+        let mutations = [];
+        let elementCounter = 3;
+        let originalSource = '';
+
+        // Capture original on load
+        window.addEventListener('load', () => {
+            originalSource = document.documentElement.outerHTML;
+            updateSourceView();
+            setupCounter('el_3');
+        });
+
+        // ==================== MUTATION LOGGING ====================
+        function log(action, target, detail) {
+            const now = new Date();
+            const time = now.getHours().toString().padStart(2,'0') + ':' + 
+                        now.getMinutes().toString().padStart(2,'0') + ':' + 
+                        now.getSeconds().toString().padStart(2,'0');
+
+            mutations.push({time, action, target, detail, timestamp: now.getTime()});
+
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = '<span class="log-time">' + time + '</span>' +
+                             '<span class="log-action">' + action + '</span>' +
+                             '<span class="log-target">' + target + '</span>' +
+                             '<span class="log-detail">' + detail + '</span>';
+            document.getElementById('logBody').appendChild(entry);
+            document.getElementById('logBody').scrollTop = 999999;
+
+            document.getElementById('mutationCount').textContent = mutations.length + ' mutations';
+            document.getElementById('logStats').textContent = mutations.length + ' events';
+
+            updateDiffView();
+            updateSourceView();
+        }
+
+        // ==================== ELEMENT MANAGEMENT ====================
+        function addElement(type) {
+            elementCounter++;
+            const id = 'el_' + elementCounter;
+            const container = document.getElementById('liveContainer');
+
+            const div = document.createElement('div');
+            div.className = 'live-element';
+            div.dataset.type = type;
+            div.dataset.id = id;
+
+            let content = '';
+            switch(type) {
+                case 'heading':
+                    content = '<h2 style="color:var(--accent);font-size:20px;">New Heading</h2>';
+                    break;
+                case 'text':
+                    content = '<p style="color:var(--text);font-size:13px;line-height:1.6;">New text block. Click edit to change this content.</p>';
+                    break;
+                case 'button':
+                    content = '<button id="btn_' + id + '" style="padding:8px 16px;background:var(--green);color:var(--bg);border:none;border-radius:6px;font-family:inherit;font-size:12px;cursor:pointer;font-weight:600;">New Button</button>';
+                    break;
+                case 'input':
+                    content = '<div style="display:flex;flex-direction:column;gap:6px;"><label style="font-size:11px;color:var(--text-dim);">Label</label><input type="text" placeholder="Type here..." style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:4px;font-family:inherit;font-size:12px;"></div>';
+                    break;
+                case 'card':
+                    content = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;"><h3 style="color:var(--cyan);font-size:14px;margin-bottom:8px;">Card Title</h3><p style="color:var(--text-dim);font-size:12px;">Card content goes here.</p></div>';
+                    break;
+                case 'divider':
+                    content = '<hr style="border:none;border-top:1px solid var(--border);margin:8px 0;">';
+                    break;
+            }
+
+            div.innerHTML = 
+                '<div class="element-toolbar">' +
+                '<span class="element-tool" onclick="editElement('' + id + '')">✎ Edit</span>' +
+                '<span class="element-tool" onclick="moveUp('' + id + '')">↑</span>' +
+                '<span class="element-tool" onclick="moveDown('' + id + '')">↓</span>' +
+                '<span class="element-tool" onclick="deleteElement('' + id + '')">×</span>' +
+                '</div>' + content;
+
+            container.appendChild(div);
+            log('CREATE', type, 'Added element ' + id);
+            selectElement(id);
+        }
+
+        function deleteElement(id) {
+            const el = document.querySelector('[data-id="' + id + '"]');
+            if(el) {
+                el.remove();
+                log('DELETE', id, 'Element removed');
+            }
+        }
+
+        function moveUp(id) {
+            const el = document.querySelector('[data-id="' + id + '"]');
+            if(el && el.previousElementSibling) {
+                el.parentNode.insertBefore(el, el.previousElementSibling);
+                log('REORDER', id, 'Moved up');
+            }
+        }
+
+        function moveDown(id) {
+            const el = document.querySelector('[data-id="' + id + '"]');
+            if(el && el.nextElementSibling) {
+                el.parentNode.insertBefore(el.nextElementSibling, el);
+                log('REORDER', id, 'Moved down');
+            }
+        }
+
+        function selectElement(id) {
+            document.querySelectorAll('.live-element').forEach(e => e.classList.remove('selected'));
+            const el = document.querySelector('[data-id="' + id + '"]');
+            if(el) el.classList.add('selected');
+        }
+
+        // ==================== INLINE EDITING ====================
+        function editElement(id) {
+            const el = document.querySelector('[data-id="' + id + '"');
+            if(!el) return;
+
+            selectElement(id);
+
+            // Find the actual content (skip toolbar)
+            const contentDiv = Array.from(el.children).find(c => !c.classList.contains('element-toolbar'));
+            if(!contentDiv) return;
+
+            const oldHTML = contentDiv.innerHTML;
+
+            // Replace with textarea
+            const textarea = document.createElement('textarea');
+            textarea.style.cssText = 'width:100%;min-height:80px;background:var(--bg);border:1px solid var(--accent);color:var(--text);padding:8px;font-family:inherit;font-size:12px;border-radius:4px;resize:vertical;';
+            textarea.value = oldHTML;
+
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Apply';
+            saveBtn.style.cssText = 'margin-top:6px;padding:4px 12px;background:var(--accent);color:var(--bg);border:none;border-radius:4px;font-family:inherit;font-size:10px;cursor:pointer;';
+
+            const wrapper = document.createElement('div');
+            wrapper.appendChild(textarea);
+            wrapper.appendChild(saveBtn);
+
+            contentDiv.innerHTML = '';
+            contentDiv.appendChild(wrapper);
+            textarea.focus();
+
+            saveBtn.onclick = () => {
+                contentDiv.innerHTML = textarea.value;
+                log('EDIT', id, 'Content modified via inline editor');
+            };
+
+            textarea.addEventListener('keydown', (e) => {
+                if(e.key === 'Enter' && e.ctrlKey) {
+                    saveBtn.click();
+                }
+            });
+        }
+
+        // ==================== BEHAVIOR SYSTEM ====================
+        function addBehavior(type) {
+            if(!selectedId) {
+                alert('Select an element first!');
+                return;
+            }
+            const el = document.querySelector('[data-id="' + selectedId + '"]');
+            if(!el) return;
+
+            el.dataset.behavior = type;
+
+            switch(type) {
+                case 'counter':
+                    setupCounter(selectedId);
+                    log('BEHAVIOR', selectedId, 'Added click counter');
+                    break;
+                case 'toggle':
+                    setupToggle(selectedId);
+                    log('BEHAVIOR', selectedId, 'Added theme toggle');
+                    break;
+                case 'random':
+                    setupRandom(selectedId);
+                    log('BEHAVIOR', selectedId, 'Added random color');
+                    break;
+                case 'typewriter':
+                    setupTypewriter(selectedId);
+                    log('BEHAVIOR', selectedId, 'Added typewriter effect');
+                    break;
+            }
+        }
+
+        function setupCounter(id) {
+            const btn = document.querySelector('#btn_' + id);
+            if(!btn) return;
+            let count = 0;
+            btn.onclick = () => {
+                count++;
+                btn.textContent = 'Clicked ' + count + ' times';
+                log('INTERACT', id, 'Counter incremented to ' + count);
+            };
+        }
+
+        function setupToggle(id) {
+            const btn = document.querySelector('#btn_' + id);
+            if(!btn) return;
+            let dark = true;
+            btn.onclick = () => {
+                dark = !dark;
+                document.documentElement.style.setProperty('--bg', dark ? '#0d0d12' : '#f5f5fa');
+                document.documentElement.style.setProperty('--text', dark ? '#e0e0e8' : '#1a1a2e');
+                document.documentElement.style.setProperty('--panel', dark ? '#151520' : '#ffffff');
+                btn.textContent = dark ? 'Switch to Light' : 'Switch to Dark';
+                log('INTERACT', id, 'Theme toggled to ' + (dark ? 'dark' : 'light'));
+            };
+            btn.textContent = 'Switch to Light';
+        }
+
+        function setupRandom(id) {
+            const el = document.querySelector('[data-id="' + id + '"');
+            if(!el) return;
+            const target = el.querySelector('button, h2, p, div') || el;
+            target.onclick = () => {
+                const hue = Math.floor(Math.random() * 360);
+                target.style.color = 'hsl(' + hue + ', 70%, 50%)';
+                log('INTERACT', id, 'Random color: hsl(' + hue + ', 70%, 50%)');
+            };
+        }
+
+        function setupTypewriter(id) {
+            const el = document.querySelector('[data-id="' + id + '"');
+            if(!el) return;
+            const target = el.querySelector('p, h2, h3') || el;
+            const original = target.textContent;
+            target.textContent = '';
+            let i = 0;
+            const interval = setInterval(() => {
+                if(i < original.length) {
+                    target.textContent += original[i];
+                    i++;
+                } else {
+                    clearInterval(interval);
+                }
+            }, 50);
+            log('BEHAVIOR', id, 'Typewriter initialized');
+        }
+
+        // ==================== SOURCE CODE GENERATION ====================
+        // This is the black magic. We serialize the CURRENT DOM state
+        // into a complete, valid HTML file that includes all mutations.
+
+        function generateSourceCode() {
+            // Clone the document
+            const clone = document.documentElement.cloneNode(true);
+
+            // Remove the source pane from the exported file (it's meta-UI)
+            const sourcePane = clone.querySelector('.source-pane');
+            if(sourcePane) sourcePane.remove();
+
+            // Remove the mutation log from export
+            const mutationLog = clone.querySelector('.mutation-log');
+            if(mutationLog) mutationLog.remove();
+
+            // Remove the builder bar from export (it's part of the editor)
+            const builderBar = clone.querySelector('.builder-bar');
+            if(builderBar) builderBar.remove();
+
+            // Remove element toolbars from export (they're editor chrome)
+            clone.querySelectorAll('.element-toolbar').forEach(t => t.remove());
+
+            // Clean up selection states
+            clone.querySelectorAll('.live-element').forEach(el => {
+                el.classList.remove('selected');
+                el.removeAttribute('onclick');
+            });
+
+            // Update the header to show this is a mutated export
+            const header = clone.querySelector('.header h1');
+            if(header) header.textContent = '🧬 Autopoiesis (Mutated)';
+
+            // Add mutation metadata comment
+            const comment = document.createComment(
+                '
+AUTOPOIESIS MUTATION RECORD
+' +
+                'Generated: ' + new Date().toISOString() + '
+' +
+                'Mutations: ' + mutations.length + '
+' +
+                'Elements: ' + elementCounter + '
+' +
+                'This file was rewritten by itself.
+'
+            );
+            clone.insertBefore(comment, clone.firstChild);
+
+            // Serialize
+            const serializer = new XMLSerializer();
+            let source = serializer.serializeToString(clone);
+
+            // Fix XMLSerializer's self-closing tag issues for HTML5
+            source = source.replace(/\/>/g, '>');  // Simple fix for common cases
+
+            return '<!DOCTYPE html>
+' + source;
+        }
+
+        function updateSourceView() {
+            const editor = document.getElementById('sourceEditor');
+            const currentTab = document.querySelector('.source-tab.active').textContent;
+
+            if(currentTab.includes('HTML')) {
+                // Show the live container HTML
+                const container = document.getElementById('liveContainer');
+                editor.value = formatHTML(container.innerHTML);
+            } else if(currentTab.includes('CSS')) {
+                const style = document.getElementById('self-style');
+                editor.value = style ? style.textContent : '/* No styles */';
+            } else if(currentTab.includes('JS')) {
+                const script = document.getElementById('self-logic');
+                editor.value = script ? script.textContent : '// No logic';
+            } else if(currentTab.includes('Diff')) {
+                updateDiffView();
+            }
+        }
+
+        function formatHTML(html) {
+            // Simple HTML formatter
+            let formatted = '';
+            let indent = 0;
+            const lines = html.split(/>(\s*)</g);
+            for(let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim();
+                if(!line) continue;
+                if(line.startsWith('/')) indent--;
+                formatted += '  '.repeat(Math.max(0, indent)) + (i % 2 === 0 ? line + '>' : '<' + line) + '
+';
+                if(!line.startsWith('/') && !line.endsWith('/')) indent++;
+            }
+            return formatted;
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            updateSourceView();
+        }
+
+        // ==================== DIFF VIEW ====================
+        function updateDiffView() {
+            const diffView = document.getElementById('diffView');
+            if(mutations.length === 0) {
+                diffView.innerHTML = '<div class="diff-ctx">No mutations yet.</div>';
+                return;
+            }
+
+            let html = '';
+            const recent = mutations.slice(-10);
+            for(const m of recent) {
+                html += '<div class="diff-add">+ [' + m.time + '] ' + m.action + ': ' + m.target + ' — ' + m.detail + '</div>';
+            }
+            diffView.innerHTML = html;
+        }
+
+        // ==================== SELF-PRESERVATION ====================
+        function downloadSelf() {
+            const source = generateSourceCode();
+            const blob = new Blob([source], {type: 'text/html'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'autopoiesis_mutated_' + Date.now() + '.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            log('EXPORT', 'file', 'Downloaded mutated self as ' + a.download);
+        }
+
+        function resetToOriginal() {
+            if(!confirm('This will reset ALL mutations. The file will return to its original state. Continue?')) return;
+            location.reload();
+        }
+
+        // ==================== SOURCE EDITOR LIVE EDITING ====================
+        // The user can edit the source code directly and apply it
+        document.getElementById('sourceEditor').addEventListener('keydown', (e) => {
+            if(e.key === 'Tab') {
+                e.preventDefault();
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                e.target.value = e.target.value.substring(0, start) + '  ' + e.target.value.substring(end);
+                e.target.selectionStart = e.target.selectionEnd = start + 2;
+            }
+            if(e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                applySourceChanges();
+            }
+        });
+
+        function applySourceChanges() {
+            const editor = document.getElementById('sourceEditor');
+            const currentTab = document.querySelector('.source-tab.active').textContent;
+            const code = editor.value;
+
+            if(currentTab.includes('HTML')) {
+                // Parse and inject HTML into live container
+                const container = document.getElementById('liveContainer');
+                container.innerHTML = code;
+                log('SOURCE_EDIT', 'HTML', 'Direct HTML modification applied');
+            } else if(currentTab.includes('CSS')) {
+                const style = document.getElementById('self-style');
+                if(style) style.textContent = code;
+                log('SOURCE_EDIT', 'CSS', 'Stylesheet modified');
+            } else if(currentTab.includes('JS')) {
+                // For JS, we create a new script and execute it
+                const newScript = document.createElement('script');
+                newScript.textContent = code;
+                document.body.appendChild(newScript);
+                log('SOURCE_EDIT', 'JS', 'Logic engine hot-patched');
+            }
+        }
+
+        // ==================== KEYBOARD SHORTCUTS ====================
+        document.addEventListener('keydown', (e) => {
+            if(e.key === 's' && e.ctrlKey) {
+                e.preventDefault();
+                downloadSelf();
+            }
+        });
+
+        // ==================== AUTO-SERIALIZATION ON MUTATION ====================
+        // Every mutation updates the source view so the user always sees
+        // the current state of their self-modifying file.
+
+        const observer = new MutationObserver((mutations) => {
+            // Debounced source update
+            clearTimeout(window._updateTimer);
+            window._updateTimer = setTimeout(updateSourceView, 100);
+        });
+
+        observer.observe(document.getElementById('liveContainer'), {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true
+        });
+    </script>
+</body>
+</html>

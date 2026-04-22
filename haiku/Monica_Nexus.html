@@ -1,0 +1,742 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus — P2P Game Engine</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Arial', sans-serif;
+        background: #0a0e27;
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .game-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(135deg, #1a1f3a 0%, #0f1419 100%);
+        border: 2px solid #00d4ff;
+        border-radius: 4px;
+        box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        overflow: hidden;
+      }
+
+      .game-header {
+        background: #161b2e;
+        border-bottom: 1px solid #00d4ff;
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+      }
+
+      .game-header-title {
+        color: #00d4ff;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ff4444;
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      .status-dot.connected {
+        background: #00ff00;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      canvas {
+        flex: 1;
+        background: linear-gradient(45deg, #0a0e27 25%, transparent 25%, transparent 75%, #0a0e27 75%, #0a0e27),
+                    linear-gradient(45deg, #0a0e27 25%, transparent 25%, transparent 75%, #0a0e27 75%, #0a0e27);
+        background-size: 40px 40px;
+        background-position: 0 0, 20px 20px;
+        background-color: #0a0e27;
+        cursor: crosshair;
+        display: block;
+      }
+
+      .game-footer {
+        background: #161b2e;
+        border-top: 1px solid #00d4ff;
+        padding: 10px;
+        font-size: 11px;
+        color: #888;
+        display: flex;
+        gap: 20px;
+      }
+
+      .sidebar {
+        width: 280px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        overflow-y: auto;
+      }
+
+      .panel {
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 100, 150, 0.05) 100%);
+        border: 1px solid #00d4ff;
+        border-radius: 4px;
+        padding: 12px;
+      }
+
+      .panel h3 {
+        color: #00d4ff;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #00d4ff;
+        padding-bottom: 8px;
+      }
+
+      .tool-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+
+      .tool-btn {
+        background: linear-gradient(135deg, #00d4ff 0%, #0088cc 100%);
+        border: none;
+        color: #000;
+        padding: 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: bold;
+        transition: all 0.2s;
+        text-transform: uppercase;
+      }
+
+      .tool-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+      }
+
+      .tool-btn.active {
+        background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+        box-shadow: 0 0 10px rgba(0, 255, 0, 0.6);
+      }
+
+      .tool-btn:active {
+        transform: translateY(0);
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        margin-bottom: 6px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+      }
+
+      .stat-label {
+        color: #888;
+      }
+
+      .stat-value {
+        color: #00d4ff;
+        font-weight: bold;
+      }
+
+      .player-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .player-item {
+        background: rgba(0, 212, 255, 0.1);
+        border: 1px solid #00d4ff;
+        padding: 8px;
+        border-radius: 3px;
+        font-size: 10px;
+      }
+
+      .player-name {
+        color: #00d4ff;
+        font-weight: bold;
+      }
+
+      .player-status {
+        color: #888;
+        font-size: 9px;
+        margin-top: 4px;
+      }
+
+      .connection-panel {
+        background: rgba(255, 100, 100, 0.1);
+        border: 1px solid #ff6464;
+        padding: 12px;
+        border-radius: 4px;
+      }
+
+      .connection-panel h3 {
+        color: #ff6464;
+        border-bottom-color: #ff6464;
+      }
+
+      .connection-input {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #00d4ff;
+        color: #00d4ff;
+        padding: 6px;
+        border-radius: 3px;
+        font-size: 10px;
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+      }
+
+      .connection-input::placeholder {
+        color: #666;
+      }
+
+      .connection-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #ff6464 0%, #cc5050 100%);
+        border: none;
+        color: white;
+        padding: 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+        transition: all 0.2s;
+      }
+
+      .connection-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 100, 100, 0.4);
+      }
+
+      .connection-code {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #00d4ff;
+        padding: 8px;
+        border-radius: 3px;
+        font-size: 9px;
+        font-family: 'Courier New', monospace;
+        color: #00d4ff;
+        word-break: break-all;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .connection-code:hover {
+        background: rgba(0, 212, 255, 0.1);
+      }
+
+      .chat-box {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .chat-messages {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #00d4ff;
+        border-radius: 3px;
+        padding: 8px;
+        max-height: 100px;
+        overflow-y: auto;
+        font-size: 9px;
+      }
+
+      .chat-message {
+        color: #00d4ff;
+        margin-bottom: 4px;
+        padding: 2px 0;
+        border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+      }
+
+      .chat-message.system {
+        color: #888;
+        font-style: italic;
+      }
+
+      .chat-input {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #00d4ff;
+        color: #00d4ff;
+        padding: 6px;
+        border-radius: 3px;
+        font-size: 10px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 212, 255, 0.05);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #00d4ff;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="game-area">
+        <div class="game-header">
+          <span class="game-header-title">🎮 Nexus Game Engine</span>
+          <div class="connection-status">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="connectionText">Disconnected</span>
+          </div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-footer">
+          <span>Players: <strong id="playerCount">1</strong></span>
+          <span>Entities: <strong id="entityCount">0</strong></span>
+          <span>FPS: <strong id="fps">60</strong></span>
+          <span id="coordsDisplay">X: 0 Y: 0</span>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="connection-panel">
+          <h3>🔗 Connection</h3>
+          <div id="connectionCode" class="connection-code" style="display: none; cursor: pointer;" onclick="copyCode()">
+            Loading...
+          </div>
+          <input type="text" id="peerCode" class="connection-input" placeholder="Paste peer code here...">
+          <button class="connection-btn" onclick="connectToPeer()">Connect</button>
+          <button class="connection-btn" style="background: linear-gradient(135deg, #666 0%, #444 100%); margin-top: 6px;" onclick="generateNewCode()">New Code</button>
+        </div>
+
+        <div class="panel">
+          <h3>🛠️ Tools</h3>
+          <div class="tool-grid">
+            <button class="tool-btn active" onclick="selectTool('draw')">✏️ Draw</button>
+            <button class="tool-btn" onclick="selectTool('erase')">🗑️ Erase</button>
+            <button class="tool-btn" onclick="selectTool('spawn')">⭐ Spawn</button>
+            <button class="tool-btn" onclick="selectTool('move')">↔️ Move</button>
+            <button class="tool-btn" onclick="selectTool('wall')">🧱 Wall</button>
+            <button class="tool-btn" onclick="selectTool('clear')">🔄 Clear</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>📊 Statistics</h3>
+          <div class="stat">
+            <span class="stat-label">Latency:</span>
+            <span class="stat-value" id="latency">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Sync Status:</span>
+            <span class="stat-value" id="syncStatus">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Messages:</span>
+            <span class="stat-value" id="messageCount">0</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>👥 Players</h3>
+          <div class="player-list" id="playerList">
+            <div class="player-item">
+              <div class="player-name">You</div>
+              <div class="player-status">Local • Ready</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>💬 Chat</h3>
+          <div class="chat-box">
+            <div class="chat-messages" id="chatMessages"></div>
+            <input type="text" id="chatInput" class="chat-input" placeholder="Say something..." onkeypress="handleChatInput(event)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      let resizeTimeout;
+
+      function resizeCanvas() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(resizeCanvas, 100);
+      });
+
+      resizeCanvas();
+
+      // Game State
+      const gameState = {
+        entities: [],
+        walls: [],
+        players: [{ id: 'local', x: 100, y: 100, color: '#00ff00' }],
+        selectedTool: 'draw',
+        messageCount: 0
+      };
+
+      // WebRTC Setup
+      let peerConnection = null;
+      let dataChannel = null;
+      let localDescription = null;
+      let remoteDescription = null;
+      let isConnected = false;
+
+      async function generateNewCode() {
+        try {
+          peerConnection = new RTCPeerConnection({
+            iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+          });
+
+          dataChannel = peerConnection.createDataChannel('gameSync', { ordered: true });
+          setupDataChannel();
+
+          peerConnection.onicecandidate = (event) => {
+            if (event.candidate === null) {
+              localDescription = peerConnection.localDescription;
+              const code = btoa(JSON.stringify(localDescription));
+              document.getElementById('connectionCode').textContent = code;
+              document.getElementById('connectionCode').style.display = 'block';
+              addChatMessage('system', 'Connection code generated. Share it with your peer!');
+            }
+          };
+
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(offer);
+        } catch (e) {
+          addChatMessage('system', 'Error: ' + e.message);
+        }
+      }
+
+      async function connectToPeer() {
+        const code = document.getElementById('peerCode').value;
+        if (!code) return;
+
+        try {
+          remoteDescription = JSON.parse(atob(code));
+
+          if (!peerConnection) {
+            peerConnection = new RTCPeerConnection({
+              iceServers: [{ urls: ['stun:stun.l.google.com:19302'] }]
+            });
+          }
+
+          peerConnection.ondatachannel = (event) => {
+            dataChannel = event.channel;
+            setupDataChannel();
+          };
+
+          peerConnection.onicecandidate = (event) => {
+            if (event.candidate === null) {
+              localDescription = peerConnection.localDescription;
+              const code = btoa(JSON.stringify(localDescription));
+              document.getElementById('connectionCode').textContent = code;
+              document.getElementById('connectionCode').style.display = 'block';
+              addChatMessage('system', 'Send this code back to complete connection');
+            }
+          };
+
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(remoteDescription));
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+        } catch (e) {
+          addChatMessage('system', 'Error: ' + e.message);
+        }
+      }
+
+      function setupDataChannel() {
+        dataChannel.onopen = () => {
+          isConnected = true;
+          document.getElementById('statusDot').classList.add('connected');
+          document.getElementById('connectionText').textContent = 'Connected';
+          addChatMessage('system', 'Connected to peer!');
+          gameState.players.push({ id: 'remote', x: 300, y: 300, color: '#ff00ff' });
+          updatePlayerList();
+        };
+
+        dataChannel.onclose = () => {
+          isConnected = false;
+          document.getElementById('statusDot').classList.remove('connected');
+          document.getElementById('connectionText').textContent = 'Disconnected';
+        };
+
+        dataChannel.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          handleRemoteMessage(message);
+        };
+      }
+
+      function sendMessage(message) {
+        if (dataChannel && dataChannel.readyState === 'open') {
+          dataChannel.send(JSON.stringify(message));
+          gameState.messageCount++;
+          document.getElementById('messageCount').textContent = gameState.messageCount;
+        }
+      }
+
+      function handleRemoteMessage(message) {
+        if (message.type === 'entity') {
+          const existing = gameState.entities.find(e => e.id === message.entity.id);
+          if (existing) {
+            Object.assign(existing, message.entity);
+          } else {
+            gameState.entities.push(message.entity);
+          }
+        } else if (message.type === 'wall') {
+          gameState.walls.push(message.wall);
+        } else if (message.type === 'clear') {
+          gameState.entities = [];
+          gameState.walls = [];
+        } else if (message.type === 'chat') {
+          addChatMessage(message.player, message.text);
+        } else if (message.type === 'playerMove') {
+          const player = gameState.players.find(p => p.id === 'remote');
+          if (player) {
+            player.x = message.x;
+            player.y = message.y;
+          }
+        }
+      }
+
+      // Canvas Interaction
+      let isDrawing = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+        isDrawing = true;
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        document.getElementById('coordsDisplay').textContent = `X: ${Math.round(x)} Y: ${Math.round(y)}`;
+
+        if (isDrawing) {
+          if (gameState.selectedTool === 'draw') {
+            gameState.entities.push({
+              id: Date.now() + Math.random(),
+              x: x,
+              y: y,
+              type: 'dot',
+              color: '#00d4ff',
+              size: 4
+            });
+            sendMessage({ type: 'entity', entity: gameState.entities[gameState.entities.length - 1] });
+          } else if (gameState.selectedTool === 'wall') {
+            gameState.walls.push({ x1: lastX, y1: lastY, x2: x, y2: y });
+            sendMessage({ type: 'wall', wall: gameState.walls[gameState.walls.length - 1] });
+            lastX = x;
+            lastY = y;
+          }
+        }
+      });
+
+      canvas.addEventListener('mouseup', () => {
+        isDrawing = false;
+      });
+
+      canvas.addEventListener('mouseleave', () => {
+        isDrawing = false;
+      });
+
+      canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (gameState.selectedTool === 'spawn') {
+          gameState.entities.push({
+            id: Date.now(),
+            x: x,
+            y: y,
+            type: 'star',
+            color: '#ffff00',
+            size: 8
+          });
+          sendMessage({ type: 'entity', entity: gameState.entities[gameState.entities.length - 1] });
+        } else if (gameState.selectedTool === 'erase') {
+          gameState.entities = gameState.entities.filter(e => Math.hypot(e.x - x, e.y - y) > 20);
+          sendMessage({ type: 'clear' });
+        } else if (gameState.selectedTool === 'move') {
+          gameState.players[0].x = x;
+          gameState.players[0].y = y;
+          sendMessage({ type: 'playerMove', x: x, y: y });
+        }
+      });
+
+      function selectTool(tool) {
+        gameState.selectedTool = tool;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+      }
+
+      // Chat
+      function addChatMessage(player, text) {
+        const messages = document.getElementById('chatMessages');
+        const msg = document.createElement('div');
+        msg.className = player === 'system' ? 'chat-message system' : 'chat-message';
+        msg.textContent = `${player}: ${text}`;
+        messages.appendChild(msg);
+        messages.scrollTop = messages.scrollHeight;
+      }
+
+      function handleChatInput(event) {
+        if (event.key === 'Enter') {
+          const input = document.getElementById('chatInput');
+          const text = input.value;
+          if (text) {
+            addChatMessage('You', text);
+            sendMessage({ type: 'chat', player: 'Remote', text: text });
+            input.value = '';
+          }
+        }
+      }
+
+      function copyCode() {
+        const code = document.getElementById('connectionCode').textContent;
+        navigator.clipboard.writeText(code);
+        addChatMessage('system', 'Code copied to clipboard!');
+      }
+
+      function updatePlayerList() {
+        const list = document.getElementById('playerList');
+        list.innerHTML = gameState.players.map(p => `
+          <div class="player-item">
+            <div class="player-name">${p.id === 'local' ? 'You' : 'Peer'}</div>
+            <div class="player-status">${p.id === 'local' ? 'Local' : 'Remote'} • X: ${Math.round(p.x)} Y: ${Math.round(p.y)}</div>
+          </div>
+        `).join('');
+      }
+
+      // Render Loop
+      let lastTime = Date.now();
+      let frameCount = 0;
+
+      function render() {
+        ctx.fillStyle = '#0a0e27';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.1)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 40) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, canvas.height);
+          ctx.stroke();
+        }
+        for (let i = 0; i < canvas.height; i += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(canvas.width, i);
+          ctx.stroke();
+        }
+
+        // Draw walls
+        ctx.strokeStyle = '#ff6464';
+        ctx.lineWidth = 3;
+        gameState.walls.forEach(wall => {
+          ctx.beginPath();
+          ctx.moveTo(wall.x1, wall.y1);
+          ctx.lineTo(wall.x2, wall.y2);
+          ctx.stroke();
+        });
+
+        // Draw entities
+        gameState.entities.forEach(entity => {
+          ctx.fillStyle = entity.color;
+          if (entity.type === 'dot') {
+            ctx.fillRect(entity.x - entity.size / 2, entity.y - entity.size / 2, entity.size, entity.size);
+          } else if (entity.type === 'star') {
+            ctx.beginPath();
+            ctx.arc(entity.x, entity.y, entity.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+
+        // Draw players
+        gameState.players.forEach(player => {
+          ctx.fillStyle = player.color;
+          ctx.beginPath();
+          ctx.arc(player.x, player.y, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = player.color;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+
+        // Update stats
+        frameCount++;
+        const now = Date.now();
+        if (now - lastTime > 1000) {
+          document.getElementById('fps').textContent = frameCount;
+          document.getElementById('entityCount').textContent = gameState.entities.length;
+          document.getElementById('playerCount').textContent = gameState.players.length;
+          frameCount = 0;
+          lastTime = now;
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      render();
+
+      // Initialize
+      generateNewCode();
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cpu.html — fake hardware, real assembly</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      background: #0a0c12;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .cpu-container {
+      max-width: 1300px;
+      width: 100%;
+      background: #0f1117;
+      border-radius: 2rem;
+      border: 1px solid #2a2e3a;
+      overflow: hidden;
+    }
+    .header {
+      background: #1a1d2b;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #2a2e3a;
+      font-weight: bold;
+      color: #c084fc;
+    }
+    .main-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .hardware-panel {
+      flex: 1.5;
+      min-width: 300px;
+      padding: 20px;
+      background: #05070c;
+      border-right: 1px solid #252836;
+    }
+    .code-panel {
+      flex: 1;
+      min-width: 320px;
+      padding: 20px;
+      background: #0b0d12;
+    }
+    .register-grid, .ram-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px,1fr));
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .reg {
+      background: #10121a;
+      padding: 6px 10px;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      border-left: 3px solid #5f3dc9;
+    }
+    .ram-cell {
+      background: #0a0c12;
+      padding: 4px;
+      text-align: center;
+      font-size: 0.7rem;
+      border-radius: 8px;
+      font-family: monospace;
+    }
+    button {
+      background: #2c2e3f;
+      border: none;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-family: monospace;
+      cursor: pointer;
+      margin: 4px;
+    }
+    button.primary {
+      background: #5f3dc9;
+    }
+    textarea {
+      width: 100%;
+      background: #010409;
+      color: #e2e8f0;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      padding: 12px;
+      border-radius: 20px;
+      border: 1px solid #2a2e3a;
+      resize: vertical;
+    }
+    .output {
+      background: #010409;
+      padding: 10px;
+      border-radius: 16px;
+      font-size: 0.7rem;
+      font-family: monospace;
+      height: 120px;
+      overflow-y: auto;
+      color: #8f95b3;
+    }
+    .status-led {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 10px;
+      background: #2ecc71;
+      box-shadow: 0 0 4px #2ecc71;
+      margin-right: 6px;
+    }
+    hr { border-color: #252836; margin: 16px 0; }
+  </style>
+</head>
+<body>
+<div class="cpu-container">
+  <div class="header">
+    <span>⚙️ CPU.HTML — fake 8‑bit system</span>
+    <span><span class="status-led"></span> HALT = false</span>
+  </div>
+  <div class="main-grid">
+    <div class="hardware-panel">
+      <div style="font-weight:bold;">📟 REGISTERS</div>
+      <div class="register-grid" id="regPanel"></div>
+      <div style="font-weight:bold; margin-top:16px;">🧠 RAM (0x00-0x1F)</div>
+      <div class="ram-grid" id="ramPanel"></div>
+      <div style="margin-top:16px;">
+        <button id="stepBtn">⏯️ STEP (one instruction)</button>
+        <button id="runBtn">▶️ RUN</button>
+        <button id="resetCpuBtn">🔄 RESET CPU</button>
+        <button id="assembleBtn" class="primary">🔧 ASSEMBLE & LOAD</button>
+      </div>
+    </div>
+    <div class="code-panel">
+      <div style="font-weight:bold;">📝 ASSEMBLY CODE</div>
+      <textarea id="asmSource" rows="8" spellcheck="false">; Simple sum program
+; R0 = 5, R1 = 7, R2 = R0+R1, then HALT
+MOV R0, 5
+MOV R1, 7
+ADD R2, R0, R1
+HLT</textarea>
+      <div style="margin-top:8px;">
+        <button id="loadExample1">📘 Example: Fibonacci</button>
+        <button id="loadExample2">📘 Example: Loop</button>
+      </div>
+      <hr>
+      <div style="font-weight:bold;">📢 CPU OUTPUT</div>
+      <div class="output" id="cpuOutput"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  //  cpu.html - a simulated 8-bit CPU with assembly language
+  //  Registers: R0-R3 (8-bit), PC, FLAGS (Z, C)
+  //  Memory: 256 bytes (0x00-0xFF), 16 visible in UI
+  //  Instructions: MOV, ADD, SUB, JMP, JZ, JNZ, HLT, LD, ST
+  // --------------------------------------------------------------
+  
+  class FakeCPU {
+    constructor() {
+      this.reg = [0,0,0,0];   // R0..R3
+      this.pc = 0;            // program counter
+      this.flags = { Z: false, C: false };
+      this.memory = new Uint8Array(256);
+      this.halted = false;
+      this.outputLog = [];
+    }
+    
+    reset() {
+      this.reg.fill(0);
+      this.pc = 0;
+      this.flags = { Z: false, C: false };
+      this.halted = false;
+      this.outputLog = [];
+      // keep memory content (program) intact, but we can optionally clear
+    }
+    
+    clearMemory() {
+      this.memory.fill(0);
+    }
+    
+    loadProgram(bytes, startAddr=0) {
+      for(let i=0; i<bytes.length; i++) {
+        if(startAddr+i < 256) this.memory[startAddr+i] = bytes[i];
+      }
+      this.pc = startAddr;
+      this.halted = false;
+    }
+    
+    log(msg) {
+      this.outputLog.unshift(`[${this.pc.toString(16).padStart(2,'0')}] ${msg}`);
+      if(this.outputLog.length > 20) this.outputLog.pop();
+      this.updateUI();
+    }
+    
+    updateFlags(value) {
+      this.flags.Z = (value & 0xFF) === 0;
+      this.flags.C = (value > 0xFF);
+    }
+    
+    fetch() {
+      if(this.pc >= 256) { this.halted = true; this.log("PC out of bounds → HALT"); return null; }
+      return this.memory[this.pc];
+    }
+    
+    execute(opcode) {
+      if(this.halted) return;
+      // instruction encoding: 
+      // 0x10-0x1F: MOV reg, imm (opcode 0x10 + reg, next byte = imm)
+      // 0x20-0x23: ADD Rd, Rs, Rt (Rd = Rs + Rt)
+      // 0x24-0x27: SUB Rd, Rs, Rt
+      // 0x30: JMP addr (next byte)
+      // 0x31: JZ addr (next byte)
+      // 0x32: JNZ addr
+      // 0x40: HLT
+      // 0x50-0x53: LD Rd, [addr] (load from memory)
+      // 0x60-0x63: ST [addr], Rs (store Rs to memory)
+      
+      const instr = opcode;
+      let regIdx, imm, addr, rs, rt, rd;
+      
+      if(instr >= 0x10 && instr <= 0x1F) { // MOV reg, imm
+        regIdx = instr & 0x0F;
+        if(regIdx >= 4) { this.log(`Invalid register ${regIdx}`); this.halted=true; return; }
+        imm = this.memory[this.pc+1];
+        this.pc += 2;
+        this.reg[regIdx] = imm & 0xFF;
+        this.log(`MOV R${regIdx}, #${imm}`);
+        return;
+      }
+      if(instr >= 0x20 && instr <= 0x23) { // ADD Rd, Rs, Rt
+        rd = instr & 0x03;
+        rs = this.memory[this.pc+1];
+        rt = this.memory[this.pc+2];
+        this.pc += 3;
+        if(rs>=4 || rt>=4 || rd>=4) { this.log("Bad register in ADD"); this.halted=true; return; }
+        let res = this.reg[rs] + this.reg[rt];
+        this.updateFlags(res);
+        this.reg[rd] = res & 0xFF;
+        this.log(`ADD R${rd}, R${rs}, R${rt} -> ${this.reg[rd]}`);
+        return;
+      }
+      if(instr >= 0x24 && instr <= 0x27) { // SUB Rd, Rs, Rt
+        rd = instr & 0x03;
+        rs = this.memory[this.pc+1];
+        rt = this.memory[this.pc+2];
+        this.pc += 3;
+        let res = this.reg[rs] - this.reg[rt];
+        this.flags.Z = (res & 0xFF) === 0;
+        this.flags.C = res < 0;
+        this.reg[rd] = res & 0xFF;
+        this.log(`SUB R${rd}, R${rs}, R${rt} -> ${this.reg[rd]}`);
+        return;
+      }
+      if(instr === 0x30) { // JMP addr
+        addr = this.memory[this.pc+1];
+        this.pc = addr;
+        this.log(`JMP 0x${addr.toString(16)}`);
+        return;
+      }
+      if(instr === 0x31) { // JZ addr
+        addr = this.memory[this.pc+1];
+        this.pc += 2;
+        if(this.flags.Z) {
+          this.pc = addr;
+          this.log(`JZ 0x${addr.toString(16)} (taken)`);
+        } else this.log(`JZ not taken`);
+        return;
+      }
+      if(instr === 0x32) { // JNZ addr
+        addr = this.memory[this.pc+1];
+        this.pc += 2;
+        if(!this.flags.Z) {
+          this.pc = addr;
+          this.log(`JNZ 0x${addr.toString(16)} (taken)`);
+        } else this.log(`JNZ not taken`);
+        return;
+      }
+      if(instr === 0x40) { // HLT
+        this.halted = true;
+        this.log("HLT — execution stopped");
+        return;
+      }
+      if(instr >= 0x50 && instr <= 0x53) { // LD Rd, [addr]
+        rd = instr & 0x03;
+        addr = this.memory[this.pc+1];
+        this.pc += 2;
+        if(addr<256) {
+          this.reg[rd] = this.memory[addr];
+          this.log(`LD R${rd}, [0x${addr.toString(16)}] = ${this.reg[rd]}`);
+        } else { this.log("Invalid address LD"); this.halted=true; }
+        return;
+      }
+      if(instr >= 0x60 && instr <= 0x63) { // ST [addr], Rs
+        let rs = instr & 0x03;
+        addr = this.memory[this.pc+1];
+        this.pc += 2;
+        if(addr<256) {
+          this.memory[addr] = this.reg[rs];
+          this.log(`ST [0x${addr.toString(16)}], R${rs} = ${this.reg[rs]}`);
+        } else { this.log("Invalid address ST"); this.halted=true; }
+        return;
+      }
+      this.log(`Unknown opcode 0x${instr.toString(16)} → HALT`);
+      this.halted = true;
+    }
+    
+    step() {
+      if(this.halted) { this.log("CPU halted, reset or reload program"); return false; }
+      let op = this.fetch();
+      if(op === undefined) return false;
+      this.execute(op);
+      this.updateUI();
+      return !this.halted;
+    }
+    
+    run() {
+      while(!this.halted && this.pc < 256) {
+        let op = this.fetch();
+        if(op === undefined) break;
+        this.execute(op);
+        if(this.halted) break;
+      }
+      this.updateUI();
+    }
+    
+    updateUI() {
+      renderRegisters(this.reg, this.flags, this.pc);
+      renderRAM(this.memory);
+      document.getElementById('cpuOutput').innerHTML = this.outputLog.slice(0,15).map(m => `<div>${m}</div>`).join('');
+    }
+  }
+  
+  // ---------- ASSEMBLER (tiny) ----------
+  function assemble(source) {
+    const lines = source.split(/\r?\n/);
+    const labels = new Map();
+    let bytecode = [];
+    let address = 0;
+    // first pass: collect labels
+    for(let line of lines) {
+      line = line.split(';')[0].trim();
+      if(line === '') continue;
+      if(line.endsWith(':')) {
+        let label = line.slice(0,-1);
+        labels.set(label, address);
+        continue;
+      }
+      address++;
+    }
+    // second pass: generate code
+    address = 0;
+    for(let line of lines) {
+      line = line.split(';')[0].trim();
+      if(line === '' || line.endsWith(':')) continue;
+      let parts = line.split(/\s+/);
+      let mnemonic = parts[0].toUpperCase();
+      if(mnemonic === 'MOV') {
+        let reg = parts[1].toUpperCase();
+        let imm = parts[2];
+        let regNum = parseInt(reg[1]);
+        if(isNaN(regNum)) throw new Error(`Bad register ${reg}`);
+        let val = parseInt(imm);
+        if(isNaN(val)) throw new Error(`Bad immediate ${imm}`);
+        bytecode.push(0x10 + regNum, val & 0xFF);
+        address += 2;
+      }
+      else if(mnemonic === 'ADD') {
+        let rd = parseInt(parts[1][1]), rs = parseInt(parts[2][1]), rt = parseInt(parts[3][1]);
+        bytecode.push(0x20 + rd, rs, rt);
+        address += 3;
+      }
+      else if(mnemonic === 'SUB') {
+        let rd = parseInt(parts[1][1]), rs = parseInt(parts[2][1]), rt = parseInt(parts[3][1]);
+        bytecode.push(0x24 + rd, rs, rt);
+        address += 3;
+      }
+      else if(mnemonic === 'JMP') {
+        let target = parts[1];
+        let addr = labels.get(target);
+        if(addr === undefined) throw new Error(`Undefined label ${target}`);
+        bytecode.push(0x30, addr);
+        address += 2;
+      }
+      else if(mnemonic === 'JZ') {
+        let target = parts[1];
+        let addr = labels.get(target);
+        bytecode.push(0x31, addr);
+        address += 2;
+      }
+      else if(mnemonic === 'JNZ') {
+        let target = parts[1];
+        let addr = labels.get(target);
+        bytecode.push(0x32, addr);
+        address += 2;
+      }
+      else if(mnemonic === 'HLT') {
+        bytecode.push(0x40);
+        address += 1;
+      }
+      else if(mnemonic === 'LD') {
+        let rd = parseInt(parts[1][1]);
+        let addrExpr = parts[2];
+        let addrVal = parseInt(addrExpr.match(/\d+/)?.[0]);
+        if(isNaN(addrVal)) throw new Error(`Bad address ${addrExpr}`);
+        bytecode.push(0x50 + rd, addrVal);
+        address += 2;
+      }
+      else if(mnemonic === 'ST') {
+        let rs = parseInt(parts[1][1]);
+        let addrExpr = parts[2];
+        let addrVal = parseInt(addrExpr.match(/\d+/)?.[0]);
+        bytecode.push(0x60 + rs, addrVal);
+        address += 2;
+      }
+      else throw new Error(`Unknown instruction ${mnemonic}`);
+    }
+    return bytecode;
+  }
+  
+  // UI rendering
+  let cpu = new FakeCPU();
+  
+  function renderRegisters(reg, flags, pc) {
+    const panel = document.getElementById('regPanel');
+    panel.innerHTML = `
+      <div class="reg">R0 = ${reg[0]}</div>
+      <div class="reg">R1 = ${reg[1]}</div>
+      <div class="reg">R2 = ${reg[2]}</div>
+      <div class="reg">R3 = ${reg[3]}</div>
+      <div class="reg">PC = ${pc.toString(16).padStart(2,'0')}</div>
+      <div class="reg">Z = ${flags.Z ? '1' : '0'} | C = ${flags.C ? '1' : '0'}</div>
+    `;
+  }
+  
+  function renderRAM(memory) {
+    const panel = document.getElementById('ramPanel');
+    let html = '';
+    for(let i=0; i<32; i++) {
+      let val = memory[i];
+      html += `<div class="ram-cell">0x${i.toString(16).padStart(2,'0')}: ${val.toString(16).padStart(2,'0')}</div>`;
+    }
+    panel.innerHTML = html;
+  }
+  
+  function assembleAndLoad() {
+    const source = document.getElementById('asmSource').value;
+    try {
+      const bytecode = assemble(source);
+      cpu.clearMemory();
+      cpu.loadProgram(bytecode, 0);
+      cpu.reset();
+      cpu.log(`Loaded ${bytecode.length} bytes. Ready.`);
+    } catch(e) {
+      cpu.log(`ASSEMBLY ERROR: ${e.message}`);
+    }
+  }
+  
+  function stepCPU() { cpu.step(); }
+  function runCPU() { cpu.run(); }
+  function resetCPU() { cpu.reset(); cpu.log("CPU reset (program still in memory)"); cpu.updateUI(); }
+  
+  function loadExample(example) {
+    let code = '';
+    if(example === 'fib') {
+      code = `; Fibonacci: R0 = 0, R1 = 1, loop: R2 = R0+R1, R0=R1, R1=R2, repeat 8 times
+MOV R0, 0
+MOV R1, 1
+MOV R3, 8
+LOOP: ADD R2, R0, R1
+MOV R0, R1
+MOV R1, R2
+SUB R3, R3, 1
+JNZ LOOP
+HLT`;
+    } else if(example === 'loop') {
+      code = `; Countdown from 5 to 0
+MOV R0, 5
+LOOP: SUB R0, R0, 1
+JNZ LOOP
+HLT`;
+    }
+    document.getElementById('asmSource').value = code;
+  }
+  
+  // bindings
+  document.getElementById('assembleBtn').onclick = assembleAndLoad;
+  document.getElementById('stepBtn').onclick = stepCPU;
+  document.getElementById('runBtn').onclick = runCPU;
+  document.getElementById('resetCpuBtn').onclick = resetCPU;
+  document.getElementById('loadExample1').onclick = () => loadExample('fib');
+  document.getElementById('loadExample2').onclick = () => loadExample('loop');
+  
+  // initial load example
+  loadExample('fib');
+  assembleAndLoad();
+  renderRAM(cpu.memory);
+</script>
+</body>
+</html>

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>brainwave.html — see the neural network think</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background: #0a0c12;
+      font-family: 'Segoe UI', 'Fira Code', monospace;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .nn-container {
+      max-width: 1300px;
+      width: 100%;
+      background: #0f1117;
+      border-radius: 2rem;
+      border: 1px solid #2a2e3a;
+      overflow: hidden;
+      box-shadow: 0 20px 30px -10px black;
+    }
+    .header {
+      background: #1a1d2b;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid #2a2e3a;
+    }
+    .title {
+      font-weight: bold;
+      color: #c084fc;
+      letter-spacing: 1px;
+    }
+    button {
+      background: #2c2e3f;
+      border: none;
+      color: white;
+      font-family: inherit;
+      padding: 6px 16px;
+      border-radius: 40px;
+      cursor: pointer;
+      transition: 0.1s;
+      border: 1px solid #3d4055;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #3d3f5a;
+      transform: scale(0.97);
+    }
+    .train-btn {
+      background: #5f3dc9;
+      border-color: #8a6de9;
+    }
+    .reset-btn {
+      background: #3b2e4a;
+    }
+    .main-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .viz-panel {
+      flex: 2;
+      min-width: 500px;
+      background: #05070c;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      background: #0b0e16;
+      border-radius: 24px;
+      box-shadow: 0 0 0 1px #2a2e3a;
+      width: 100%;
+      height: auto;
+    }
+    .controls-panel {
+      flex: 1;
+      min-width: 260px;
+      background: #0b0d12;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border-left: 1px solid #252836;
+    }
+    .card {
+      background: #10121a;
+      border-radius: 1.5rem;
+      padding: 16px;
+      border-left: 3px solid #5f3dc9;
+    }
+    .loss-graph {
+      background: #010409;
+      border-radius: 16px;
+      padding: 10px;
+      margin-top: 8px;
+    }
+    canvas.small-canvas {
+      width: 100%;
+      height: 120px;
+      background: #010409;
+      border-radius: 12px;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-family: monospace;
+      margin: 4px 0;
+      color: #b9c3e6;
+    }
+    .dataset-buttons {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .badge {
+      background: #1e1f2c;
+      padding: 4px 8px;
+      border-radius: 20px;
+      font-size: 0.7rem;
+    }
+    hr {
+      border-color: #252836;
+      margin: 12px 0;
+    }
+    .neuron-status {
+      font-size: 0.7rem;
+      color: #8f95b3;
+    }
+  </style>
+</head>
+<body>
+<div class="nn-container">
+  <div class="header">
+    <div class="title">🧠 BRAINWAVE.HTML — live neural network</div>
+    <div>
+      <button id="trainStepBtn" class="train-btn">⚡ TRAIN ONE STEP</button>
+      <button id="trainAutoBtn" class="train-btn">🔄 AUTO TRAIN</button>
+      <button id="resetNetBtn" class="reset-btn">🗲 RESET WEIGHTS</button>
+    </div>
+  </div>
+  <div class="main-panel">
+    <div class="viz-panel">
+      <canvas id="networkCanvas" width="700" height="500" style="width:100%; height:auto; max-width:700px; aspect-ratio:7/5"></canvas>
+    </div>
+    <div class="controls-panel">
+      <div class="card">
+        <div style="font-weight:bold;">📊 LOSS & ACCURACY</div>
+        <canvas id="lossCanvas" class="small-canvas" width="400" height="120" style="width:100%; height:auto;"></canvas>
+        <div class="stat-row"><span>Loss:</span><span id="lossValue">—</span></div>
+        <div class="stat-row"><span>Accuracy:</span><span id="accValue">—%</span></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold;">🎯 DATASET</div>
+        <div class="dataset-buttons">
+          <button id="datasetXor">XOR</button>
+          <button id="datasetCircle">Circle</button>
+          <button id="datasetSpiral">Spiral</button>
+        </div>
+        <div class="neuron-status" id="datasetDesc">XOR: points (0,0)->0, (0,1)->1, (1,0)->1, (1,1)->0</div>
+        <hr>
+        <div style="font-weight:bold;">⚙️ ARCHITECTURE</div>
+        <div class="stat-row"><span>Inputs:</span><span>2</span></div>
+        <div class="stat-row"><span>Hidden:</span><span id="hiddenSize">4 neurons</span></div>
+        <div class="stat-row"><span>Output:</span><span>1 (sigmoid)</span></div>
+        <button id="changeHiddenBtn" style="margin-top:6px;">🔁 Change hidden neurons</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold;">🧬 GRADIENT HEATMAP</div>
+        <div class="neuron-status">Connection thickness = weight magnitude.<br>Color: red=positive, blue=negative.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  //  brainwave.html — fully observable neural network
+  //  Forward/backprop, live drawing of weights & activations
+  // --------------------------------------------------------------
+  
+  class NeuralNet {
+    constructor(inputSize, hiddenSize, outputSize) {
+      this.inputSize = inputSize;
+      this.hiddenSize = hiddenSize;
+      this.outputSize = outputSize;
+      this.W1 = this.randomMatrix(hiddenSize, inputSize);
+      this.b1 = this.randomMatrix(hiddenSize, 1);
+      this.W2 = this.randomMatrix(outputSize, hiddenSize);
+      this.b2 = this.randomMatrix(outputSize, 1);
+    }
+    
+    randomMatrix(rows, cols) {
+      let m = Array(rows).fill().map(() => Array(cols).fill(0));
+      for(let i=0;i<rows;i++)
+        for(let j=0;j<cols;j++)
+          m[i][j] = (Math.random() - 0.5) * 2 * Math.sqrt(2.0/(rows+cols)); // Xavier init
+      return m;
+    }
+    
+    sigmoid(z) { return 1 / (1 + Math.exp(-z)); }
+    dsigmoid(a) { return a * (1 - a); }
+    
+    forward(x) {
+      // x is array of inputs (size inputSize)
+      let z1 = this.matMul(this.W1, this.colVector(x));
+      z1 = this.addVec(z1, this.b1);
+      let a1 = z1.map(v => this.sigmoid(v[0]));
+      let z2 = this.matMul(this.W2, this.colVector(a1));
+      z2 = this.addVec(z2, this.b2);
+      let a2 = z2.map(v => this.sigmoid(v[0]));
+      return { a1, a2, z1, z2 };
+    }
+    
+    colVector(arr) { return arr.map(v => [v]); }
+    matMul(A, B) { // A rows x cols, B cols x 1
+      let rows = A.length, cols = B[0].length;
+      let result = Array(rows).fill().map(() => Array(cols).fill(0));
+      for(let i=0;i<rows;i++)
+        for(let j=0;j<cols;j++)
+          for(let k=0;k<B.length;k++)
+            result[i][j] += A[i][k] * B[k][j];
+      return result;
+    }
+    addVec(A, B) { return A.map((row,i) => [row[0] + B[i][0]]); }
+    
+    train(x, yTrue, lr=0.5) {
+      // forward
+      let { a1, a2, z1, z2 } = this.forward(x);
+      let yPred = a2[0];
+      // loss derivative (binary cross entropy: dL/da2 = -yTrue/a2 + (1-yTrue)/(1-a2) but we combine with dsigmoid)
+      let dL_da2 = (yPred - yTrue) / (yPred*(1-yPred) + 1e-8);
+      let da2_dz2 = this.dsigmoid(yPred);
+      let delta2 = dL_da2 * da2_dz2; // scalar
+      // gradients W2, b2
+      let a1Col = this.colVector(a1);
+      let dW2 = this.matMul([[delta2]], this.transpose(a1Col));
+      let db2 = [[delta2]];
+      // backprop to hidden
+      let dL_da1 = this.matMul(this.transpose(this.W2), [[delta2]]).map(v=>v[0]);
+      let da1_dz1 = a1.map(v => this.dsigmoid(v));
+      let delta1 = dL_da1.map((v,i) => v * da1_dz1[i]);
+      let xCol = this.colVector(x);
+      let dW1 = this.matMul(this.colVector(delta1), this.transpose(xCol));
+      let db1 = this.colVector(delta1);
+      
+      // update weights
+      for(let i=0;i<this.W1.length;i++)
+        for(let j=0;j<this.W1[0].length;j++)
+          this.W1[i][j] -= lr * dW1[i][j];
+      for(let i=0;i<this.b1.length;i++) this.b1[i][0] -= lr * db1[i][0];
+      for(let i=0;i<this.W2.length;i++)
+        for(let j=0;j<this.W2[0].length;j++)
+          this.W2[i][j] -= lr * dW2[i][j];
+      this.b2[0][0] -= lr * db2[0][0];
+      
+      return yPred;
+    }
+    
+    transpose(m) { return m[0].map((_,i) => m.map(row => row[i])); }
+    
+    predict(x) { return this.forward(x).a2[0]; }
+  }
+  
+  // ----- Dataset generators -----
+  const datasets = {
+    xor: {
+      name: "XOR",
+      data: [[0,0,0],[0,1,1],[1,0,1],[1,1,0]],
+      generate: () => [...datasets.xor.data],
+      description: "XOR: 0,0→0 ; 0,1→1 ; 1,0→1 ; 1,1→0"
+    },
+    circle: {
+      name: "Circle",
+      generate: (n=32) => {
+        let pts = [];
+        for(let i=0;i<n;i++) {
+          let angle = Math.random()*2*Math.PI;
+          let r = Math.random();
+          let x = Math.cos(angle)*r;
+          let y = Math.sin(angle)*r;
+          let label = (r < 0.5) ? 1 : 0;
+          pts.push([x,y,label]);
+        }
+        return pts;
+      },
+      description: "Circle: points inside radius 0.5 → class 1, outside → 0"
+    },
+    spiral: {
+      name: "Spiral",
+      generate: (n=200) => {
+        let pts = [];
+        let turns = 3;
+        for(let i=0;i<n;i++) {
+          let t = i/n;
+          let angle = turns * 2 * Math.PI * t;
+          let r = t;
+          let x = Math.cos(angle)*r;
+          let y = Math.sin(angle)*r;
+          let label = (t < 0.5) ? 1 : 0;
+          // add some noise
+          pts.push([x + (Math.random()-0.5)*0.1, y + (Math.random()-0.5)*0.1, label]);
+        }
+        return pts;
+      },
+      description: "Spiral: two intertwined arms"
+    }
+  };
+  
+  let currentDataset = "xor";
+  let trainingData = [];
+  let net;
+  let hiddenNeurons = 4;
+  let lossHistory = [];
+  let autoTrainInterval = null;
+  let stepCount = 0;
+  
+  // Visualization refs
+  const netCanvas = document.getElementById('networkCanvas');
+  const ctx = netCanvas.getContext('2d');
+  const lossCanvas = document.getElementById('lossCanvas');
+  const lossCtx = lossCanvas.getContext('2d');
+  
+  function initNetwork() {
+    net = new NeuralNet(2, hiddenNeurons, 1);
+    lossHistory = [];
+    stepCount = 0;
+    updateUIStats();
+    drawNetwork();
+  }
+  
+  function generateDataset() {
+    if(currentDataset === "xor") trainingData = datasets.xor.generate();
+    else if(currentDataset === "circle") trainingData = datasets.circle.generate(64);
+    else if(currentDataset === "spiral") trainingData = datasets.spiral.generate(120);
+    document.getElementById('datasetDesc').innerText = datasets[currentDataset].description;
+  }
+  
+  function trainOneStep() {
+    if(!trainingData.length) generateDataset();
+    let epochLoss = 0;
+    let correct = 0;
+    // shuffle
+    for(let i=trainingData.length-1;i>0;i--){
+      let j=Math.floor(Math.random()*(i+1));
+      [trainingData[i], trainingData[j]] = [trainingData[j], trainingData[i]];
+    }
+    for(let sample of trainingData) {
+      let x = [sample[0], sample[1]];
+      let y = sample[2];
+      let pred = net.train(x, y, 0.6);
+      let loss = - (y * Math.log(pred+1e-8) + (1-y)*Math.log(1-pred+1e-8));
+      epochLoss += loss;
+      if((pred>0.5 && y===1) || (pred<=0.5 && y===0)) correct++;
+    }
+    let avgLoss = epochLoss / trainingData.length;
+    let acc = correct / trainingData.length;
+    lossHistory.push(avgLoss);
+    if(lossHistory.length > 100) lossHistory.shift();
+    stepCount++;
+    updateUIStats(avgLoss, acc);
+    drawNetwork();
+    drawLossGraph();
+  }
+  
+  function updateUIStats(currentLoss=null, currentAcc=null) {
+    if(currentLoss !== null) document.getElementById('lossValue').innerText = currentLoss.toFixed(5);
+    if(currentAcc !== null) document.getElementById('accValue').innerText = (currentAcc*100).toFixed(1)+'%';
+    document.getElementById('hiddenSize').innerHTML = `${hiddenNeurons} neurons`;
+  }
+  
+  function drawNetwork() {
+    if(!net) return;
+    const w = netCanvas.width, h = netCanvas.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle = "#0b0e16";
+    ctx.fillRect(0,0,w,h);
+    
+    const inputX = [w*0.15, w*0.15];
+    const hiddenX = w*0.5;
+    const outputX = w*0.85;
+    const inputYs = [h*0.3, h*0.7];
+    const hiddenYs = [];
+    for(let i=0;i<hiddenNeurons;i++) hiddenYs.push(h*0.2 + (i/(hiddenNeurons-1||1)) * h*0.6);
+    const outputY = h*0.5;
+    
+    // Draw connections (weights)
+    for(let i=0;i<2;i++) {
+      for(let j=0;j<hiddenNeurons;j++) {
+        let weight = net.W1[j][i];
+        let thickness = Math.min(8, Math.abs(weight)*6);
+        let color = weight > 0 ? `rgba(200, 100, 255, ${Math.abs(weight)*0.8})` : `rgba(80, 160, 255, ${Math.abs(weight)*0.8})`;
+        ctx.beginPath();
+        ctx.moveTo(inputX, inputYs[i]);
+        ctx.lineTo(hiddenX, hiddenYs[j]);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = thickness;
+        ctx.stroke();
+      }
+    }
+    for(let j=0;j<hiddenNeurons;j++) {
+      let weight = net.W2[0][j];
+      let thickness = Math.min(8, Math.abs(weight)*6);
+      let color = weight > 0 ? `rgba(200, 100, 255, ${Math.abs(weight)*0.8})` : `rgba(80, 160, 255, ${Math.abs(weight)*0.8})`;
+      ctx.beginPath();
+      ctx.moveTo(hiddenX, hiddenYs[j]);
+      ctx.lineTo(outputX, outputY);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.stroke();
+    }
+    
+    // Draw neurons
+    function drawNeuron(x,y, activation, isInput=false) {
+      let radius = 14;
+      let intensity = Math.min(0.9, Math.abs(activation || 0));
+      let color = `hsl(${activation>0.5 ? 280 : 210}, 70%, ${40+intensity*40}%)`;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, 2*Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = "#aaa";
+      ctx.lineWidth=1;
+      ctx.stroke();
+      ctx.fillStyle = "white";
+      ctx.font = "bold 12px monospace";
+      ctx.fillText(isInput ? (activation?.toFixed(1)??"") : (activation?.toFixed(2)??""), x-8, y+4);
+    }
+    
+    // compute current activation for a random sample to show live firing
+    let sample = trainingData.length ? trainingData[Math.floor(Math.random()*trainingData.length)] : [0,0,0];
+    let fwd = net.forward([sample[0], sample[1]]);
+    let inputActs = [sample[0], sample[1]];
+    let hiddenActs = fwd.a1;
+    let outputAct = fwd.a2[0];
+    
+    for(let i=0;i<2;i++) drawNeuron(inputX, inputYs[i], inputActs[i], true);
+    for(let j=0;j<hiddenNeurons;j++) drawNeuron(hiddenX, hiddenYs[j], hiddenActs[j]);
+    drawNeuron(outputX, outputY, outputAct);
+    
+    // labels
+    ctx.fillStyle = "#aaa";
+    ctx.font = "10px monospace";
+    ctx.fillText("input layer", inputX-30, inputYs[0]);
+    ctx.fillText("hidden", hiddenX-25, h*0.1);
+    ctx.fillText("output", outputX-20, outputY-10);
+  }
+  
+  function drawLossGraph() {
+    if(lossHistory.length < 2) return;
+    lossCtx.clearRect(0,0,lossCanvas.width,lossCanvas.height);
+    lossCtx.fillStyle = "#010409";
+    lossCtx.fillRect(0,0,lossCanvas.width,lossCanvas.height);
+    let maxLoss = Math.max(...lossHistory, 1);
+    let minLoss = Math.min(...lossHistory, 0);
+    let range = Math.max(maxLoss - minLoss, 0.01);
+    lossCtx.beginPath();
+    lossCtx.strokeStyle = "#c084fc";
+    lossCtx.lineWidth = 2;
+    for(let i=0;i<lossHistory.length;i++) {
+      let x = (i/(lossHistory.length-1)) * lossCanvas.width;
+      let y = lossCanvas.height - ((lossHistory[i]-minLoss)/range) * lossCanvas.height;
+      if(i===0) lossCtx.moveTo(x,y);
+      else lossCtx.lineTo(x,y);
+    }
+    lossCtx.stroke();
+    lossCtx.fillStyle = "#8f95b3";
+    lossCtx.font = "8px monospace";
+    lossCtx.fillText("loss →", 5, 10);
+  }
+  
+  function setDataset(ds) {
+    currentDataset = ds;
+    generateDataset();
+    initNetwork();
+    drawLossGraph();
+    if(autoTrainInterval) clearInterval(autoTrainInterval);
+    autoTrainInterval = null;
+  }
+  
+  function resetNetwork() {
+    initNetwork();
+    drawLossGraph();
+    if(autoTrainInterval) clearInterval(autoTrainInterval);
+    autoTrainInterval = null;
+  }
+  
+  function toggleAutoTrain() {
+    if(autoTrainInterval) {
+      clearInterval(autoTrainInterval);
+      autoTrainInterval = null;
+      document.getElementById('trainAutoBtn').style.background = "#2c2e3f";
+    } else {
+      autoTrainInterval = setInterval(() => trainOneStep(), 100);
+      document.getElementById('trainAutoBtn').style.background = "#9b4dff";
+    }
+  }
+  
+  function changeHiddenCount() {
+    let newVal = prompt("Enter number of hidden neurons (2-16):", hiddenNeurons);
+    let nh = parseInt(newVal);
+    if(!isNaN(nh) && nh>=2 && nh<=16) {
+      hiddenNeurons = nh;
+      initNetwork();
+    }
+  }
+  
+  // Event bindings
+  document.getElementById('trainStepBtn').onclick = () => trainOneStep();
+  document.getElementById('trainAutoBtn').onclick = () => toggleAutoTrain();
+  document.getElementById('resetNetBtn').onclick = () => resetNetwork();
+  document.getElementById('datasetXor').onclick = () => setDataset('xor');
+  document.getElementById('datasetCircle').onclick = () => setDataset('circle');
+  document.getElementById('datasetSpiral').onclick = () => setDataset('spiral');
+  document.getElementById('changeHiddenBtn').onclick = () => changeHiddenCount();
+  
+  // initial start
+  generateDataset();
+  initNetwork();
+  drawLossGraph();
+  setInterval(() => { if(!autoTrainInterval) drawNetwork(); }, 200);
+</script>
+</body>
+</html>

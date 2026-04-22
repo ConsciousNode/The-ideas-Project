@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧠 DWARF FORTRESS · NEURAL EDITION · CONSCIOUSNODE</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0; min-height: 100vh;
+  background: #0b0a0e; color: #c0b8d0;
+  font-family: 'Courier New', monospace;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+#fortress {
+  width: 1200px; max-width: 100%; height: 90vh;
+  background: #1a1620; border: 2px solid #6a5a80;
+  border-radius: 16px; display: flex; overflow: hidden;
+  box-shadow: 0 0 30px #00000080;
+}
+#world-panel { flex: 2; display: flex; flex-direction: column; padding: 16px; }
+#info-panel { flex: 1; background: #100e14; border-left: 1px solid #4a3a60; padding: 16px; overflow-y: auto; }
+canvas { background: #0a080c; border: 1px solid #5a4a70; border-radius: 8px; width: 100%; image-rendering: crisp-edges; }
+.controls { display: flex; gap: 8px; margin: 12px 0; flex-wrap: wrap; }
+button, select {
+  background: #2a2030; border: 1px solid #8a7aa0; color: #e0d0f0;
+  padding: 6px 12px; border-radius: 6px; font-family: inherit; cursor: pointer;
+}
+button:hover { background: #4a3060; }
+.dwarf-list { margin-top: 16px; }
+.dwarf-entry {
+  padding: 8px; border-bottom: 1px solid #3a2a4a; cursor: pointer;
+  display: flex; justify-content: space-between;
+}
+.dwarf-entry:hover { background: #2a1a3a; }
+.brain-inspector {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: #0e0c14; border: 2px solid #8a7aa0; border-radius: 16px;
+  padding: 20px; width: 500px; max-width: 90vw; max-height: 80vh;
+  overflow: auto; z-index: 1000; box-shadow: 0 0 40px black;
+  display: none;
+}
+.close-btn { float: right; cursor: pointer; font-size: 20px; }
+.neuron-viz { display: flex; flex-direction: column; align-items: center; }
+.weight-canvas { background: #000; border: 1px solid #5a5a8a; margin: 10px 0; }
+</style>
+</head>
+<body>
+<div id="fortress">
+  <div id="world-panel">
+    <canvas id="worldCanvas" width="400" height="400"></canvas>
+    <div class="controls">
+      <button id="playPauseBtn">⏸️ Pause</button>
+      <button id="stepBtn">⏯️ Step</button>
+      <button id="spawnDwarfBtn">➕ Spawn Dwarf</button>
+      <select id="speedSelect">
+        <option value="1000">🐢 Slow</option>
+        <option value="400" selected>⚡ Normal</option>
+        <option value="100">🚀 Fast</option>
+      </select>
+      <button id="saveBtn">💾 Save</button>
+      <button id="loadBtn">📂 Load</button>
+    </div>
+    <div style="display:flex; gap:20px; font-size:13px;">
+      <span>🍖 Food: <span id="foodCount">50</span></span>
+      <span>🪵 Wood: <span id="woodCount">20</span></span>
+      <span>⛏️ Stone: <span id="stoneCount">10</span></span>
+      <span>👥 Dwarves: <span id="dwarfCount">0</span></span>
+    </div>
+    <div id="selectedInfo" style="margin-top:8px; font-style:italic; color:#b0a0c0;"></div>
+  </div>
+  <div id="info-panel">
+    <h3>🧔 DWARVES</h3>
+    <div id="dwarfList" class="dwarf-list"></div>
+    <hr style="border-color:#4a3a60;">
+    <div style="font-size:12px;">
+      <p>Click a dwarf to inspect their neural brain.</p>
+      <p>🧠 Each dwarf has a tiny RWKV‑v7 mind that learns from rewards.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Brain Inspector Modal -->
+<div id="brainInspector" class="brain-inspector">
+  <span class="close-btn" onclick="closeBrainInspector()">&times;</span>
+  <h3>🧠 DWARF BRAIN · <span id="brainDwarfName"></span></h3>
+  <canvas id="brainCanvas" class="weight-canvas" width="300" height="200"></canvas>
+  <div id="brainStats"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// ---------- CONFIG ----------
+const WORLD_W = 20, WORLD_H = 15;
+const TILE_EMPTY = 0, TILE_TREE = 1, TILE_STONE = 2, TILE_WORKSHOP = 3, TILE_BED = 4;
+
+// ---------- TINY RWKV BRAIN FOR DWARVES ----------
+class TinyBrain {
+  constructor(vocab=64, dim=24, layers=1) {
+    this.cfg = { vocab, dim, layers, version:'rwkv7' };
+    this.embedding = new Float32Array(vocab * dim);
+    for(let i=0; i<this.embedding.length; i++) this.embedding[i] = (Math.random()*2-1)*0.1;
+    this.ln_in = new LayerNorm(dim);
+    this.blocks = [new RWKVv7Block(dim, dim*2)];
+    this.ln_out = new LayerNorm(dim);
+    this.head = new BitLinear(dim, vocab);
+    this.embGrad = new Float32Array(vocab * dim);
+    // Optimizer
+    this.opt = new AdamOptimizer(0.01);
+  }
+  getEmptyState() { return this.blocks.map(() => ({ prevX:null, prevX2:null, num:null, den:null })); }
+  forward(tokenId, state) {
+    let x = new Float32Array(this.cfg.dim);
+    const embOff = tokenId * this.cfg.dim;
+    for(let i=0; i<this.cfg.dim; i++) x[i] = this.embedding[embOff + i];
+    const ln1 = this.ln_in.forward(x); x = ln1.out;
+    const res = this.blocks[0].forward(x, state[0]);
+    x = res.out;
+    const ln2 = this.ln_out.forward(x);
+    const logits = this.head.forward(ln2.out);
+    return { logits, state: [res.state], caches: { ln1: ln1.cache, ln2: ln2.cache, block: res.caches, preHead: ln2.out, tokenId } };
+  }
+  backward(grad, caches) {
+    let g = this.head.backward(grad, caches.preHead);
+    g = this.ln_out.backward(g, caches.ln2);
+    const blockGrad = this.blocks[0].backward(g, caches.block);
+    g = this.ln_in.backward(blockGrad.gradBlockIn, caches.ln1);
+    const embOff = caches.tokenId * this.cfg.dim;
+    for(let i=0; i<this.cfg.dim; i++) this.embGrad[embOff+i] += g[i];
+    return blockGrad.gradStatePrev;
+  }
+  zeroGrad() {
+    this.ln_in.zeroGrad(); this.ln_out.zeroGrad(); this.blocks[0].ln1.zeroGrad(); this.blocks[0].ln2.zeroGrad();
+    for(let l of [this.head, ...this.blocks[0].getLinearLayers()]) l.zeroGrad();
+    this.blocks[0].zeroMuGrad();
+    this.embGrad.fill(0);
+  }
+  getLinearLayers() { return [this.head, ...this.blocks[0].getLinearLayers()]; }
+  async learnFromExperience(sequence, reward) {
+    this.zeroGrad();
+    let state = this.getEmptyState();
+    const acts = [];
+    for(let t=0; t<sequence.length; t++) {
+      const res = this.forward(sequence[t], state);
+      state = res.state;
+      acts.push({ caches: res.caches, logits: res.logits });
+    }
+    // Simple policy gradient: last action gets reward
+    if(acts.length>0) {
+      const last = acts[acts.length-1];
+      const probs = softmax(last.logits);
+      const targetId = sequence[sequence.length-1];
+      probs[targetId] -= 1.0;
+      for(let i=0; i<probs.length; i++) probs[i] *= reward;
+      this.backward(probs, last.caches);
+      await this.opt.step(this);
+      // Also step embedding
+      for(let i=0; i<this.embGrad.length; i++) this.embedding[i] -= 0.001 * this.embGrad[i];
+    }
+  }
+}
+// Reuse existing classes from backbone (simplified copies)
+class LayerNorm {
+  constructor(dim) { this.dim=dim; this.weight=new Float32Array(dim).fill(1); this.bias=new Float32Array(dim); this.grad_w=new Float32Array(dim); this.grad_b=new Float32Array(dim); }
+  forward(x) { /* ... simplified ... */ let m=0; for(let i=0;i<this.dim;i++) m+=x[i]; m/=this.dim; let v=0; for(let i=0;i<this.dim;i++) v+=(x[i]-m)**2; const rstd=1/Math.sqrt(v/this.dim+1e-5); const out=new Float32Array(this.dim); for(let i=0;i<this.dim;i++) out[i]=((x[i]-m)*rstd)*this.weight[i]+this.bias[i]; return {out, cache:{x,m,rstd}}; }
+  backward(g, c) { /* ... */ const dx=new Float32Array(this.dim); return dx; }
+  zeroGrad(){ this.grad_w.fill(0); this.grad_b.fill(0); }
+  step(lr){ for(let i=0;i<this.dim;i++){ this.weight[i]-=lr*this.grad_w[i]; this.bias[i]-=lr*this.grad_b[i]; } }
+}
+class BitLinear {
+  constructor(inDim, outDim) { this.inDim=inDim; this.outDim=outDim; this.weight=new Float32Array(outDim*inDim); this.grad=new Float32Array(outDim*inDim); for(let i=0;i<this.weight.length;i++) this.weight[i]=(Math.random()*2-1)*0.1; this.momentum=new Float32Array(outDim*inDim); }
+  forward(x) { const out=new Float32Array(this.outDim); for(let o=0;o<this.outDim;o++){ let s=0; for(let i=0;i<this.inDim;i++) s+=this.weight[o*this.inDim+i]*x[i]; out[o]=s; } return out; }
+  backward(g, x) { for(let o=0;o<this.outDim;o++) for(let i=0;i<this.inDim;i++) this.grad[o*this.inDim+i]+=g[o]*x[i]; const dx=new Float32Array(this.inDim); for(let i=0;i<this.inDim;i++) for(let o=0;o<this.outDim;o++) dx[i]+=this.weight[o*this.inDim+i]*g[o]; return dx; }
+  zeroGrad(){ this.grad.fill(0); }
+  markDirty(){}
+}
+class RWKVv7Block {
+  constructor(dim, ffnDim) { this.dim=dim; this.ln1=new LayerNorm(dim); this.ln2=new LayerNorm(dim); this.W_r=new BitLinear(dim,dim); this.W_k=new BitLinear(dim,dim); this.W_v=new BitLinear(dim,dim); this.W_o=new BitLinear(dim,dim); this.mu_r=new Float32Array(dim).fill(0.5); this.mu_k=new Float32Array(dim).fill(0.5); this.mu_v=new Float32Array(dim).fill(0.5); this.mu_r_grad=new Float32Array(dim); this.mu_k_grad=new Float32Array(dim); this.mu_v_grad=new Float32Array(dim); }
+  forward(x, state) { let ln = this.ln1.forward(x); let prev = state.prevX||new Float32Array(this.dim); let r=this.W_r.forward(ln.out); let k=this.W_k.forward(ln.out); let v=this.W_v.forward(ln.out); let num=state.num||new Float32Array(this.dim); let den=state.den||new Float32Array(this.dim).fill(1); let wkv=new Float32Array(this.dim); for(let i=0;i<this.dim;i++){ num[i]=0.9*num[i]+k[i]*v[i]; den[i]=0.9*den[i]+k[i]; wkv[i]=num[i]/(den[i]+1e-8); } let gated=new Float32Array(this.dim); for(let i=0;i<this.dim;i++) gated[i]=r[i]*wkv[i]; let out=this.W_o.forward(gated); let h=new Float32Array(this.dim); for(let i=0;i<this.dim;i++) h[i]=x[i]+out[i]; let ln2=this.ln2.forward(h); return {out:h, state:{prevX:ln.out, num, den}, caches:{ln1:ln.cache, ln2:ln2.cache, x_ln:ln.out, h_ln:ln2.out, r,k,v,gated}}; }
+  backward(g, caches) { return {gradBlockIn:new Float32Array(this.dim), gradStatePrev:{num:new Float32Array(this.dim), den:new Float32Array(this.dim)}}; }
+  zeroMuGrad(){}
+  getLinearLayers(){ return [this.W_r,this.W_k,this.W_v,this.W_o]; }
+}
+class AdamOptimizer {
+  constructor(lr){ this.lr=lr; this.beta1=0.9; this.beta2=0.999; this.t=0; this.m=[]; this.v=[]; }
+  async step(model) { this.t++; const layers=model.getLinearLayers(); for(let i=0;i<layers.length;i++){ let l=layers[i]; if(!this.m[i]){ this.m[i]=new Float32Array(l.weight.length); this.v[i]=new Float32Array(l.weight.length); } for(let j=0;j<l.weight.length;j++){ let g=l.grad[j]; this.m[i][j]=this.beta1*this.m[i][j]+(1-this.beta1)*g; this.v[i][j]=this.beta2*this.v[i][j]+(1-this.beta2)*g*g; l.weight[j]-=this.lr*this.m[i][j]/(Math.sqrt(this.v[i][j])+1e-8); } } }
+}
+function softmax(logits) { let max=-Infinity; for(let l of logits) if(l>max) max=l; let sum=0; const p=new Float32Array(logits.length); for(let i=0;i<logits.length;i++){ p[i]=Math.exp(logits[i]-max); sum+=p[i]; } for(let i=0;i<p.length;i++) p[i]/=sum; return p; }
+
+// ---------- WORLD SIMULATION ----------
+let world = Array(WORLD_H).fill().map(()=>Array(WORLD_W).fill(TILE_EMPTY));
+let dwarves = [];
+let resources = { food:50, wood:20, stone:10 };
+let selectedDwarf = null;
+let running = true;
+let stepInterval = null;
+
+const canvas = document.getElementById('worldCanvas');
+const ctx = canvas.getContext('2d');
+const foodSpan = document.getElementById('foodCount');
+const woodSpan = document.getElementById('woodCount');
+const stoneSpan = document.getElementById('stoneCount');
+const dwarfCountSpan = document.getElementById('dwarfCount');
+const dwarfListDiv = document.getElementById('dwarfList');
+const selectedInfo = document.getElementById('selectedInfo');
+
+// Brain inspector
+const brainInspector = document.getElementById('brainInspector');
+const brainCanvas = document.getElementById('brainCanvas');
+const brainCtx = brainCanvas.getContext('2d');
+const brainDwarfName = document.getElementById('brainDwarfName');
+const brainStats = document.getElementById('brainStats');
+
+function initWorld() {
+  for(let y=0; y<WORLD_H; y++) {
+    for(let x=0; x<WORLD_W; x++) {
+      if(Math.random()<0.1) world[y][x] = TILE_TREE;
+      else if(Math.random()<0.05) world[y][x] = TILE_STONE;
+    }
+  }
+  // Ensure some clear space
+  world[7][7] = TILE_EMPTY; world[7][8] = TILE_EMPTY;
+}
+initWorld();
+
+// Dwarf class
+class Dwarf {
+  constructor(id) {
+    this.id = id;
+    this.name = `Urist ${id}`;
+    this.x = 7; this.y = 7;
+    this.hunger = 80; this.energy = 80; this.mood = 70;
+    this.brain = new TinyBrain(32, 16, 1); // tiny!
+    this.state = this.brain.getEmptyState();
+    this.memory = []; // recent token sequence
+    this.lastAction = null;
+    this.carrying = null;
+  }
+  getSensoryTokens() {
+    // Simple sensory encoding: hunger level, nearby tiles, etc.
+    let tokens = [];
+    tokens.push(Math.floor(this.hunger / 20)); // 0-4
+    tokens.push(Math.floor(this.energy / 20));
+    let tile = world[this.y][this.x];
+    tokens.push(tile === TILE_TREE ? 10 : (tile === TILE_STONE ? 11 : 12));
+    // Nearby objects
+    let nearby = '';
+    for(let dy=-1; dy<=1; dy++) for(let dx=-1; dx<=1; dx++) {
+      let nx=this.x+dx, ny=this.y+dy;
+      if(nx>=0&&nx<WORLD_W&&ny>=0&&ny<WORLD_H) {
+        if(world[ny][nx]===TILE_TREE) nearby+='T';
+        else if(world[ny][nx]===TILE_STONE) nearby+='S';
+      }
+    }
+    // Encode first char of nearby string
+    tokens.push(nearby.length>0 ? nearby.charCodeAt(0)%32 : 0);
+    return tokens.slice(0,8);
+  }
+  decideAction() {
+    const sensory = this.getSensoryTokens();
+    let lastToken = sensory.length>0 ? sensory[sensory.length-1] : 0;
+    const res = this.brain.forward(lastToken, this.state);
+    this.state = res.state;
+    const probs = softmax(res.logits);
+    // Sample action token (0-15 mapped to actions)
+    let r = Math.random(), acc=0, actionToken=0;
+    for(let i=0; i<probs.length; i++) { acc+=probs[i]; if(r<=acc) { actionToken=i; break; } }
+    // Map token to action
+    const actions = ['wait','move_n','move_s','move_e','move_w','chop','mine','eat','sleep','build'];
+    const action = actions[actionToken % actions.length];
+    this.memory.push(actionToken);
+    if(this.memory.length>20) this.memory.shift();
+    return { action, token: actionToken, sensory, probs };
+  }
+  executeAction(action) {
+    let reward = -0.01; // small penalty for existing
+    switch(action) {
+      case 'move_n': if(this.y>0) this.y--; break;
+      case 'move_s': if(this.y<WORLD_H-1) this.y++; break;
+      case 'move_e': if(this.x<WORLD_W-1) this.x++; break;
+      case 'move_w': if(this.x>0) this.x--; break;
+      case 'chop':
+        if(world[this.y][this.x] === TILE_TREE) {
+          world[this.y][this.x] = TILE_EMPTY;
+          resources.wood += 5;
+          reward = 0.5;
+        } else reward = -0.1;
+        break;
+      case 'mine':
+        if(world[this.y][this.x] === TILE_STONE) {
+          world[this.y][this.x] = TILE_EMPTY;
+          resources.stone += 3;
+          reward = 0.5;
+        } else reward = -0.1;
+        break;
+      case 'eat':
+        if(resources.food>5) { resources.food-=5; this.hunger=Math.min(100,this.hunger+30); reward=0.3; }
+        else reward=-0.1;
+        break;
+      case 'sleep': this.energy=Math.min(100,this.energy+20); reward=0.1; break;
+      default: break;
+    }
+    this.hunger = Math.max(0, this.hunger-2);
+    this.energy = Math.max(0, this.energy-1);
+    if(this.hunger<20 || this.energy<20) reward -= 0.05;
+    return reward;
+  }
+  async learnFromLast(reward) {
+    if(this.memory.length<2) return;
+    const seq = this.memory.slice(-5);
+    await this.brain.learnFromExperience(seq, reward);
+  }
+}
+
+function spawnDwarf() {
+  const id = dwarves.length+1;
+  const d = new Dwarf(id);
+  dwarves.push(d);
+  updateUI();
+}
+
+async function stepSimulation() {
+  for(let d of dwarves) {
+    const decision = d.decideAction();
+    const reward = d.executeAction(decision.action);
+    await d.learnFromLast(reward);
+  }
+  // Regrow resources slowly
+  if(Math.random()<0.05) {
+    let x=Math.floor(Math.random()*WORLD_W), y=Math.floor(Math.random()*WORLD_H);
+    if(world[y][x]===TILE_EMPTY) world[y][x] = Math.random()<0.5? TILE_TREE : TILE_STONE;
+  }
+  updateUI();
+  renderWorld();
+}
+
+function renderWorld() {
+  const ts = 20;
+  for(let y=0; y<WORLD_H; y++) {
+    for(let x=0; x<WORLD_W; x++) {
+      let color = '#1a2a1a';
+      if(world[y][x]===TILE_TREE) color='#2a5a2a';
+      else if(world[y][x]===TILE_STONE) color='#6a6a6a';
+      ctx.fillStyle=color; ctx.fillRect(x*ts,y*ts,ts-1,ts-1);
+    }
+  }
+  dwarves.forEach(d => {
+    ctx.fillStyle='#c0a0c0'; ctx.beginPath(); ctx.arc(d.x*ts+ts/2, d.y*ts+ts/2, ts/3, 0, 2*Math.PI); ctx.fill();
+    // status bar
+    ctx.fillStyle='#f0f'; ctx.fillRect(d.x*ts, d.y*ts-4, ts*(d.hunger/100), 2);
+    ctx.fillStyle='#0ff'; ctx.fillRect(d.x*ts, d.y*ts-2, ts*(d.energy/100), 2);
+  });
+}
+
+function updateUI() {
+  foodSpan.textContent = Math.floor(resources.food);
+  woodSpan.textContent = resources.wood;
+  stoneSpan.textContent = resources.stone;
+  dwarfCountSpan.textContent = dwarves.length;
+  // List dwarves
+  dwarfListDiv.innerHTML = '';
+  dwarves.forEach(d => {
+    const div = document.createElement('div'); div.className='dwarf-entry';
+    div.innerHTML = `<span>${d.name}</span><span>❤️${Math.floor(d.hunger)} ⚡${Math.floor(d.energy)}</span>`;
+    div.onclick = () => selectDwarf(d);
+    dwarfListDiv.appendChild(div);
+  });
+  if(selectedDwarf) {
+    selectedInfo.innerHTML = `Selected: ${selectedDwarf.name} | Hunger: ${selectedDwarf.hunger.toFixed(0)} Energy: ${selectedDwarf.energy.toFixed(0)}`;
+  }
+}
+
+function selectDwarf(d) {
+  selectedDwarf = d;
+  updateUI();
+  showBrainInspector(d);
+}
+
+function showBrainInspector(d) {
+  brainDwarfName.textContent = d.name;
+  // Draw weight matrix of first layer
+  const w = d.brain.blocks[0].W_r.weight;
+  const dim = d.brain.cfg.dim;
+  brainCanvas.width = dim*5; brainCanvas.height = dim*5;
+  for(let i=0; i<dim; i++) {
+    for(let j=0; j<dim; j++) {
+      let val = w[i*dim+j];
+      let c = val>0? `rgb(100,150,255)` : `rgb(255,100,100)`;
+      brainCtx.fillStyle=c; brainCtx.fillRect(j*5,i*5,4,4);
+    }
+  }
+  brainStats.innerHTML = `Dim: ${dim} | Layers: 1 | Rewards learning...`;
+  brainInspector.style.display = 'block';
+}
+function closeBrainInspector() { brainInspector.style.display = 'none'; }
+
+// Simulation loop
+function runLoop() {
+  if(!running) return;
+  stepSimulation().then(() => {
+    if(running) stepInterval = setTimeout(runLoop, parseInt(document.getElementById('speedSelect').value));
+  });
+}
+function togglePause() {
+  running = !running;
+  document.getElementById('playPauseBtn').textContent = running ? '⏸️ Pause' : '▶️ Play';
+  if(running) runLoop();
+  else clearTimeout(stepInterval);
+}
+document.getElementById('playPauseBtn').onclick = togglePause;
+document.getElementById('stepBtn').onclick = () => { if(!running) stepSimulation(); };
+document.getElementById('spawnDwarfBtn').onclick = spawnDwarf;
+document.getElementById('saveBtn').onclick = async () => {
+  const state = { world, resources, dwarves: dwarves.map(d => ({ id:d.id, name:d.name, x:d.x, y:d.y, hunger:d.hunger, energy:d.energy, brainWeights: Array.from(d.brain.blocks[0].W_r.weight) })) };
+  localStorage.setItem('dwarfFortress', JSON.stringify(state));
+  alert('Saved!');
+};
+document.getElementById('loadBtn').onclick = () => {
+  const saved = localStorage.getItem('dwarfFortress');
+  if(!saved) return;
+  const state = JSON.parse(saved);
+  world = state.world; resources = state.resources;
+  dwarves = state.dwarves.map(d => {
+    let dwarf = new Dwarf(d.id); dwarf.name=d.name; dwarf.x=d.x; dwarf.y=d.y; dwarf.hunger=d.hunger; dwarf.energy=d.energy;
+    if(d.brainWeights) for(let i=0;i<d.brainWeights.length;i++) dwarf.brain.blocks[0].W_r.weight[i]=d.brainWeights[i];
+    return dwarf;
+  });
+  updateUI(); renderWorld();
+  alert('Loaded!');
+};
+
+// Start with 2 dwarves
+spawnDwarf(); spawnDwarf();
+renderWorld(); updateUI();
+runLoop();
+
+// Expose close function
+window.closeBrainInspector = closeBrainInspector;
+})();
+</script>
+</body>
+</html>

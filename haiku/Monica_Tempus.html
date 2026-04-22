@@ -1,0 +1,580 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempus — Mortality Clock</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Courier New', monospace;
+        background: #000;
+        color: #fff;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 1200px;
+        height: 95vh;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 100%);
+        border: 2px solid #ff4444;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 80px rgba(255, 68, 68, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #1a0a0a 0%, #2a0a1a 100%);
+        border-bottom: 2px solid #ff4444;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #ff4444;
+        font-size: 36px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 30px rgba(255, 68, 68, 0.6);
+        letter-spacing: 2px;
+      }
+
+      .header p {
+        color: #888;
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .main-area {
+        flex: 1;
+        padding: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 40px;
+        border-right: 1px solid #ff4444;
+      }
+
+      .clock-display {
+        text-align: center;
+      }
+
+      .time-remaining {
+        font-size: 72px;
+        color: #ff4444;
+        font-weight: bold;
+        text-shadow: 0 0 30px rgba(255, 68, 68, 0.8);
+        margin-bottom: 20px;
+        letter-spacing: 3px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .time-label {
+        font-size: 14px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .progress-container {
+        width: 100%;
+        max-width: 500px;
+      }
+
+      .progress-label {
+        font-size: 12px;
+        color: #888;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 30px;
+        background: rgba(255, 68, 68, 0.1);
+        border: 2px solid #ff4444;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #ff4444 0%, #ff6666 100%);
+        width: 0%;
+        transition: width 0.1s linear;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        color: #000;
+        font-weight: bold;
+      }
+
+      .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 12px;
+        color: #fff;
+        font-weight: bold;
+        z-index: 10;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        width: 100%;
+        max-width: 600px;
+      }
+
+      .stat-box {
+        background: rgba(255, 68, 68, 0.08);
+        border: 1px solid #ff4444;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+      }
+
+      .stat-value {
+        font-size: 28px;
+        color: #ff4444;
+        font-weight: bold;
+        margin-bottom: 8px;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .sidebar {
+        width: 350px;
+        background: rgba(0, 0, 0, 0.5);
+        border-left: 1px solid #ff4444;
+        padding: 25px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+      }
+
+      .section {
+        background: rgba(255, 68, 68, 0.05);
+        border: 1px solid #ff4444;
+        padding: 15px;
+        border-radius: 6px;
+      }
+
+      .section-title {
+        color: #ff4444;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #ff4444;
+        padding-bottom: 8px;
+      }
+
+      .input-group {
+        margin-bottom: 12px;
+      }
+
+      .input-label {
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 4px;
+        display: block;
+      }
+
+      input[type="number"],
+      input[type="date"] {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #ff4444;
+        color: #fff;
+        padding: 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+      }
+
+      input[type="number"]:focus,
+      input[type="date"]:focus {
+        outline: none;
+        border-color: #ff6666;
+        box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+      }
+
+      button {
+        width: 100%;
+        background: linear-gradient(135deg, #ff4444 0%, #cc3333 100%);
+        border: none;
+        color: #000;
+        padding: 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 11px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Courier New', monospace;
+        margin-top: 8px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(255, 68, 68, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 10px;
+        margin-bottom: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(255, 68, 68, 0.2);
+      }
+
+      .stat-row-label {
+        color: #888;
+      }
+
+      .stat-row-value {
+        color: #ff4444;
+        font-weight: bold;
+      }
+
+      .activity-log {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #ff4444;
+        padding: 10px;
+        border-radius: 4px;
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 9px;
+      }
+
+      .activity-item {
+        color: #888;
+        margin-bottom: 6px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255, 68, 68, 0.1);
+      }
+
+      .activity-item.major {
+        color: #ff4444;
+        font-weight: bold;
+      }
+
+      .what-if {
+        background: rgba(255, 68, 68, 0.1);
+        border-left: 3px solid #ff4444;
+        padding: 12px;
+        border-radius: 4px;
+        font-size: 10px;
+        line-height: 1.6;
+        color: #ccc;
+      }
+
+      .what-if-title {
+        color: #ff4444;
+        font-weight: bold;
+        margin-bottom: 6px;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(255, 68, 68, 0.05);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #ff4444;
+        border-radius: 3px;
+      }
+
+      .pulse {
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          text-shadow: 0 0 30px rgba(255, 68, 68, 0.6);
+        }
+        50% {
+          text-shadow: 0 0 60px rgba(255, 68, 68, 0.9);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>⏳ TEMPUS</h1>
+        <p>Your life, measured in time remaining</p>
+      </div>
+
+      <div class="content">
+        <div class="main-area">
+          <div class="clock-display">
+            <div class="time-remaining pulse" id="timeRemaining">00:00:00</div>
+            <div class="time-label">Time Remaining</div>
+          </div>
+
+          <div class="progress-container">
+            <div class="progress-label">Life Lived</div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progressFill">
+                <div class="progress-text" id="progressText">0%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-box">
+              <div class="stat-value" id="yearsRemaining">0</div>
+              <div class="stat-label">Years Left</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" id="daysRemaining">0</div>
+              <div class="stat-label">Days Left</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" id="hoursRemaining">0</div>
+              <div class="stat-label">Hours Left</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-value" id="secondsRemaining">0</div>
+              <div class="stat-label">Seconds Left</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar">
+          <div class="section">
+            <div class="section-title">⚙️ Your Information</div>
+            <div class="input-group">
+              <label class="input-label">Birth Date</label>
+              <input type="date" id="birthDate" onchange="updateClock()">
+            </div>
+            <div class="input-group">
+              <label class="input-label">Life Expectancy (years)</label>
+              <input type="number" id="lifeExpectancy" value="75" min="1" max="150" onchange="updateClock()">
+            </div>
+            <button onclick="setToday()">Set Today</button>
+          </div>
+
+          <div class="section">
+            <div class="section-title">📊 Statistics</div>
+            <div class="stat-row">
+              <span class="stat-row-label">Age:</span>
+              <span class="stat-row-value" id="currentAge">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row-label">% of Life Used:</span>
+              <span class="stat-row-value" id="percentUsed">0%</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row-label">Total Seconds:</span>
+              <span class="stat-row-value" id="totalSeconds">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-row-label">Seconds/Day:</span>
+              <span class="stat-row-value">86,400</span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">💭 What If</div>
+            <div class="what-if">
+              <div class="what-if-title">If you lived to 100?</div>
+              <div id="whatIf100"></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">📝 Reflections</div>
+            <div class="activity-log" id="activityLog"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        birthDate: null,
+        lifeExpectancy: 75,
+        startTime: Date.now(),
+        secondsWatched: 0
+      };
+
+      function setToday() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        document.getElementById('birthDate').valueAsDate = today;
+        state.birthDate = today;
+        updateClock();
+      }
+
+      function updateClock() {
+        const birthDateInput = document.getElementById('birthDate').valueAsDate;
+        const lifeExpectancy = parseInt(document.getElementById('lifeExpectancy').value) || 75;
+
+        if (!birthDateInput) {
+          document.getElementById('timeRemaining').textContent = '--:--:--';
+          return;
+        }
+
+        state.birthDate = birthDateInput;
+        state.lifeExpectancy = lifeExpectancy;
+
+        const now = new Date();
+        const deathDate = new Date(birthDateInput);
+        deathDate.setFullYear(deathDate.getFullYear() + lifeExpectancy);
+
+        const totalSeconds = Math.floor((deathDate - birthDateInput) / 1000);
+        const secondsLived = Math.floor((now - birthDateInput) / 1000);
+        const secondsRemaining = Math.max(0, totalSeconds - secondsLived);
+
+        // Format time
+        const hours = Math.floor(secondsRemaining / 3600);
+        const minutes = Math.floor((secondsRemaining % 3600) / 60);
+        const seconds = secondsRemaining % 60;
+
+        const timeStr = String(hours).padStart(2, '0') + ':' + 
+                       String(minutes).padStart(2, '0') + ':' + 
+                       String(seconds).padStart(2, '0');
+
+        document.getElementById('timeRemaining').textContent = timeStr;
+
+        // Calculate units
+        const yearsRemaining = Math.floor(secondsRemaining / (365.25 * 24 * 3600));
+        const daysRemaining = Math.floor((secondsRemaining % (365.25 * 24 * 3600)) / (24 * 3600));
+        const hoursRemaining = Math.floor((secondsRemaining % (24 * 3600)) / 3600);
+        const secsRemaining = secondsRemaining % 60;
+
+        document.getElementById('yearsRemaining').textContent = yearsRemaining;
+        document.getElementById('daysRemaining').textContent = daysRemaining;
+        document.getElementById('hoursRemaining').textContent = hoursRemaining;
+        document.getElementById('secondsRemaining').textContent = secsRemaining;
+
+        // Progress
+        const percentUsed = (secondsLived / totalSeconds) * 100;
+        document.getElementById('progressFill').style.width = percentUsed + '%';
+        document.getElementById('progressText').textContent = Math.round(percentUsed) + '%';
+        document.getElementById('percentUsed').textContent = Math.round(percentUsed) + '%';
+
+        // Age
+        const age = now.getFullYear() - birthDateInput.getFullYear();
+        document.getElementById('currentAge').textContent = age;
+
+        // Total seconds
+        document.getElementById('totalSeconds').textContent = totalSeconds.toLocaleString();
+
+        // What if 100?
+        const deathDate100 = new Date(birthDateInput);
+        deathDate100.setFullYear(deathDate100.getFullYear() + 100);
+        const secondsRemaining100 = Math.max(0, Math.floor((deathDate100 - now) / 1000));
+        const years100 = Math.floor(secondsRemaining100 / (365.25 * 24 * 3600));
+        document.getElementById('whatIf100').textContent = years100 + ' more years (' + Math.round((years100 / 100) * 100) + '% more time)';
+
+        updateReflections();
+      }
+
+      function updateReflections() {
+        const log = document.getElementById('activityLog');
+        
+        state.secondsWatched++;
+
+        const reflections = [];
+
+        if (state.secondsWatched === 1) {
+          reflections.push('You have started watching your time.');
+        }
+
+        if (state.secondsWatched === 60) {
+          reflections.push('One minute has passed. 60 seconds of your life, gone.');
+        }
+
+        if (state.secondsWatched === 300) {
+          reflections.push('Five minutes. What have you done with them?');
+        }
+
+        if (state.secondsWatched === 3600) {
+          reflections.push('One hour. You have spent an hour watching time pass.');
+        }
+
+        if (state.secondsWatched % 10 === 0 && state.secondsWatched > 0) {
+          const messages = [
+            'Time is passing.',
+            'Every second counts.',
+            'What are you doing with this moment?',
+            'This second will never come again.',
+            'Are you living or watching?',
+            'The clock keeps ticking.',
+            'You cannot get this time back.',
+            'What matters to you?',
+            'Is this how you want to spend your time?',
+            'Your life is finite.'
+          ];
+          reflections.push(messages[Math.floor(Math.random() * messages.length)]);
+        }
+
+        if (reflections.length > 0) {
+          reflections.forEach(msg => {
+            const item = document.createElement('div');
+            item.className = 'activity-item major';
+            item.textContent = msg;
+            log.insertBefore(item, log.firstChild);
+          });
+
+          if (log.children.length > 15) {
+            log.removeChild(log.lastChild);
+          }
+        }
+      }
+
+      // Set initial date to today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      document.getElementById('birthDate').valueAsDate = today;
+      state.birthDate = today;
+
+      // Update every second
+      setInterval(updateClock, 1000);
+
+      // Initial update
+      updateClock();
+    </script>
+  </body>
+  </html>

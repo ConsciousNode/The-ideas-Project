@@ -1,0 +1,574 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Mythographer — Oracle of Your Creative Self</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Garamond', 'Georgia', serif;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 50%, #0f0f1e 100%);
+        color: #d4af37;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+      }
+
+      .journal-section {
+        flex: 1;
+        padding: 40px;
+        overflow-y: auto;
+        background: linear-gradient(135deg, rgba(10, 10, 10, 0.9) 0%, rgba(26, 10, 46, 0.9) 100%);
+        border-right: 2px solid #d4af37;
+      }
+
+      .oracle-section {
+        flex: 1;
+        padding: 40px;
+        overflow-y: auto;
+        background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(30, 10, 40, 0.95) 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+        color: #d4af37;
+        text-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+      }
+
+      h2 {
+        font-size: 18px;
+        margin-top: 20px;
+        margin-bottom: 15px;
+        color: #d4af37;
+        border-bottom: 1px solid #d4af37;
+        padding-bottom: 8px;
+      }
+
+      .subtitle {
+        font-size: 12px;
+        color: #888;
+        font-style: italic;
+        margin-bottom: 20px;
+      }
+
+      .journal-entry {
+        background: rgba(212, 175, 55, 0.05);
+        border-left: 3px solid #d4af37;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 2px;
+        line-height: 1.8;
+        font-size: 13px;
+      }
+
+      .journal-entry.thinking {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      .entry-timestamp {
+        font-size: 10px;
+        color: #666;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      textarea {
+        width: 100%;
+        height: 120px;
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid #d4af37;
+        color: #d4af37;
+        padding: 12px;
+        font-family: 'Georgia', serif;
+        font-size: 13px;
+        resize: vertical;
+        margin-bottom: 10px;
+      }
+
+      textarea::placeholder {
+        color: #666;
+      }
+
+      textarea:focus {
+        outline: none;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        flex: 1;
+        background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+        border: none;
+        color: #000;
+        padding: 12px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.3s;
+        border-radius: 2px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button.secondary {
+        background: linear-gradient(135deg, #444 0%, #222 100%);
+        color: #d4af37;
+        border: 1px solid #d4af37;
+      }
+
+      .oracle-panel {
+        background: rgba(212, 175, 55, 0.08);
+        border: 1px solid #d4af37;
+        padding: 20px;
+        border-radius: 2px;
+      }
+
+      .oracle-panel h3 {
+        color: #d4af37;
+        font-size: 14px;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .oracle-content {
+        font-size: 12px;
+        line-height: 1.8;
+        color: #d4af37;
+      }
+
+      .oracle-content p {
+        margin-bottom: 12px;
+      }
+
+      .file-artifact {
+        background: rgba(100, 150, 200, 0.1);
+        border-left: 3px solid #6496c8;
+        padding: 10px;
+        margin: 8px 0;
+        font-size: 11px;
+        font-family: 'Courier New', monospace;
+        color: #6496c8;
+      }
+
+      .theme-tag {
+        display: inline-block;
+        background: rgba(212, 175, 55, 0.2);
+        border: 1px solid #d4af37;
+        padding: 4px 8px;
+        margin: 4px 4px 4px 0;
+        font-size: 10px;
+        border-radius: 2px;
+        color: #d4af37;
+      }
+
+      .loading {
+        color: #888;
+        font-style: italic;
+        animation: blink 1s ease-in-out infinite;
+      }
+
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .myth-section {
+        background: rgba(212, 175, 55, 0.12);
+        border: 2px solid #d4af37;
+        padding: 20px;
+        border-radius: 2px;
+        margin-top: 20px;
+      }
+
+      .myth-section h3 {
+        color: #d4af37;
+        font-size: 16px;
+        margin-bottom: 15px;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .myth-text {
+        font-size: 13px;
+        line-height: 2;
+        font-style: italic;
+        color: #d4af37;
+        text-align: justify;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      .file-input-wrapper {
+        position: relative;
+        overflow: hidden;
+        display: inline-block;
+        width: 100%;
+      }
+
+      .file-input-wrapper input[type=file] {
+        position: absolute;
+        left: -9999px;
+      }
+
+      .file-input-label {
+        display: block;
+        background: linear-gradient(135deg, #444 0%, #222 100%);
+        color: #d4af37;
+        border: 1px solid #d4af37;
+        padding: 12px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-align: center;
+        transition: all 0.3s;
+        border-radius: 2px;
+      }
+
+      .file-input-label:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.2);
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        font-size: 12px;
+      }
+
+      .stat-label {
+        color: #888;
+      }
+
+      .stat-value {
+        color: #d4af37;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- LEFT: JOURNAL -->
+      <div class="journal-section">
+        <h1>📖 The Mythographer</h1>
+        <p class="subtitle">A living journal that reads your creative essence</p>
+
+        <h2>Today's Reflection</h2>
+        <textarea id="journalInput" placeholder="Write your thoughts, dreams, creative ideas... The oracle watches and learns..."></textarea>
+        <div class="button-group">
+          <button onclick="saveEntry()">Save Entry</button>
+          <button class="secondary" onclick="clearEntries()">Clear All</button>
+        </div>
+
+        <h2>Recent Entries</h2>
+        <div id="entriesList"></div>
+      </div>
+
+      <!-- RIGHT: ORACLE -->
+      <div class="oracle-section">
+        <h1>🔮 The Oracle Speaks</h1>
+        <p class="subtitle">Your creative mythology, revealed</p>
+
+        <div class="oracle-panel">
+          <h3>📊 Creative Profile</h3>
+          <div class="oracle-content">
+            <div class="stat-row">
+              <span class="stat-label">Entries Written:</span>
+              <span class="stat-value" id="statEntries">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Total Words:</span>
+              <span class="stat-value" id="statWords">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Dominant Themes:</span>
+              <span class="stat-value" id="statThemes">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Creative Energy:</span>
+              <span class="stat-value" id="statEnergy">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="oracle-panel">
+          <h3>🎭 Detected Themes</h3>
+          <div id="themesList" class="oracle-content"></div>
+        </div>
+
+        <div class="myth-section">
+          <h3>✨ Your Myth</h3>
+          <div class="myth-text" id="mythText">
+            The oracle is still learning your essence. Write more, and your story will emerge from the shadows...
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="file-input-wrapper">
+            <input type="file" id="fileInput" accept=".txt,.md,.json" onchange="analyzeFile()">
+            <label class="file-input-label" for="fileInput">📂 Analyze a File</label>
+          </div>
+        </div>
+
+        <div class="oracle-panel" style="margin-top: auto;">
+          <h3>💫 Oracle's Insight</h3>
+          <div class="oracle-content" id="oracleInsight">
+            The oracle awaits your words...
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const journalInput = document.getElementById('journalInput');
+      const entriesList = document.getElementById('entriesList');
+      const mythText = document.getElementById('mythText');
+      const themesList = document.getElementById('themesList');
+      const oracleInsight = document.getElementById('oracleInsight');
+
+      let entries = JSON.parse(localStorage.getItem('mythographerEntries')) || [];
+      let analyzedFiles = JSON.parse(localStorage.getItem('analyzedFiles')) || [];
+
+      const themes = {
+        creation: ['create', 'build', 'make', 'design', 'craft', 'invent', 'imagine', 'vision'],
+        exploration: ['explore', 'discover', 'search', 'journey', 'wander', 'quest', 'adventure', 'unknown'],
+        struggle: ['struggle', 'fight', 'battle', 'overcome', 'challenge', 'difficult', 'pain', 'suffer'],
+        connection: ['love', 'connect', 'together', 'community', 'friend', 'bond', 'relation', 'share'],
+        knowledge: ['learn', 'understand', 'know', 'wisdom', 'truth', 'insight', 'realize', 'discover'],
+        darkness: ['dark', 'shadow', 'fear', 'lost', 'empty', 'void', 'alone', 'broken'],
+        light: ['bright', 'hope', 'joy', 'light', 'shine', 'beautiful', 'wonder', 'magic'],
+        time: ['time', 'moment', 'age', 'era', 'year', 'past', 'future', 'eternal']
+      };
+
+      function saveEntry() {
+        const text = journalInput.value.trim();
+        if (!text) return;
+
+        const entry = {
+          id: Date.now(),
+          text: text,
+          timestamp: new Date().toLocaleString(),
+          wordCount: text.split(/\s+/).length
+        };
+
+        entries.unshift(entry);
+        localStorage.setItem('mythographerEntries', JSON.stringify(entries));
+        journalInput.value = '';
+        renderEntries();
+        updateOracle();
+      }
+
+      function renderEntries() {
+        entriesList.innerHTML = entries.slice(0, 5).map(entry => `
+          <div class="journal-entry">
+            <div class="entry-timestamp">${entry.timestamp} • ${entry.wordCount} words</div>
+            <div>${entry.text}</div>
+          </div>
+        `).join('');
+      }
+
+      function clearEntries() {
+        if (confirm('Clear all entries? This cannot be undone.')) {
+          entries = [];
+          localStorage.setItem('mythographerEntries', JSON.stringify(entries));
+          renderEntries();
+          updateOracle();
+        }
+      }
+
+      function analyzeFile() {
+        const file = document.getElementById('fileInput').files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const content = e.target.result;
+          const entry = {
+            id: Date.now(),
+            text: content.substring(0, 500),
+            timestamp: new Date().toLocaleString(),
+            wordCount: content.split(/\s+/).length,
+            source: `📄 ${file.name}`
+          };
+
+          entries.unshift(entry);
+          analyzedFiles.push(file.name);
+          localStorage.setItem('mythographerEntries', JSON.stringify(entries));
+          localStorage.setItem('analyzedFiles', JSON.stringify(analyzedFiles));
+          
+          renderEntries();
+          updateOracle();
+          document.getElementById('fileInput').value = '';
+        };
+        reader.readAsText(file);
+      }
+
+      function detectThemes(text) {
+        const lowerText = text.toLowerCase();
+        const detected = {};
+
+        for (const [theme, keywords] of Object.entries(themes)) {
+          const count = keywords.filter(kw => lowerText.includes(kw)).length;
+          if (count > 0) {
+            detected[theme] = count;
+          }
+        }
+
+        return detected;
+      }
+
+      function updateOracle() {
+        const allText = entries.map(e => e.text).join(' ');
+        const totalWords = entries.reduce((sum, e) => sum + e.wordCount, 0);
+
+        // Update stats
+        document.getElementById('statEntries').textContent = entries.length;
+        document.getElementById('statWords').textContent = totalWords;
+
+        // Detect themes
+        const allThemes = {};
+        entries.forEach(entry => {
+          const detected = detectThemes(entry.text);
+          for (const [theme, count] of Object.entries(detected)) {
+            allThemes[theme] = (allThemes[theme] || 0) + count;
+          }
+        });
+
+        const topThemes = Object.entries(allThemes)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5);
+
+        document.getElementById('statThemes').textContent = topThemes.length > 0 
+          ? topThemes.map(([t]) => t).join(', ') 
+          : '—';
+
+        // Render themes
+        themesList.innerHTML = topThemes.length > 0
+          ? topThemes.map(([theme, count]) => `<span class="theme-tag">✦ ${theme} (${count})</span>`).join('')
+          : '<span class="theme-tag">Awaiting patterns...</span>';
+
+        // Energy level
+        const energy = Math.min(100, Math.round((totalWords / 100) * 10));
+        document.getElementById('statEnergy').textContent = energy + '%';
+
+        // Generate myth
+        generateMyth(topThemes, totalWords);
+
+        // Generate insight
+        generateInsight(topThemes, allText);
+      }
+
+      function generateMyth(themes, wordCount) {
+        if (entries.length === 0) {
+          mythText.textContent = 'The oracle is still learning your essence. Write more, and your story will emerge from the shadows...';
+          return;
+        }
+
+        const themeNames = themes.map(t => t[0]);
+        const myths = {
+          creation: 'You are a maker. From the void, you pull worlds into being.',
+          exploration: 'You are a wanderer. The unknown calls to your soul.',
+          struggle: 'You are a warrior. Your battles forge your spirit.',
+          connection: 'You are a bridge. Through you, souls find each other.',
+          knowledge: 'You are a seeker. Truth is your eternal quest.',
+          darkness: 'You have walked through shadows. They have taught you.',
+          light: 'You carry the flame. Others find their way by your glow.',
+          time: 'You understand the eternal. Moments are your canvas.'
+        };
+
+        let myth = 'In the age of creation, there arose one who ';
+        
+        if (themeNames.includes('creation')) myth += 'shaped reality with thought. ';
+        if (themeNames.includes('exploration')) myth += 'ventured beyond the known. ';
+        if (themeNames.includes('struggle')) myth += 'faced the abyss and returned. ';
+        if (themeNames.includes('connection')) myth += 'wove souls together. ';
+        if (themeNames.includes('knowledge')) myth += 'sought the hidden truths. ';
+        if (themeNames.includes('darkness')) myth += 'descended into shadow and emerged transformed. ';
+        if (themeNames.includes('light')) myth += 'became a beacon in the dark. ';
+        if (themeNames.includes('time')) myth += 'learned to read the language of ages. ';
+
+        myth += `\n\nAcross ${entries.length} reflections and ${wordCount} words, a pattern emerges. You are not one thing, but many. `;
+        myth += `Your essence flows through ${themeNames.slice(0, 3).join(', ')}. `;
+        myth += `\n\nThe oracle sees you now. You are the myth you have written.`;
+
+        mythText.textContent = myth;
+      }
+
+      function generateInsight(themes, text) {
+        if (entries.length === 0) {
+          oracleInsight.textContent = 'The oracle awaits your words...';
+          return;
+        }
+
+        const insights = [
+          'Your creative essence is restless. It seeks expression.',
+          'The patterns reveal a mind that builds worlds.',
+          'You carry stories that demand to be told.',
+          'Your words are seeds. They will grow.',
+          'The oracle sees potential in your silence as much as your speech.',
+          'You are becoming. The myth is not finished.',
+          'Your journey is written in the spaces between words.',
+          'The oracle recognizes a kindred spirit—one who makes meaning from chaos.'
+        ];
+
+        const randomInsight = insights[Math.floor(Math.random() * insights.length)];
+        oracleInsight.textContent = randomInsight;
+      }
+
+      // Initialize
+      renderEntries();
+      updateOracle();
+
+      // Auto-update when typing
+      journalInput.addEventListener('input', () => {
+        if (journalInput.value.length > 20) {
+          updateOracle();
+        }
+      });
+    </script>
+  </body>
+  </html>

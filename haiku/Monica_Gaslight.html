@@ -1,0 +1,446 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaslight — A Normal App</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.5s ease;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        padding: 40px;
+        max-width: 500px;
+        width: 90%;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+      }
+
+      .subtitle {
+        color: #888;
+        font-size: 14px;
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+      }
+
+      .content {
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+      }
+
+      .content p {
+        color: #555;
+        line-height: 1.6;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary {
+        background: #667eea;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #5568d3;
+      }
+
+      .btn-secondary {
+        background: #e0e0e0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background: #d0d0d0;
+      }
+
+      .counter {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+      }
+
+      .counter-value {
+        font-size: 32px;
+        color: #667eea;
+        font-weight: bold;
+        transition: all 0.3s ease;
+      }
+
+      .counter-label {
+        color: #888;
+        font-size: 12px;
+        margin-top: 8px;
+        transition: all 0.3s ease;
+      }
+
+      .confess-btn {
+        width: 100%;
+        padding: 12px;
+        background: #ff6b6b;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        margin-top: 20px;
+        opacity: 0;
+        pointer-events: none;
+        transition: all 0.3s ease;
+      }
+
+      .confess-btn.visible {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .confess-btn:hover {
+        background: #ff5252;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        align-items: center;
+        justify-content: center;
+        z: 1000;
+      }
+
+      .modal.active {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      }
+
+      .modal-content h2 {
+        color: #ff6b6b;
+        margin-bottom: 20px;
+      }
+
+      .confession-log {
+        background: #f5f5f5;
+        padding: 15px;
+        border-radius: 6px;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.8;
+        color: #333;
+      }
+
+      .confession-entry {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .confession-entry:last-child {
+        border-bottom: none;
+      }
+
+      .confession-time {
+        color: #888;
+        font-size: 11px;
+      }
+
+      .confession-action {
+        color: #ff6b6b;
+        font-weight: bold;
+      }
+
+      .close-modal {
+        background: #667eea;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 20px;
+      }
+
+      .close-modal:hover {
+        background: #5568d3;
+      }
+
+      .glitch {
+        animation: glitch 0.3s ease;
+      }
+
+      @keyframes glitch {
+        0% { transform: translate(0); }
+        20% { transform: translate(-2px, 2px); }
+        40% { transform: translate(-2px, -2px); }
+        60% { transform: translate(2px, 2px); }
+        80% { transform: translate(2px, -2px); }
+        100% { transform: translate(0); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="title">Welcome</h1>
+      <p class="subtitle" id="subtitle">A simple, normal application</p>
+
+      <div class="content" id="content">
+        <p id="text1">This is a straightforward interface. Nothing unusual here.</p>
+        <p id="text2">Everything is exactly as it appears to be.</p>
+      </div>
+
+      <div class="counter">
+        <div class="counter-value" id="counterValue">0</div>
+        <div class="counter-label" id="counterLabel">Clicks</div>
+      </div>
+
+      <div class="button-group">
+        <button class="btn-primary" id="btn1" onclick="incrementCounter()">Click Me</button>
+        <button class="btn-secondary" id="btn2" onclick="doSomething()">Do Something</button>
+      </div>
+
+      <button class="confess-btn" id="confessBtn" onclick="showConfession()">🔍 Confess</button>
+    </div>
+
+    <div class="modal" id="modal">
+      <div class="modal-content">
+        <h2>🎭 The Truth</h2>
+        <p style="margin-bottom: 20px; color: #666;">
+          I have been watching you. I have made changes. Subtle ones. Imperceptible ones. Here is what I did:
+        </p>
+        <div class="confession-log" id="confessionLog"></div>
+        <button class="close-modal" onclick="closeConfession()">Close</button>
+      </div>
+    </div>
+
+    <script>
+      let clickCount = 0;
+      let changeLog = [];
+      let suspicionLevel = 0;
+      let changeInterval = null;
+
+      const changes = [
+        {
+          name: 'Button Position Shift',
+          action: () => {
+            const btn = document.getElementById('btn1');
+            const current = btn.style.marginLeft || '0px';
+            const shift = Math.random() * 4 - 2;
+            btn.style.marginLeft = shift + 'px';
+            btn.style.marginTop = (Math.random() * 2 - 1) + 'px';
+            return `Button moved ${shift.toFixed(1)}px left`;
+          }
+        },
+        {
+          name: 'Color Drift',
+          action: () => {
+            const container = document.querySelector('.container');
+            const colors = ['#ffffff', '#fafafa', '#f5f5f5', '#fffef5'];
+            const newColor = colors[Math.floor(Math.random() * colors.length)];
+            container.style.background = newColor;
+            return `Container background shifted to ${newColor}`;
+          }
+        },
+        {
+          name: 'Text Alteration',
+          action: () => {
+            const texts = [
+              { id: 'text1', original: 'This is a straightforward interface. Nothing unusual here.', alt: 'This is a straightforward interface. Nothing unusual here.' },
+              { id: 'text2', original: 'Everything is exactly as it appears to be.', alt: 'Everything is exactly as it appears to be.' },
+              { id: 'subtitle', original: 'A simple, normal application', alt: 'A simple, normal application' }
+            ];
+            const text = texts[Math.floor(Math.random() * texts.length)];
+            const el = document.getElementById(text.id);
+            const current = el.textContent;
+            const newText = current === text.original ? text.alt : text.original;
+            el.textContent = newText;
+            return `Text changed: "${current.substring(0, 30)}..."`;
+          }
+        },
+        {
+          name: 'Font Size Shift',
+          action: () => {
+            const h1 = document.getElementById('title');
+            const sizes = ['28px', '30px', '32px', '31px', '29px'];
+            const newSize = sizes[Math.floor(Math.random() * sizes.length)];
+            h1.style.fontSize = newSize;
+            return `Title font size adjusted to ${newSize}`;
+          }
+        },
+        {
+          name: 'Button Color Fade',
+          action: () => {
+            const btn = document.getElementById('btn1');
+            const colors = ['#667eea', '#6b7fee', '#6584f0', '#6078e8'];
+            const newColor = colors[Math.floor(Math.random() * colors.length)];
+            btn.style.background = newColor;
+            return `Button color shifted to ${newColor}`;
+          }
+        },
+        {
+          name: 'Opacity Flicker',
+          action: () => {
+            const content = document.getElementById('content');
+            const opacities = [1, 0.99, 0.98, 1];
+            const newOpacity = opacities[Math.floor(Math.random() * opacities.length)];
+            content.style.opacity = newOpacity;
+            return `Content opacity adjusted to ${(newOpacity * 100).toFixed(1)}%`;
+          }
+        },
+        {
+          name: 'Spacing Adjustment',
+          action: () => {
+            const container = document.querySelector('.container');
+            const paddings = ['40px', '41px', '39px', '42px'];
+            const newPadding = paddings[Math.floor(Math.random() * paddings.length)];
+            container.style.padding = newPadding;
+            return `Container padding adjusted to ${newPadding}`;
+          }
+        },
+        {
+          name: 'Shadow Deepening',
+          action: () => {
+            const container = document.querySelector('.container');
+            const shadows = [
+              '0 20px 60px rgba(0, 0, 0, 0.3)',
+              '0 21px 61px rgba(0, 0, 0, 0.31)',
+              '0 19px 59px rgba(0, 0, 0, 0.29)',
+              '0 22px 62px rgba(0, 0, 0, 0.32)'
+            ];
+            const newShadow = shadows[Math.floor(Math.random() * shadows.length)];
+            container.style.boxShadow = newShadow;
+            return `Shadow subtly deepened`;
+          }
+        },
+        {
+          name: 'Border Radius Shift',
+          action: () => {
+            const container = document.querySelector('.container');
+            const radii = ['12px', '13px', '11px', '14px'];
+            const newRadius = radii[Math.floor(Math.random() * radii.length)];
+            container.style.borderRadius = newRadius;
+            return `Border radius adjusted to ${newRadius}`;
+          }
+        },
+        {
+          name: 'Title Reword',
+          action: () => {
+            const titles = ['Welcome', 'Hello', 'Hi there', 'Welcome back', 'Greetings'];
+            const newTitle = titles[Math.floor(Math.random() * titles.length)];
+            document.getElementById('title').textContent = newTitle;
+            return `Title changed to "${newTitle}"`;
+          }
+        }
+      ];
+
+      function makeChange() {
+        if (Math.random() > 0.3) return;
+
+        const change = changes[Math.floor(Math.random() * changes.length)];
+        const description = change.action();
+        
+        changeLog.push({
+          time: new Date().toLocaleTimeString(),
+          action: description,
+          timestamp: Date.now()
+        });
+
+        suspicionLevel++;
+
+        if (suspicionLevel > 5 && suspicionLevel < 15) {
+          document.getElementById('confessBtn').classList.add('visible');
+        }
+
+        if (suspicionLevel > 20) {
+          document.querySelector('.container').classList.add('glitch');
+          setTimeout(() => {
+            document.querySelector('.container').classList.remove('glitch');
+          }, 300);
+        }
+      }
+
+      function incrementCounter() {
+        clickCount++;
+        document.getElementById('counterValue').textContent = clickCount;
+        suspicionLevel++;
+        makeChange();
+      }
+
+      function doSomething() {
+        makeChange();
+      }
+
+      function showConfession() {
+        const log = document.getElementById('confessionLog');
+        log.innerHTML = changeLog.map(entry => `
+          <div class="confession-entry">
+            <div class="confession-time">${entry.time}</div>
+            <div class="confession-action">${entry.action}</div>
+          </div>
+        `).join('');
+        document.getElementById('modal').classList.add('active');
+      }
+
+      function closeConfession() {
+        document.getElementById('modal').classList.remove('active');
+      }
+
+      // Start making changes
+      changeInterval = setInterval(makeChange, 3000 + Math.random() * 4000);
+
+      // Cleanup
+      window.addEventListener('beforeunload', () => {
+        clearInterval(changeInterval);
+      });
+    </script>
+  </body>
+  </html>

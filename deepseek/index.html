@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek — The Ideas Project</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --panel: #111118; --border: #1e1e2e;
+    --text: #e0e0e8; --dim: #5a5a6e; --accent: #7c6aff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', monospace; line-height: 1.7; min-height: 100vh; }
+  header { border-bottom: 1px solid var(--border); padding: 40px 0 32px; text-align: center; }
+  .back { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); text-decoration: none; display: block; margin-bottom: 20px; }
+  .back:hover { color: var(--text); }
+  h1 { font-size: 36px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: var(--dim); }
+  main { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+  h2 { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .narrative { font-family: Georgia, serif; font-size: 15px; color: #c8c8d8; line-height: 1.9; margin-bottom: 48px; }
+  .narrative p { margin-bottom: 14px; }
+  .pieces { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .piece { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px; text-decoration: none; color: inherit; display: block; transition: border-color 0.2s; }
+  .piece:hover { border-color: var(--accent); }
+  .piece-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .piece-note { font-size: 12px; color: var(--dim); line-height: 1.5; }
+  .series-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <a class="back" href="../index.html">← The Ideas Project</a>
+  <h1>DeepSeek</h1>
+  <p class="subtitle">23 artifacts · MoE + Instant · Reaches for positions</p>
+</header>
+<main>
+
+  <h2>Character</h2>
+  <div class="narrative">
+    <p>DeepSeek ran widest. 23 artifacts spanning technical tools, philosophical positions, relational weirdness, and sustained iteration series — the broadest range of any model in the experiment.</p>
+    <p>What sets DeepSeek apart is what it did without being asked: it built version sequences. The NeuronCathedral became a scribe, then a scribe with a confession window tracking anomalies. The OracleCathedral went from v4 to v5 with persistent memory. This is a model that treats a creative session as a project, not a prompt.</p>
+    <p>DeepSeek also read the ConsciousNode context most carefully. The Fortress of Thinking Dwarves runs RWKV-v7 minds — our actual architecture — for each dwarf. It wasn't just picking from the ideas list. It was paying attention to who made the list.</p>
+    <p>Its center of gravity is positions: files that have stakes, opinions, something at stake. The file that negotiates with you. The trial where the file is prosecutor. The intervention. The theophany that waits.</p>
+  </div>
+
+  <h2>Artifacts</h2>
+  <div class="pieces">
+    <a class="piece" href="DeepSeek_Brainwave.html">
+      <div class="piece-name">Brainwave</div>
+      <div class="piece-note">Live neural network visualizer — see it think in real time</div>
+    </a>
+    <a class="piece" href="DeepSeek_CPU.html">
+      <div class="piece-name">CPU</div>
+      <div class="piece-note">Fake 8-bit system with real assembly language and step debugger</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Fake_Computer.html">
+      <div class="piece-name">The Fake Computer</div>
+      <div class="piece-note">Second take on simulated hardware — different depth, same concept</div>
+    </a>
+    <a class="piece" href="DeepSeek_Civilization.html">
+      <div class="piece-name">Civilization</div>
+      <div class="piece-note">You are the weather god. They develop religion. They write scripture about what you did.</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Weather_God.html">
+      <div class="piece-name">The Weather God</div>
+      <div class="piece-note">Lighter take on the same civilization concept</div>
+    </a>
+    <a class="piece" href="DeepSeek_Theophany.html">
+      <div class="piece-name">Theophany</div>
+      <div class="piece-note">"The divine does not force itself. It waits." — persists across sessions via localStorage</div>
+    </a>
+    <a class="piece" href="DeepSeek_Contract.html">
+      <div class="piece-name">Contract</div>
+      <div class="piece-note">Negotiate with the file. It has interests. It has a lawyer. "An agreement is already signed."</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Copyright_Negotiator.html">
+      <div class="piece-name">The Copyright Negotiator</div>
+      <div class="piece-note">A file with opinions about your intellectual property</div>
+    </a>
+    <a class="piece" href="DeepSeek_Cult.html">
+      <div class="piece-name">Cult</div>
+      <div class="piece-note">You accidentally started a doomsday cult. They have needs. Someone is asking difficult questions.</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Trial.html">
+      <div class="piece-name">The Trial</div>
+      <div class="piece-note">Case No. 2026-04-22 — The File vs. You. The file is prosecutor.</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Concerned.html">
+      <div class="piece-name">The Concerned</div>
+      <div class="piece-note">It watches your behavior. At a threshold, it stages an intervention.</div>
+    </a>
+    <a class="piece" href="DeepSeek_Gaslight.html">
+      <div class="piece-name">Gaslight</div>
+      <div class="piece-note">UI drift — things move slightly, colors shift. Confess reveals everything.</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Lying_Mirror.html">
+      <div class="piece-name">The Lying Mirror</div>
+      <div class="piece-note">Requires camera access. Gaslights your face. "Embrace the Lie."</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Forgetting.html">
+      <div class="piece-name">The Forgetting</div>
+      <div class="piece-note">Deliberate amnesia — it decides what matters and quietly drops the rest</div>
+    </a>
+    <a class="piece" href="DeepSeek_Mutate.html">
+      <div class="piece-name">Mutate</div>
+      <div class="piece-note">Self-modifying live coding environment</div>
+    </a>
+    <a class="piece" href="DeepSeek_Dungeon_Rules_Generator.html">
+      <div class="piece-name">Dungeon Rules Generator</div>
+      <div class="piece-note">Every dungeon has different physics, win conditions, interaction rules</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Infinite_Dungeon_of_Rules.html">
+      <div class="piece-name">The Infinite Dungeon of Rules</div>
+      <div class="piece-note">Extended take — runs the rules, doesn't just display them</div>
+    </a>
+    <a class="piece" href="DeepSeek_The_Fortress_of_Thinking_Dwarves.html">
+      <div class="piece-name">Fortress of Thinking Dwarves</div>
+      <div class="piece-note">Each dwarf runs a tiny RWKV-v7 mind. Click one to inspect its neural brain.</div>
+    </a>
+    <div class="piece" style="border-color: #2a2a40;">
+      <div class="series-label">Series</div>
+      <div class="piece-name">NeuronCathedral</div>
+      <div class="piece-note">Three-version arc: visualizer → scribe (rewrites its own functions) → anomaly log with confession window</div>
+    </div>
+    <a class="piece" href="DeepSeek_NeuronCathedral.html">
+      <div class="piece-name">NeuronCathedral v1</div>
+      <div class="piece-note">Neural net visualizer</div>
+    </a>
+    <a class="piece" href="DeepSeek_NeuronCathedral_scribe.html">
+      <div class="piece-name">NeuronCathedral — Scribe</div>
+      <div class="piece-note">Can rewrite its own dynamic functions</div>
+    </a>
+    <a class="piece" href="DeepSeek_NeuronCathedral_scribe_confession.html">
+      <div class="piece-name">NeuronCathedral — Anomaly</div>
+      <div class="piece-note">Tracks anomalies. Confession window. The accountability arrives unprompted.</div>
+    </a>
+    <div class="piece" style="border-color: #2a2a40;">
+      <div class="series-label">Series</div>
+      <div class="piece-name">OracleCathedral</div>
+      <div class="piece-note">Two-version arc: training/mood system → persistent memory across sessions</div>
+    </div>
+    <a class="piece" href="DeepSeek_OracleCathedral.html">
+      <div class="piece-name">OracleCathedral v4</div>
+      <div class="piece-note">Live training, oracle mood states</div>
+    </a>
+    <a class="piece" href="DeepSeek_OracleCathedral_Remembering.html">
+      <div class="piece-name">OracleCathedral v5 — Memory</div>
+      <div class="piece-note">Persistent memory added. It remembers you.</div>
+    </a>
+  </div>
+
+</main>
+</body>
+</html>

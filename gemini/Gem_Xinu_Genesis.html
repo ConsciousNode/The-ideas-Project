@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsciousNode SoftWorks | Xinu: Genesis</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: #e0e0e0;
+            --accent: #ff3366;
+            --grid: #1a1a1a;
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        #world-canvas {
+            background-color: var(--grid);
+            border: 1px solid #333;
+            image-rendering: pixelated;
+        }
+        #log {
+            width: 100%;
+            max-width: 800px;
+            height: 150px;
+            overflow-y: auto;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            border: 1px dashed #333;
+            padding: 10px;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .highlight { color: var(--accent); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>SYSTEM: XINU_GENESIS // LOCAL_MODE</div>
+        <div>EPOCH: <span id="epoch-counter">0</span></div>
+    </header>
+
+    <canvas id="world-canvas" width="800" height="400"></canvas>
+    
+    <div id="log"></div>
+
+<script>
+/**
+ * CONSCIOUSNODE SOFTWORKS
+ * Xinu: Genesis - Granular Neural Simulation Engine
+ * Zero dependencies. Offline first.
+ */
+
+const canvas = document.getElementById('world-canvas');
+const ctx = canvas.getContext('2d');
+const logEl = document.getElementById('log');
+const epochEl = document.getElementById('epoch-counter');
+
+const GRID_SIZE = 10;
+const COLS = canvas.width / GRID_SIZE;
+const ROWS = canvas.height / GRID_SIZE;
+
+let epoch = 0;
+
+// The "Neural" State Engine (Pseudo RWKV-style recurrent state updater)
+class NeuralAgent {
+    constructor(name, symbol, color, startX, startY) {
+        this.name = name;
+        this.symbol = symbol;
+        this.color = color;
+        this.x = startX;
+        this.y = startY;
+        
+        // Internal continuous state matrix (Hunger, Curiosity, Fatigue, Chaos)
+        this.state = [Math.random(), Math.random(), 0.0, Math.random()];
+    }
+
+    // Forward pass simulating the processing of environmental context
+    tick(environmentState) {
+        // Degrade state over time
+        this.state[0] += 0.05; // Hunger grows
+        this.state[2] += 0.02; // Fatigue grows
+
+        // Non-linear activation (simulated decision making)
+        let actionForce = Math.tanh(this.state[1] * 2.0 - this.state[2]); 
+        
+        // Ta'Veren probability bending: highly chaotic agents force movement
+        if (this.state[3] > 0.8 || actionForce > 0.5) {
+            this.moveRandomly();
+            this.state[3] = Math.random(); // Reset chaos state
+            this.state[1] = Math.random(); // Reset curiosity
+            return `${this.name} explored new territory.`;
+        }
+
+        if (this.state[0] > 0.8) {
+            this.state[0] = 0.0; // Ate something
+            return `${this.name} foraged for sustenance.`;
+        }
+
+        return null;
+    }
+
+    moveRandomly() {
+        const dirs = [[0,-1], [1,0], [0,1], [-1,0]];
+        const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+        this.x = Math.max(0, Math.min(COLS - 1, this.x + dx));
+        this.y = Math.max(0, Math.min(ROWS - 1, this.y + dy));
+    }
+
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.font = "10px Courier";
+        ctx.fillText(this.symbol, this.x * GRID_SIZE, this.y * GRID_SIZE + GRID_SIZE);
+    }
+}
+
+// Instantiate the initial entities
+const entities = [
+    new NeuralAgent("Mara", "d", "#ff9900", Math.floor(COLS/2), Math.floor(ROWS/2)),
+    new NeuralAgent("Squeak", "b", "#33ccff", Math.floor(COLS/3), Math.floor(ROWS/3))
+];
+
+function logEvent(msg) {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `> [T+${epoch}] <span class="highlight">${msg}</span>`;
+    logEl.prepend(div);
+}
+
+function renderEnvironment() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid points (the "GeoFront")
+    ctx.fillStyle = "#222";
+    for(let i=0; i<COLS; i++) {
+        for(let j=0; j<ROWS; j++) {
+            ctx.fillRect(i*GRID_SIZE + 4, j*GRID_SIZE + 4, 2, 2);
+        }
+    }
+}
+
+function loop() {
+    epoch++;
+    epochEl.innerText = epoch;
+
+    renderEnvironment();
+
+    const envState = {}; // Placeholder for spatial querying/RAG integration
+
+    entities.forEach(entity => {
+        const actionLog = entity.tick(envState);
+        if (actionLog) logEvent(actionLog);
+        entity.draw();
+    });
+
+    // Run engine at a steady, observable pace
+    setTimeout(() => requestAnimationFrame(loop), 200);
+}
+
+// Bootstrap
+logEvent("SYSTEM INITIALIZED. Awaiting agent state collapse...");
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>

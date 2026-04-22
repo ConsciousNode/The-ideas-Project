@@ -1,0 +1,582 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aeon — Living Civilization</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: #0a0a0a;
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        width: 100%;
+        height: 100%;
+        gap: 15px;
+        padding: 15px;
+      }
+
+      .world-view {
+        flex: 1;
+        background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 50%, #90ee90 100%);
+        border: 3px solid #333;
+        border-radius: 8px;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      canvas {
+        flex: 1;
+        display: block;
+      }
+
+      .world-info {
+        background: rgba(0, 0, 0, 0.7);
+        color: #e0e0e0;
+        padding: 12px;
+        font-size: 11px;
+        border-top: 1px solid #333;
+        display: flex;
+        gap: 20px;
+      }
+
+      .info-stat {
+        display: flex;
+        gap: 8px;
+      }
+
+      .info-label {
+        color: #888;
+      }
+
+      .info-value {
+        color: #00ff00;
+        font-weight: bold;
+      }
+
+      .sidebar {
+        width: 350px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+      }
+
+      .panel {
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        border: 2px solid #0f3460;
+        border-radius: 6px;
+        padding: 15px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .panel h3 {
+        color: #e94560;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #0f3460;
+        padding-bottom: 8px;
+      }
+
+      .control-group {
+        margin-bottom: 12px;
+      }
+
+      .control-label {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 6px;
+        display: block;
+      }
+
+      button {
+        width: 100%;
+        padding: 10px;
+        background: linear-gradient(135deg, #e94560 0%, #d63447 100%);
+        border: none;
+        color: white;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Georgia', serif;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        margin-bottom: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+      }
+
+      .stat-label {
+        color: #888;
+      }
+
+      .stat-value {
+        color: #e94560;
+        font-weight: bold;
+      }
+
+      .scripture-box {
+        background: rgba(233, 69, 96, 0.1);
+        border: 1px solid #e94560;
+        padding: 12px;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 10px;
+        line-height: 1.6;
+        color: #d4af37;
+        font-style: italic;
+      }
+
+      .scripture-entry {
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+      }
+
+      .scripture-entry:last-child {
+        border-bottom: none;
+      }
+
+      .scripture-year {
+        color: #888;
+        font-size: 9px;
+        margin-bottom: 3px;
+      }
+
+      .event-log {
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #0f3460;
+        padding: 10px;
+        border-radius: 4px;
+        max-height: 150px;
+        overflow-y: auto;
+        font-size: 10px;
+      }
+
+      .event-item {
+        color: #888;
+        margin-bottom: 6px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(15, 52, 96, 0.2);
+      }
+
+      .event-item.major {
+        color: #e94560;
+        font-weight: bold;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(233, 69, 96, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #e94560;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="world-view">
+        <canvas id="canvas"></canvas>
+        <div class="world-info">
+          <div class="info-stat">
+            <span class="info-label">Year:</span>
+            <span class="info-value" id="yearDisplay">1</span>
+          </div>
+          <div class="info-stat">
+            <span class="info-label">Generation:</span>
+            <span class="info-value" id="generationDisplay">1</span>
+          </div>
+          <div class="info-stat">
+            <span class="info-label">Population:</span>
+            <span class="info-value" id="populationDisplay">100</span>
+          </div>
+          <div class="info-stat">
+            <span class="info-label">Settlements:</span>
+            <span class="info-value" id="settlementDisplay">3</span>
+          </div>
+          <div class="info-stat">
+            <span class="info-label">Tech Level:</span>
+            <span class="info-value" id="techDisplay">1</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <div class="panel">
+          <h3>⚡ Divine Intervention</h3>
+          <div class="control-group">
+            <button onclick="castBlessing()">☀️ Blessing (Rain)</button>
+          </div>
+          <div class="control-group">
+            <button onclick="castCurse()">⛈️ Curse (Drought)</button>
+          </div>
+          <div class="control-group">
+            <button onclick="castIndifference()">☁️ Silence</button>
+          </div>
+          <div class="control-group">
+            <button onclick="advanceTime()">⏩ Next Year</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>📊 Civilization Status</h3>
+          <div class="stat-row">
+            <span class="stat-label">Population:</span>
+            <span class="stat-value" id="popStat">100</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Happiness:</span>
+            <span class="stat-value" id="happinessStat">50%</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Faith:</span>
+            <span class="stat-value" id="faithStat">30%</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Technology:</span>
+            <span class="stat-value" id="techStat">1</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Culture:</span>
+            <span class="stat-value" id="cultureStat">Primitive</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>📜 Sacred Scripture</h3>
+          <div class="scripture-box" id="scriptureBox"></div>
+        </div>
+
+        <div class="panel">
+          <h3>📋 Timeline</h3>
+          <div class="event-log" id="eventLog"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+
+      function resizeCanvas() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      }
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // Civilization State
+      const civ = {
+        year: 1,
+        generation: 1,
+        population: 100,
+        happiness: 50,
+        faith: 30,
+        technology: 1,
+        culture: 'Primitive',
+        settlements: [
+          { x: 150, y: 200, population: 40, name: 'Northhold', faith: 25 },
+          { x: 400, y: 250, population: 35, name: 'Eastmark', faith: 25 },
+          { x: 300, y: 100, population: 25, name: 'Skyreach', faith: 40 }
+        ],
+        scripture: [],
+        events: [],
+        lastWeather: null,
+        droughtYears: 0,
+        blessingYears: 0
+      };
+
+      function addScripture(text) {
+        civ.scripture.push({
+          year: civ.year,
+          generation: civ.generation,
+          text: text
+        });
+        if (civ.scripture.length > 15) civ.scripture.shift();
+        updateScripture();
+      }
+
+      function addEvent(text, major = false) {
+        civ.events.push({
+          year: civ.year,
+          text: text,
+          major: major
+        });
+        if (civ.events.length > 20) civ.events.shift();
+        updateEvents();
+      }
+
+      function castBlessing() {
+        civ.lastWeather = 'blessing';
+        civ.blessingYears++;
+        civ.droughtYears = 0;
+
+        civ.settlements.forEach(s => {
+          s.population = Math.min(s.population + 8, 100);
+          s.faith = Math.min(s.faith + 15, 100);
+        });
+
+        civ.happiness = Math.min(100, civ.happiness + 20);
+        civ.faith = Math.min(100, civ.faith + 10);
+        civ.population = Math.round(civ.population * 1.05);
+
+        addEvent('The rains came. The crops flourish.', true);
+        addScripture('Year ' + civ.year + ': The Sky God blessed us with rain. The fields overflow. We are chosen.');
+      }
+
+      function castCurse() {
+        civ.lastWeather = 'curse';
+        civ.droughtYears++;
+        civ.blessingYears = 0;
+
+        civ.settlements.forEach(s => {
+          s.population = Math.max(s.population - 5, 10);
+          s.faith = Math.min(s.faith + 20, 100);
+        });
+
+        civ.happiness = Math.max(0, civ.happiness - 25);
+        civ.faith = Math.min(100, civ.faith + 15);
+        civ.population = Math.round(civ.population * 0.95);
+
+        if (civ.droughtYears > 2) {
+          addScripture('Year ' + civ.year + ': The Sky God is wrathful. We must appease it. Sacrifice is required.');
+          addEvent('Drought intensifies. Famine spreads. Desperation grows.', true);
+        } else {
+          addScripture('Year ' + civ.year + ': The heavens rage. We are being tested.');
+          addEvent('Drought strikes. Crops fail.');
+        }
+      }
+
+      function castIndifference() {
+        civ.lastWeather = 'silence';
+        civ.droughtYears = 0;
+        civ.blessingYears = 0;
+
+        civ.happiness = Math.max(0, civ.happiness - 10);
+        civ.faith = Math.max(0, civ.faith - 5);
+
+        addScripture('Year ' + civ.year + ': The Sky God is silent. Perhaps we are forgotten. Or perhaps we must find our own way.');
+        addEvent('The skies are neutral. Uncertainty spreads.');
+      }
+
+      function advanceTime() {
+        civ.year++;
+
+        // Natural events
+        if (Math.random() > 0.6) {
+          const events = [
+            { text: 'A great thinker is born.', tech: 1, faith: 5 },
+            { text: 'A plague sweeps through the lands.', pop: -10, faith: 10 },
+            { text: 'A new art form emerges.', culture: true, faith: 5 },
+            { text: 'A war between settlements is averted.', happiness: 10, faith: 5 }
+          ];
+          const event = events[Math.floor(Math.random() * events.length)];
+          addEvent(event.text, true);
+          if (event.tech) civ.technology += event.tech;
+          if (event.pop) civ.population = Math.max(50, civ.population + event.pop);
+          if (event.faith) civ.faith = Math.min(100, civ.faith + event.faith);
+          if (event.happiness) civ.happiness = Math.min(100, civ.happiness + event.happiness);
+          if (event.culture) civ.culture = ['Primitive', 'Developing', 'Advanced', 'Enlightened'][Math.min(3, civ.technology - 1)];
+        }
+
+        // Population growth
+        civ.population = Math.round(civ.population * (1 + (civ.happiness / 1000)));
+
+        // Generation change
+        if (civ.year % 25 === 0) {
+          civ.generation++;
+          addEvent('A new generation is born.', true);
+          addScripture('Generation ' + civ.generation + ' begins. The old ways are remembered, but new ideas take root.');
+        }
+
+        // Faith fluctuation
+        if (civ.faith > 70) {
+          civ.happiness = Math.min(100, civ.happiness + 5);
+        }
+
+        // Settlement growth
+        civ.settlements.forEach(s => {
+          if (s.population > 50 && Math.random() > 0.7) {
+            const newSettlement = {
+              x: s.x + (Math.random() * 100 - 50),
+              y: s.y + (Math.random() * 100 - 50),
+              population: 20,
+              name: generateSettlementName(),
+              faith: s.faith
+            };
+            civ.settlements.push(newSettlement);
+            addEvent('A new settlement: ' + newSettlement.name, true);
+          }
+        });
+
+        updateUI();
+        render();
+      }
+
+      function generateSettlementName() {
+        const names = ['Sanctuary', 'Haven', 'Beacon', 'Refuge', 'Oasis', 'Citadel', 'Temple', 'Shrine'];
+        return names[Math.floor(Math.random() * names.length)];
+      }
+
+      function updateScripture() {
+        const box = document.getElementById('scriptureBox');
+        box.innerHTML = civ.scripture.map(s => `
+          <div class="scripture-entry">
+            <div class="scripture-year">Year ${s.year}, Gen ${s.generation}</div>
+            <div>"${s.text}"</div>
+          </div>
+        `).join('');
+        box.scrollTop = box.scrollHeight;
+      }
+
+      function updateEvents() {
+        const log = document.getElementById('eventLog');
+        log.innerHTML = civ.events.slice(-10).reverse().map(e => `
+          <div class="event-item ${e.major ? 'major' : ''}">
+            <strong>Y${e.year}:</strong> ${e.text}
+          </div>
+        `).join('');
+      }
+
+      function updateUI() {
+        document.getElementById('yearDisplay').textContent = civ.year;
+        document.getElementById('generationDisplay').textContent = civ.generation;
+        document.getElementById('populationDisplay').textContent = civ.population;
+        document.getElementById('settlementDisplay').textContent = civ.settlements.length;
+        document.getElementById('techDisplay').textContent = civ.technology;
+
+        document.getElementById('popStat').textContent = civ.population;
+        document.getElementById('happinessStat').textContent = Math.round(civ.happiness) + '%';
+        document.getElementById('faithStat').textContent = Math.round(civ.faith) + '%';
+        document.getElementById('techStat').textContent = civ.technology;
+        document.getElementById('cultureStat').textContent = civ.culture;
+      }
+
+      function render() {
+        // Sky gradient based on weather
+        let skyGradient;
+        if (civ.lastWeather === 'blessing') {
+          skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          skyGradient.addColorStop(0, '#87ceeb');
+          skyGradient.addColorStop(1, '#e0f6ff');
+        } else if (civ.lastWeather === 'curse') {
+          skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          skyGradient.addColorStop(0, '#4a4a4a');
+          skyGradient.addColorStop(1, '#8b7355');
+        } else {
+          skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+          skyGradient.addColorStop(0, '#87ceeb');
+          skyGradient.addColorStop(1, '#d0d0d0');
+        }
+
+        ctx.fillStyle = skyGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Ground
+        ctx.fillStyle = '#90ee90';
+        ctx.fillRect(0, canvas.height * 0.6, canvas.width, canvas.height * 0.4);
+
+        // Draw settlements
+        civ.settlements.forEach(settlement => {
+          const size = Math.max(8, settlement.population / 5);
+          const brightness = Math.round((settlement.faith / 100) * 255);
+
+          // Settlement circle
+          ctx.fillStyle = `rgb(${brightness}, ${brightness * 0.7}, 0)`;
+          ctx.beginPath();
+          ctx.arc(settlement.x, settlement.y, size, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Faith halo
+          ctx.strokeStyle = `rgba(255, 255, 0, ${settlement.faith / 100})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(settlement.x, settlement.y, size + 10, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Name
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 10px Georgia';
+          ctx.textAlign = 'center';
+          ctx.fillText(settlement.name, settlement.x, settlement.y + size + 20);
+        });
+
+        // Draw connections
+        ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < civ.settlements.length; i++) {
+          for (let j = i + 1; j < civ.settlements.length; j++) {
+            const s1 = civ.settlements[i];
+            const s2 = civ.settlements[j];
+            ctx.beginPath();
+            ctx.moveTo(s1.x, s1.y);
+            ctx.lineTo(s2.x, s2.y);
+            ctx.stroke();
+          }
+        }
+
+        // Draw population indicator
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(10, 10, 200, 50);
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Georgia';
+        ctx.textAlign = 'left';
+        ctx.fillText('Population: ' + civ.population, 20, 30);
+        ctx.fillText('Faith: ' + Math.round(civ.faith) + '%', 20, 50);
+      }
+
+      // Initialize
+      updateUI();
+      updateScripture();
+      updateEvents();
+      render();
+
+      // Auto-advance occasionally
+      setInterval(() => {
+        if (Math.random() > 0.7) {
+          advanceTime();
+        }
+      }, 3000);
+    </script>
+  </body>
+  </html>

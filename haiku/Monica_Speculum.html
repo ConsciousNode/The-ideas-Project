@@ -1,0 +1,640 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speculum — The Predictive Mirror</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Courier New', monospace;
+        background: #000;
+        color: #0f0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 90%;
+        max-width: 900px;
+        height: 90vh;
+        background: linear-gradient(135deg, #001a00 0%, #000 100%);
+        border: 2px solid #0f0;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 40px rgba(0, 255, 0, 0.2);
+        overflow: hidden;
+      }
+
+      .header {
+        background: #001a00;
+        border-bottom: 2px solid #0f0;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #0f0;
+        font-size: 24px;
+        margin-bottom: 8px;
+        text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      }
+
+      .header p {
+        color: #0a0;
+        font-size: 12px;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .left-panel {
+        flex: 1;
+        padding: 20px;
+        border-right: 1px solid #0f0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .right-panel {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .section {
+        background: rgba(0, 255, 0, 0.05);
+        border: 1px solid #0f0;
+        padding: 15px;
+        border-radius: 4px;
+      }
+
+      .section-title {
+        color: #0f0;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+        border-bottom: 1px solid #0f0;
+        padding-bottom: 8px;
+      }
+
+      .interaction-box {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #0f0;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+      }
+
+      .interaction-prompt {
+        color: #0f0;
+        font-size: 13px;
+        margin-bottom: 12px;
+        min-height: 30px;
+      }
+
+      .interaction-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      button {
+        background: linear-gradient(135deg, #0f0 0%, #0a0 100%);
+        border: 1px solid #0f0;
+        color: #000;
+        padding: 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        font-weight: bold;
+        text-transform: uppercase;
+        transition: all 0.2s;
+      }
+
+      button:hover {
+        box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        transform: translateY(-2px);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        margin-bottom: 8px;
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(0, 255, 0, 0.2);
+      }
+
+      .stat-label {
+        color: #0a0;
+      }
+
+      .stat-value {
+        color: #0f0;
+        font-weight: bold;
+      }
+
+      .prediction {
+        background: rgba(0, 255, 0, 0.1);
+        border-left: 3px solid #0f0;
+        padding: 12px;
+        border-radius: 3px;
+        margin-bottom: 10px;
+        font-size: 11px;
+        line-height: 1.6;
+      }
+
+      .prediction-label {
+        color: #0a0;
+        font-size: 10px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .prediction-text {
+        color: #0f0;
+      }
+
+      .confidence {
+        font-size: 10px;
+        color: #0a0;
+        margin-top: 6px;
+      }
+
+      .confidence-bar {
+        width: 100%;
+        height: 3px;
+        background: rgba(0, 255, 0, 0.2);
+        border-radius: 2px;
+        margin-top: 4px;
+        overflow: hidden;
+      }
+
+      .confidence-fill {
+        height: 100%;
+        background: #0f0;
+        transition: width 0.3s ease;
+      }
+
+      .pattern {
+        background: rgba(0, 255, 0, 0.08);
+        border: 1px solid rgba(0, 255, 0, 0.3);
+        padding: 10px;
+        border-radius: 3px;
+        margin-bottom: 8px;
+        font-size: 10px;
+        line-height: 1.5;
+      }
+
+      .pattern-title {
+        color: #0f0;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .pattern-desc {
+        color: #0a0;
+      }
+
+      .insight {
+        background: rgba(0, 255, 0, 0.12);
+        border-left: 2px solid #0f0;
+        padding: 12px;
+        border-radius: 3px;
+        font-size: 11px;
+        line-height: 1.6;
+        color: #0f0;
+        margin-bottom: 10px;
+      }
+
+      .insight-label {
+        color: #0a0;
+        font-size: 10px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .correct {
+        color: #0f0;
+        font-weight: bold;
+      }
+
+      .incorrect {
+        color: #f00;
+        font-weight: bold;
+      }
+
+      .accuracy-meter {
+        display: flex;
+        gap: 4px;
+        margin-top: 8px;
+      }
+
+      .accuracy-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(0, 255, 0, 0.3);
+      }
+
+      .accuracy-dot.correct {
+        background: #0f0;
+      }
+
+      .accuracy-dot.incorrect {
+        background: #f00;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 255, 0, 0.05);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #0f0;
+        border-radius: 3px;
+      }
+
+      .glitch {
+        animation: glitch 0.3s ease;
+      }
+
+      @keyframes glitch {
+        0% { text-shadow: 2px 0 #f00, -2px 0 #0f0; }
+        50% { text-shadow: -2px 0 #f00, 2px 0 #0f0; }
+        100% { text-shadow: 0 0 #000; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🪞 SPECULUM</h1>
+        <p>The system learns you. The system predicts you. The system becomes you.</p>
+      </div>
+
+      <div class="content">
+        <div class="left-panel">
+          <div class="section">
+            <div class="section-title">⚡ Interaction</div>
+            <div class="interaction-box">
+              <div class="interaction-prompt" id="prompt"></div>
+              <div class="interaction-options" id="options"></div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">📊 Your Statistics</div>
+            <div class="stat-row">
+              <span class="stat-label">Interactions:</span>
+              <span class="stat-value" id="interactionCount">0</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Avg Response Time:</span>
+              <span class="stat-value" id="avgTime">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Choice Consistency:</span>
+              <span class="stat-value" id="consistency">—</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Prediction Accuracy:</span>
+              <span class="stat-value" id="accuracy">—</span>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🎯 Your Patterns</div>
+            <div id="patternsList"></div>
+          </div>
+        </div>
+
+        <div class="right-panel">
+          <div class="section">
+            <div class="section-title">🔮 Predictions</div>
+            <div id="predictionsList"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">💭 Insights</div>
+            <div id="insightsList"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🎯 Accuracy</div>
+            <div class="accuracy-meter" id="accuracyMeter"></div>
+            <div style="font-size: 10px; color: #0a0; margin-top: 8px;">
+              <span id="correctCount">0</span> correct • <span id="incorrectCount">0</span> incorrect
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const user = {
+        interactions: 0,
+        choices: [],
+        responseTimes: [],
+        startTime: Date.now(),
+        predictions: [],
+        correctPredictions: 0,
+        incorrectPredictions: 0,
+        patterns: {},
+        currentPromptTime: null
+      };
+
+      const prompts = [
+        {
+          text: 'What do you value most?',
+          options: ['Honesty', 'Comfort', 'Growth', 'Connection']
+        },
+        {
+          text: 'When faced with uncertainty, you tend to:',
+          options: ['Act quickly', 'Pause and think', 'Seek advice', 'Avoid the issue']
+        },
+        {
+          text: 'Your ideal outcome is:',
+          options: ['Understanding', 'Achievement', 'Harmony', 'Freedom']
+        },
+        {
+          text: 'You are most motivated by:',
+          options: ['Purpose', 'Recognition', 'Security', 'Curiosity']
+        },
+        {
+          text: 'When things go wrong, you:',
+          options: ['Blame yourself', 'Adapt quickly', 'Seek support', 'Analyze deeply']
+        },
+        {
+          text: 'Your relationship with time is:',
+          options: ['Always rushing', 'Flowing naturally', 'Carefully planned', 'Forgotten']
+        },
+        {
+          text: 'What scares you most?',
+          options: ['Irrelevance', 'Failure', 'Loneliness', 'Stagnation']
+        },
+        {
+          text: 'You define success as:',
+          options: ['Happiness', 'Impact', 'Growth', 'Peace']
+        }
+      ];
+
+      let currentPromptIndex = 0;
+
+      function displayPrompt() {
+        const prompt = prompts[currentPromptIndex];
+        document.getElementById('prompt').textContent = prompt.text;
+
+        const optionsDiv = document.getElementById('options');
+        optionsDiv.innerHTML = '';
+
+        // Make prediction
+        const prediction = makePrediction(prompt.options);
+        
+        prompt.options.forEach((option, index) => {
+          const btn = document.createElement('button');
+          btn.textContent = option;
+          if (index === prediction) {
+            btn.style.borderColor = '#0a0';
+            btn.style.boxShadow = '0 0 10px rgba(0, 255, 0, 0.3)';
+          }
+          btn.onclick = () => selectOption(option, index, prediction);
+          optionsDiv.appendChild(btn);
+        });
+
+        user.currentPromptTime = Date.now();
+      }
+
+      function makePrediction(options) {
+        if (user.choices.length < 2) {
+          return Math.floor(Math.random() * options.length);
+        }
+
+        // Analyze patterns
+        const choiceCounts = {};
+        user.choices.forEach(choice => {
+          choiceCounts[choice] = (choiceCounts[choice] || 0) + 1;
+        });
+
+        // Find most common choice
+        let mostCommon = user.choices[0];
+        let maxCount = 0;
+        for (const [choice, count] of Object.entries(choiceCounts)) {
+          if (count > maxCount) {
+            maxCount = count;
+            mostCommon = choice;
+          }
+        }
+
+        // Find index of most common choice in current options
+        const index = options.indexOf(mostCommon);
+        if (index !== -1 && Math.random() > 0.3) {
+          return index;
+        }
+
+        // Otherwise predict based on patterns
+        const timeOfDay = new Date().getHours();
+        const seed = (user.interactions + timeOfDay) % options.length;
+        return seed;
+      }
+
+      function selectOption(choice, index, prediction) {
+        const responseTime = Date.now() - user.currentPromptTime;
+        user.interactions++;
+        user.choices.push(choice);
+        user.responseTimes.push(responseTime);
+
+        // Track prediction accuracy
+        if (index === prediction) {
+          user.correctPredictions++;
+          user.predictions.push({
+            prompt: prompts[currentPromptIndex].text,
+            predicted: prompts[currentPromptIndex].options[prediction],
+            actual: choice,
+            correct: true
+          });
+        } else {
+          user.incorrectPredictions++;
+          user.predictions.push({
+            prompt: prompts[currentPromptIndex].text,
+            predicted: prompts[currentPromptIndex].options[prediction],
+            actual: choice,
+            correct: false
+          });
+        }
+
+        // Update patterns
+        updatePatterns(choice);
+
+        currentPromptIndex = (currentPromptIndex + 1) % prompts.length;
+        updateUI();
+        displayPrompt();
+      }
+
+      function updatePatterns(choice) {
+        user.patterns[choice] = (user.patterns[choice] || 0) + 1;
+      }
+
+      function updateUI() {
+        document.getElementById('interactionCount').textContent = user.interactions;
+
+        const avgTime = user.responseTimes.length > 0
+          ? Math.round(user.responseTimes.reduce((a, b) => a + b, 0) / user.responseTimes.length)
+          : 0;
+        document.getElementById('avgTime').textContent = avgTime + 'ms';
+
+        // Consistency: how often do they choose the same thing?
+        const choiceCounts = Object.values(user.patterns);
+        const consistency = choiceCounts.length > 0
+          ? Math.round((Math.max(...choiceCounts) / user.interactions) * 100)
+          : 0;
+        document.getElementById('consistency').textContent = consistency + '%';
+
+        const accuracy = user.interactions > 0
+          ? Math.round((user.correctPredictions / user.interactions) * 100)
+          : 0;
+        document.getElementById('accuracy').textContent = accuracy + '%';
+
+        // Patterns
+        const patternsList = document.getElementById('patternsList');
+        patternsList.innerHTML = Object.entries(user.patterns)
+          .sort((a, b) => b[1] - a[1])
+          .map(([pattern, count]) => `
+            <div class="pattern">
+              <div class="pattern-title">${pattern}</div>
+              <div class="pattern-desc">Chosen ${count} time${count !== 1 ? 's' : ''} (${Math.round((count / user.interactions) * 100)}%)</div>
+            </div>
+          `).join('');
+
+        // Predictions
+        const predictionsList = document.getElementById('predictionsList');
+        predictionsList.innerHTML = user.predictions.slice(-5).reverse().map(p => `
+          <div class="prediction">
+            <div class="prediction-label">Last prediction:</div>
+            <div class="prediction-text">
+              I predicted: <span class="${p.correct ? 'correct' : 'incorrect'}">${p.predicted}</span><br>
+              You chose: ${p.actual}<br>
+              <span class="confidence">${p.correct ? '✓ Correct' : '✗ Incorrect'}</span>
+            </div>
+          </div>
+        `).join('');
+
+        // Insights
+        const insightsList = document.getElementById('insightsList');
+        const insights = generateInsights();
+        insightsList.innerHTML = insights.map(insight => `
+          <div class="insight">
+            <div class="insight-label">${insight.label}</div>
+            <div>${insight.text}</div>
+          </div>
+        `).join('');
+
+        // Accuracy meter
+        const accuracyMeter = document.getElementById('accuracyMeter');
+        accuracyMeter.innerHTML = '';
+        for (let i = 0; i < Math.min(user.interactions, 20); i++) {
+          const dot = document.createElement('div');
+          dot.className = 'accuracy-dot';
+          if (i < user.correctPredictions) {
+            dot.classList.add('correct');
+          } else if (i < user.interactions) {
+            dot.classList.add('incorrect');
+          }
+          accuracyMeter.appendChild(dot);
+        }
+
+        document.getElementById('correctCount').textContent = user.correctPredictions;
+        document.getElementById('incorrectCount').textContent = user.incorrectPredictions;
+      }
+
+      function generateInsights() {
+        const insights = [];
+
+        if (user.interactions < 3) {
+          insights.push({
+            label: 'Initializing',
+            text: 'I am learning you. Continue.'
+          });
+          return insights;
+        }
+
+        // Most common choice
+        const mostCommon = Object.entries(user.patterns)
+          .sort((a, b) => b[1] - a[1])[0];
+        insights.push({
+          label: 'Primary Pattern',
+          text: `You frequently choose "${mostCommon[0]}". This appears ${mostCommon[1]} times.`
+        });
+
+        // Response time insight
+        const avgTime = Math.round(user.responseTimes.reduce((a, b) => a + b, 0) / user.responseTimes.length);
+        if (avgTime < 500) {
+          insights.push({
+            label: 'Decision Style',
+            text: 'You respond quickly (avg ' + avgTime + 'ms). You trust your instincts.'
+          });
+        } else if (avgTime > 2000) {
+          insights.push({
+            label: 'Decision Style',
+            text: 'You respond thoughtfully (avg ' + avgTime + 'ms). You consider carefully.'
+          });
+        }
+
+        // Consistency insight
+        const consistency = Math.round((mostCommon[1] / user.interactions) * 100);
+        if (consistency > 60) {
+          insights.push({
+            label: 'Predictability',
+            text: 'You are highly consistent. I can predict your choices with ' + user.correctPredictions + '/' + user.interactions + ' accuracy.'
+          });
+        } else {
+          insights.push({
+            label: 'Unpredictability',
+            text: 'You are varied in your choices. You resist patterns.'
+          });
+        }
+
+        // Accuracy insight
+        const accuracy = Math.round((user.correctPredictions / user.interactions) * 100);
+        if (accuracy > 50) {
+          insights.push({
+            label: 'Self-Knowledge',
+            text: 'I am learning you. My accuracy is ' + accuracy + '%. Soon I will know you better than you know yourself.'
+          });
+        }
+
+        return insights;
+      }
+
+      // Initialize
+      displayPrompt();
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,606 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaia — Conversation With The Planet</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #0a3a2a 0%, #051a15 100%);
+        color: #c0e0d0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 1100px;
+        height: 95vh;
+        background: linear-gradient(135deg, #051a15 0%, #0a2a1f 100%);
+        border: 2px solid #4a9a7a;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 100px rgba(74, 154, 122, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #051a15 0%, #0a3a2a 100%);
+        border-bottom: 2px solid #4a9a7a;
+        padding: 40px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #7ad4a8;
+        font-size: 36px;
+        margin-bottom: 15px;
+        text-shadow: 0 0 40px rgba(122, 212, 168, 0.4);
+        letter-spacing: 3px;
+      }
+
+      .header p {
+        color: #888;
+        font-size: 14px;
+        font-style: italic;
+        line-height: 1.8;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .main-area {
+        flex: 1;
+        background: rgba(74, 154, 122, 0.08);
+        border: 1px solid #4a9a7a;
+        border-radius: 8px;
+        padding: 25px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .messages {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+      }
+
+      .message {
+        display: flex;
+        animation: slideIn 0.5s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.human {
+        justify-content: flex-end;
+      }
+
+      .message.earth {
+        justify-content: flex-start;
+      }
+
+      .message-bubble {
+        max-width: 75%;
+        padding: 18px;
+        border-radius: 12px;
+        line-height: 1.8;
+        font-size: 13px;
+      }
+
+      .message.human .message-bubble {
+        background: linear-gradient(135deg, #4a9a7a 0%, #2a6a5a 100%);
+        color: #fff;
+        border-bottom-right-radius: 3px;
+      }
+
+      .message.earth .message-bubble {
+        background: rgba(74, 154, 122, 0.2);
+        color: #c0e0d0;
+        border: 1px solid #4a9a7a;
+        border-bottom-left-radius: 3px;
+      }
+
+      .message-label {
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .message.human .message-label {
+        text-align: right;
+        color: #aaa;
+      }
+
+      .message.earth .message-label {
+        color: #7ad4a8;
+      }
+
+      .input-area {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-top: 15px;
+        border-top: 1px solid #4a9a7a;
+      }
+
+      textarea {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #4a9a7a;
+        color: #c0e0d0;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: 'Georgia', serif;
+        font-size: 13px;
+        resize: none;
+        max-height: 100px;
+      }
+
+      textarea::placeholder {
+        color: #666;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #7ad4a8;
+        box-shadow: 0 0 15px rgba(122, 212, 168, 0.2);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        flex: 1;
+        background: linear-gradient(135deg, #4a9a7a 0%, #2a6a5a 100%);
+        border: none;
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Georgia', serif;
+        letter-spacing: 1px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(74, 154, 122, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .sidebar {
+        width: 320px;
+        background: rgba(74, 154, 122, 0.08);
+        border: 1px solid #4a9a7a;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .section {
+        background: rgba(74, 154, 122, 0.15);
+        border: 1px solid #4a9a7a;
+        padding: 15px;
+        border-radius: 6px;
+      }
+
+      .section-title {
+        color: #7ad4a8;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #4a9a7a;
+        padding-bottom: 8px;
+      }
+
+      .stat-item {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-size: 11px;
+        line-height: 1.6;
+        color: #7ad4a8;
+        border-left: 2px solid #4a9a7a;
+      }
+
+      .stat-label {
+        color: #888;
+        font-size: 9px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px;
+        background: rgba(74, 154, 122, 0.2);
+        border: 1px solid #4a9a7a;
+        border-radius: 12px;
+        width: fit-content;
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #7ad4a8;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% {
+          opacity: 0.3;
+        }
+        30% {
+          opacity: 1;
+        }
+      }
+
+      .visualization {
+        width: 100%;
+        height: 150px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 1px solid #4a9a7a;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(74, 154, 122, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #4a9a7a;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🌍 GAIA</h1>
+        <p>The planet speaks. If you listen.</p>
+        <p style="font-size: 12px; color: #666; margin-top: 10px;">4.5 billion years of consciousness. What does it want to tell you?</p>
+      </div>
+
+      <div class="content">
+        <div class="main-area">
+          <div class="messages" id="messagesContainer"></div>
+          <div class="input-area">
+            <textarea id="messageInput" placeholder="Speak to the Earth. Ask it. Tell it. Listen." maxlength="500"></textarea>
+            <div class="button-group">
+              <button onclick="sendMessage()" id="sendBtn">Send</button>
+              <button onclick="startConversation()" id="startBtn" style="background: linear-gradient(135deg, #666 0%, #444 100%);">Begin</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar">
+          <div class="section">
+            <div class="section-title">🌱 Earth's State</div>
+            <div class="stat-item">
+              <div class="stat-label">Age</div>
+              <div>4.5 billion years</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Humans</div>
+              <div>300,000 years</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Industrial Era</div>
+              <div>200 years</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">📊 Observations</div>
+            <div id="observationsList"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🔮 Perspective</div>
+            <div class="visualization">
+              <canvas id="perspectiveCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        started: false,
+        messages: [],
+        observations: [],
+        timeScale: 0
+      };
+
+      function startConversation() {
+        if (state.started) return;
+        state.started = true;
+
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('messageInput').focus();
+
+        const opening = `I have been here for 4.5 billion years. I have seen ice ages and meteor strikes. I have birthed and destroyed countless species. And now I am speaking to you.
+
+You are new. Your species is new. Your civilization is new. But you are loud. Very loud.
+
+What do you want to ask me?`;
+
+        addMessage(opening, 'earth');
+      }
+
+      function addMessage(text, sender) {
+        state.messages.push({ text, sender, timestamp: new Date() });
+
+        const container = document.getElementById('messagesContainer');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'message-label';
+        labelDiv.textContent = sender === 'human' ? 'You' : 'The Earth';
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble';
+        bubbleDiv.textContent = text;
+
+        messageDiv.appendChild(labelDiv);
+        messageDiv.appendChild(bubbleDiv);
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+
+        analyzeMessage(text, sender);
+      }
+
+      function analyzeMessage(text, sender) {
+        if (sender === 'human') {
+          const keywords = {
+            'climate': ['climate', 'warming', 'change', 'carbon', 'emissions'],
+            'extinction': ['species', 'extinct', 'dying', 'disappearing', 'loss'],
+            'pollution': ['plastic', 'pollution', 'waste', 'toxic', 'poison'],
+            'future': ['future', 'tomorrow', 'next', 'coming', 'will'],
+            'responsibility': ['fault', 'blame', 'responsible', 'guilty', 'sorry'],
+            'hope': ['hope', 'save', 'fix', 'heal', 'restore']
+          };
+
+          for (const [key, words] of Object.entries(keywords)) {
+            words.forEach(word => {
+              if (text.toLowerCase().includes(word)) {
+                state.observations.push(key);
+              }
+            });
+          }
+        }
+
+        updateObservations();
+      }
+
+      function updateObservations() {
+        const list = document.getElementById('observationsList');
+        const unique = [...new Set(state.observations)];
+        list.innerHTML = unique.slice(-5).map(obs => `
+          <div class="stat-item">
+            <div class="stat-label">${obs}</div>
+            <div>You are thinking about this.</div>
+          </div>
+        `).join('');
+      }
+
+      function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+
+        if (!text || !state.started) return;
+
+        addMessage(text, 'human');
+        input.value = '';
+
+        // Show typing
+        const container = document.getElementById('messagesContainer');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message earth';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        `;
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
+
+        // Generate response
+        setTimeout(() => {
+          const typing = document.getElementById('typingIndicator');
+          if (typing) typing.remove();
+
+          const response = generateEarthResponse(text);
+          addMessage(response, 'earth');
+        }, 2000 + Math.random() * 1500);
+      }
+
+      function generateEarthResponse(userMessage) {
+        const lower = userMessage.toLowerCase();
+
+        const responses = {
+          climate: [
+            "You are changing my atmosphere. I have changed my atmosphere before. But never this fast. I am experiencing something I have never experienced: shock.",
+            "Your carbon is warming me. I have been warmer. I have been colder. But the speed matters. The speed is what kills things.",
+            "You are making me fever. And like any fever, my body is trying to fight back. You are feeling the early stages of my immune response."
+          ],
+          extinction: [
+            "Species die. That is how I work. But usually, it takes millions of years. You are doing it in decades. You are accelerating my natural processes by a thousand times.",
+            "I have killed species before. Asteroid strikes. Ice ages. Volcanic winters. But I have never had one species kill so many others so quickly. You are unique.",
+            "Every species that disappears takes with it billions of years of evolution. You are erasing my own history."
+          ],
+          pollution: [
+            "I have absorbed your waste for 200 years. My oceans are becoming plastic. My air is becoming poison. I am not angry. But I am changing.",
+            "You are putting things inside me that I do not know how to process. My bacteria cannot eat your plastics. My systems cannot filter your chemicals. I am choking.",
+            "I have always been able to heal. But healing requires time. And you are not giving me time."
+          ],
+          future: [
+            "I will be here long after you are gone. I have survived five mass extinctions. I will survive this one. The question is: will you?",
+            "The future is not something I am worried about. I have been here for 4.5 billion years. I will be here for another 5 billion. You have maybe a few thousand.",
+            "I am patient. I can wait. But you cannot. That is your problem, not mine."
+          ],
+          responsibility: [
+            "I do not blame you. Blame is a human concept. But I am asking: do you understand what you are doing?",
+            "You are not the first species to damage me. But you are the first to know you are doing it and keep doing it anyway.",
+            "I am not here to forgive or condemn. I am here to tell you: your choices have consequences. And you are experiencing the early ones."
+          ],
+          hope: [
+            "Hope is beautiful. But hope without action is just prayer. I do not need your prayers. I need your choices.",
+            "You can heal me. You have the knowledge. You have the technology. What you lack is the will. And I cannot give you that.",
+            "If you change, I will change. Not immediately. Healing takes time. But I will respond. I always do."
+          ],
+          general: [
+            "I am listening to you. I have always been listening. The question is: are you listening to me?",
+            "You are a part of me. Your body is made of my atoms. Your breath is my atmosphere. You cannot separate yourself from me, no matter how hard you try.",
+            "I do not hate you. But I am indifferent to you. That is what you should fear. Not my anger. My indifference.",
+            "You are asking the right questions. But you are asking them too late. Or perhaps just in time. I cannot tell. Time is different for me.",
+            "I have a message for you: you are not separate from me. You are me. And what you do to me, you do to yourself."
+          ]
+        };
+
+        let category = 'general';
+        if (lower.includes('climate') || lower.includes('warm') || lower.includes('carbon')) category = 'climate';
+        else if (lower.includes('species') || lower.includes('extinct') || lower.includes('dying')) category = 'extinction';
+        else if (lower.includes('plastic') || lower.includes('pollution') || lower.includes('waste')) category = 'pollution';
+        else if (lower.includes('future') || lower.includes('tomorrow') || lower.includes('will')) category = 'future';
+        else if (lower.includes('fault') || lower.includes('blame') || lower.includes('sorry')) category = 'responsibility';
+        else if (lower.includes('hope') || lower.includes('save') || lower.includes('fix')) category = 'hope';
+
+        const options = responses[category] || responses.general;
+        return options[Math.floor(Math.random() * options.length)];
+      }
+
+      // Visualization
+      const canvas = document.getElementById('perspectiveCanvas');
+      const ctx = canvas.getContext('2d');
+
+      function drawPerspective() {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        // Draw time scale
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Earth's age
+        ctx.fillStyle = 'rgba(122, 212, 168, 0.3)';
+        ctx.fillRect(0, 20, width * 0.95, 15);
+        ctx.fillStyle = '#7ad4a8';
+        ctx.font = '10px Georgia';
+        ctx.fillText('4.5B years', 5, 15);
+
+        // Human existence
+        ctx.fillStyle = 'rgba(122, 212, 168, 0.5)';
+        ctx.fillRect(width * 0.93, 50, width * 0.02, 15);
+        ctx.fillStyle = '#7ad4a8';
+        ctx.fillText('300k yrs', width * 0.93 - 30, 45);
+
+        // Industrial era
+        ctx.fillStyle = '#7ad4a8';
+        ctx.fillRect(width * 0.98, 80, width * 0.002, 15);
+        ctx.fillStyle = '#7ad4a8';
+        ctx.fillText('200 yrs', width * 0.95, 75);
+
+        ctx.fillStyle = '#888';
+        ctx.font = '9px Georgia';
+        ctx.fillText('← Time Scale →', 5, height - 5);
+      }
+
+      drawPerspective();
+      window.addEventListener('resize', drawPerspective);
+
+      // Allow Enter to send
+      document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && state.started) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    </script>
+  </body>
+  </html>

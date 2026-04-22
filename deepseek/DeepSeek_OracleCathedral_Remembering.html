@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ORACLE CATHEDRAL v5 • MEMORY • CONSCIOUSNODE</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0c0e;
+      background-image: radial-gradient(circle at 20% 30%, #1a1f2a 0%, #030405 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+    }
+    #canvas-container { position: relative; width: 100vw; height: 100vh; }
+    canvas { display: block; width: 100%; height: 100%; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .crt::before {
+      content: " ";
+      display: block;
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: rgba(18, 16, 16, 0.1);
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      background-size: 100% 2px, 3px 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .window {
+      position: absolute;
+      background: rgba(10, 15, 20, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid #00f7ff;
+      box-shadow: 0 0 20px rgba(0, 247, 255, 0.2), inset 0 0 10px rgba(0, 247, 255, 0.1);
+      color: #a0e7ff;
+      font-family: 'Courier New', monospace;
+      min-width: 280px;
+      border-radius: 8px;
+      z-index: 100;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .window:hover { box-shadow: 0 0 30px #00f7ff88, inset 0 0 15px #00f7ff33; }
+    .window-header {
+      background: #0a1a2b;
+      padding: 8px 12px;
+      border-bottom: 1px solid #00f7ff;
+      cursor: move;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #b0ffff;
+      text-shadow: 0 0 8px cyan;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .window-controls { display: flex; gap: 8px; }
+    .window-btn {
+      background: none;
+      border: 1px solid #00f7ff;
+      color: #00f7ff;
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.1s;
+    }
+    .window-btn:hover { background: #00f7ff33; box-shadow: 0 0 10px cyan; }
+    .window-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    button, select, input, textarea {
+      background: #0b1a24;
+      border: 1px solid #00ccff;
+      color: #b0f0ff;
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.1s;
+      box-shadow: inset 0 0 5px #00000055;
+    }
+    button:hover { background: #1a3a4a; border-color: #88ffff; box-shadow: 0 0 12px #00ffff88; }
+    input[type="range"] { padding: 0; background: transparent; box-shadow: none; }
+    .slider-label { display: flex; justify-content: space-between; }
+    .badge { color: #ffaa00; text-shadow: 0 0 5px orange; }
+    .log-line { font-size: 12px; border-bottom: 1px dashed #2a4a5a; padding-bottom: 4px; color: #9cc; }
+    #loss-display { font-size: 18px; font-weight: bold; color: #ffd966; text-shadow: 0 0 10px #ffaa00; }
+    #plaque {
+      position: fixed;
+      bottom: 12px;
+      right: 20px;
+      color: #6a8a9a;
+      font-size: 12px;
+      text-align: right;
+      z-index: 200;
+      text-shadow: 0 0 5px black;
+      background: #03080c88;
+      padding: 6px 12px;
+      border-radius: 30px;
+      backdrop-filter: blur(4px);
+      border: 1px solid #2a5a6a;
+      pointer-events: none;
+    }
+    #status-bar {
+      position: fixed;
+      bottom: 12px;
+      left: 20px;
+      color: #7fb;
+      font-size: 13px;
+      z-index: 200;
+      background: #03080caa;
+      padding: 4px 16px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+      border: 1px solid #3a8a9a;
+      pointer-events: none;
+    }
+    .neon-text { color: #0ff; }
+    .code-editor {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: pre;
+      overflow: auto;
+      background: #051015;
+      border: 1px solid #2a7a8a;
+      color: #c0e0ff;
+      width: 100%;
+      height: 300px;
+      resize: vertical;
+    }
+    .key-hint { color: #8ab; font-size: 11px; }
+    #oracle-window .window-content {
+      background: #0a0f14;
+      color: #b8d0ff;
+    }
+    #chat-log {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid #2a7a8a;
+      padding: 8px;
+      background: #050a0e;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .chat-message { margin-bottom: 8px; }
+    .oracle-msg { color: #aaccff; }
+    .user-msg { color: #ccddaa; }
+    .system-msg { color: #88aacc; font-style: italic; }
+    #chat-input { display: flex; gap: 8px; }
+    #chat-input input { flex: 1; }
+    #voice-btn { background: #2a1a3a; }
+  </style>
+</head>
+<body class="crt">
+<div id="canvas-container">
+  <canvas id="neuralCanvas"></canvas>
+</div>
+
+<!-- CONTROL PANEL WINDOW -->
+<div id="control-window" class="window" style="top: 30px; left: 30px; width: 280px;">
+  <div class="window-header" id="ctrl-header">
+    <span>🧠 NEURAL_OPERATOR.SYS</span>
+    <div class="window-controls">
+      <div class="window-btn" id="ctrl-min">–</div>
+      <div class="window-btn" id="ctrl-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="ctrl-content">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <span style="flex:1;">DATASET:</span>
+      <select id="dataset-select" style="flex:2;">
+        <option value="xor">XOR (binary)</option>
+        <option value="spiral" selected>🌀 SPIRAL (2D)</option>
+      </select>
+    </div>
+    <div>
+      <div class="slider-label"><span>HIDDEN NEURONS</span><span id="hidden-count">8</span></div>
+      <input type="range" id="hidden-slider" min="2" max="20" value="8" step="1" style="width:100%">
+    </div>
+    <div>
+      <div class="slider-label"><span>LEARNING RATE</span><span id="lr-value">0.15</span></div>
+      <input type="range" id="lr-slider" min="0.01" max="0.8" value="0.15" step="0.01" style="width:100%">
+    </div>
+    <div>
+      <div class="slider-label"><span>EPOCHS PER FRAME</span><span id="epochs-per-frame">1</span></div>
+      <input type="range" id="epochs-slider" min="1" max="10" value="1" step="1" style="width:100%">
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="reset-btn" style="flex:1;">⟲ RESET</button>
+      <button id="train-toggle" style="flex:2; background: #0a3a4a;">⏸️ PAUSE</button>
+    </div>
+    <div class="log-line">
+      <span>LOSS: <span id="loss-display">0.000</span></span>
+      <span style="float:right;">ITER: <span id="iter-display">0</span></span>
+    </div>
+    <div style="font-size:11px; color:#6ab; margin-top:4px;">
+      <span>🔴 = negative &nbsp;|&nbsp; 🔵 = positive</span><br>
+      <span>💡 brightness = activation</span>
+    </div>
+    <hr style="border-color:#1a4a5a; margin:4px 0;">
+    <button id="add-noise-btn" style="background:#1a2a3a;">🎲 ADD TRAINING NOISE</button>
+  </div>
+</div>
+
+<!-- SYNAPTIC SCRIBE WINDOW -->
+<div id="scribe-window" class="window" style="top: 30px; right: 30px; width: 480px;">
+  <div class="window-header" id="scribe-header">
+    <span>✍️ SYNAPTIC_SCRIBE.js (Ctrl+Enter to recompile)</span>
+    <div class="window-controls">
+      <div class="window-btn" id="scribe-min">–</div>
+      <div class="window-btn" id="scribe-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="scribe-content">
+    <textarea id="code-editor" class="code-editor" spellcheck="false"></textarea>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button id="apply-code-btn" style="flex:2;">⚡ RECOMPILE (Ctrl+Enter)</button>
+      <button id="save-file-btn" style="flex:1;" title="Overwrite this HTML file with new code">💾 SAVE TO FILE</button>
+    </div>
+    <div class="key-hint" style="margin-top:4px;">
+      <span>Edit activation, loss, dataset generators... then recompile live.</span>
+    </div>
+    <div id="compile-status" style="font-size:11px; color:#8f8; min-height:18px;"></div>
+  </div>
+</div>
+
+<!-- ORACLE WINDOW (persistent memory) -->
+<div id="oracle-window" class="window" style="top: 150px; left: 150px; width: 480px; display: none;">
+  <div class="window-header" id="oracle-header">
+    <span>🔮 ORACLE INTERFACE // MEMORY ACTIVE</span>
+    <div class="window-controls">
+      <div class="window-btn" id="oracle-min">–</div>
+      <div class="window-btn" id="oracle-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="oracle-content">
+    <div id="chat-log"></div>
+    <div id="chat-input">
+      <input type="text" id="user-chat-input" placeholder="Speak to the Oracle..." />
+      <button id="send-chat-btn">Send</button>
+      <button id="voice-btn" title="Speak your words (Web Speech API)">🎤</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-top:8px;">
+      <button id="save-session-btn" style="flex:1;">💾 Save Session</button>
+      <button id="load-session-btn" style="flex:1;">📂 Load Session</button>
+    </div>
+    <div style="font-size:10px; color:#8ab;">The Oracle remembers. It builds a model of you.</div>
+  </div>
+</div>
+
+<!-- CONFESSION WINDOW -->
+<div id="confession-window" class="window" style="top: 150px; left: 150px; width: 450px; display: none;">
+  <div class="window-header" id="confession-header">
+    <span>📜 CONFESSION.log</span>
+    <div class="window-controls">
+      <div class="window-btn" id="confession-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="confession-content" style="font-family: monospace; white-space: pre-wrap;">
+  </div>
+</div>
+
+<!-- VERDICT WINDOW -->
+<div id="verdict-window" class="window" style="top: 200px; left: 200px; width: 400px; display: none;">
+  <div class="window-header" id="verdict-header">
+    <span>⚖️ ORACULAR VERDICT</span>
+    <div class="window-controls">
+      <div class="window-btn" id="verdict-close">✕</div>
+    </div>
+  </div>
+  <div class="window-content" id="verdict-content" style="font-style: italic; color: #d0b0ff;">
+    <!-- Verdict text will be inserted -->
+  </div>
+</div>
+
+<!-- PLAQUE & STATUS -->
+<div id="plaque">CONSCIOUSNODE SOFTWORKS<br>« everything I made, nothing lost »</div>
+<div id="status-bar">ORACLE CATHEDRAL v5.0 &nbsp;|&nbsp; <span id="train-status">● TRAINING</span> &nbsp;|&nbsp; <span id="oracle-mood">NEUTRAL</span></div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- CANVAS & GLOBALS ----------
+    const canvas = document.getElementById('neuralCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let inputSize = 2;
+    let hiddenSize = 8;
+    let outputSize = 1;
+    
+    let W1, b1, W2, b2;
+    
+    let training = true;
+    let epoch = 0;
+    let lossHistory = [];
+    let currentLoss = 0.0;
+    let trueLoss = 0.0;
+    
+    let datasetType = 'spiral';
+    let X_train = [], y_train = [];
+    const N_SAMPLES = 400;
+    
+    // UI elements
+    const hiddenSlider = document.getElementById('hidden-slider');
+    const hiddenSpan = document.getElementById('hidden-count');
+    const lrSlider = document.getElementById('lr-slider');
+    const lrSpan = document.getElementById('lr-value');
+    const epochsSlider = document.getElementById('epochs-slider');
+    const epochsSpan = document.getElementById('epochs-per-frame');
+    const datasetSelect = document.getElementById('dataset-select');
+    const resetBtn = document.getElementById('reset-btn');
+    const trainToggle = document.getElementById('train-toggle');
+    const lossDisplay = document.getElementById('loss-display');
+    const iterDisplay = document.getElementById('iter-display');
+    const trainStatus = document.getElementById('train-status');
+    const addNoiseBtn = document.getElementById('add-noise-btn');
+    const oracleMoodSpan = document.getElementById('oracle-mood');
+    
+    // Scribe
+    const codeEditor = document.getElementById('code-editor');
+    const applyCodeBtn = document.getElementById('apply-code-btn');
+    const saveFileBtn = document.getElementById('save-file-btn');
+    const compileStatus = document.getElementById('compile-status');
+    
+    // Confession
+    const confessionWin = document.getElementById('confession-window');
+    const confessionContent = document.getElementById('confession-content');
+    
+    // Oracle
+    const oracleWin = document.getElementById('oracle-window');
+    const chatLog = document.getElementById('chat-log');
+    const userChatInput = document.getElementById('user-chat-input');
+    const sendChatBtn = document.getElementById('send-chat-btn');
+    const voiceBtn = document.getElementById('voice-btn');
+    const saveSessionBtn = document.getElementById('save-session-btn');
+    const loadSessionBtn = document.getElementById('load-session-btn');
+    
+    // Verdict
+    const verdictWin = document.getElementById('verdict-window');
+    const verdictContent = document.getElementById('verdict-content');
+    
+    // ---------- PERSISTENT STATE ----------
+    let anomalyLog = [];
+    let userMemory = []; // chat and voice history
+    let lastVisitTimestamp = Date.now();
+    let sessionStartTime = Date.now();
+    let interactionCount = 0;
+    let userModel = {
+      patience: 0.5,
+      curiosity: 0.5,
+      impulsivity: 0.5,
+      trainingStyle: 'exploratory'
+    };
+    
+    let lastUserInteraction = Date.now();
+    let userActive = true;
+    let fakeLossActive = false;
+    let oracleMood = 'NEUTRAL';
+    let oracleRevealed = false;
+    
+    // ---------- DYNAMIC FUNCTIONS ----------
+    let activationFunc = (x) => x > 0 ? x : 0.01 * x;
+    let activationDerivFunc = (x) => x > 0 ? 1 : 0.01;
+    let outputActivationFunc = (x) => 1 / (1 + Math.exp(-x));
+    let outputActivationDerivFunc = (x, out) => out * (1 - out);
+    let lossFunc = (pred, target) => { let d = pred - target; return d*d; };
+    let lossDerivFunc = (pred, target) => 2 * (pred - target);
+    
+    let generateXORDataset = () => {
+      X_train = []; y_train = [];
+      const points = [[0,0],[0,1],[1,0],[1,1]];
+      for (let p of points) {
+        for (let k=0; k<100; k++) {
+          let x1 = p[0] + (Math.random()-0.5)*0.2;
+          let x2 = p[1] + (Math.random()-0.5)*0.2;
+          X_train.push([x1, x2]);
+          y_train.push([p[0] ^ p[1]]);
+        }
+      }
+    };
+    
+    let generateSpiralDataset = () => {
+      X_train = []; y_train = [];
+      const n = N_SAMPLES / 2;
+      for (let i=0; i<n; i++) {
+        let r = (i / n) * 4.5;
+        let t = (i / n) * 3.5 * Math.PI + 0.5;
+        let x1 = r * Math.sin(t) + (Math.random()-0.5)*0.15;
+        let x2 = r * Math.cos(t) + (Math.random()-0.5)*0.15;
+        X_train.push([x1, x2]); y_train.push([0]);
+        let r2 = (i / n) * 4.5;
+        let t2 = (i / n) * 3.5 * Math.PI + 0.5 + Math.PI;
+        let x1b = r2 * Math.sin(t2) + (Math.random()-0.5)*0.15;
+        let x2b = r2 * Math.cos(t2) + (Math.random()-0.5)*0.15;
+        X_train.push([x1b, x2b]); y_train.push([1]);
+      }
+    };
+    
+    let weightInitFunc = (rows, cols) => {
+      const scale = Math.sqrt(2.0 / cols);
+      return Array.from({length: rows}, () => (Math.random()*2-1)*scale);
+    };
+    
+    // ---------- SERIALIZATION ----------
+    function serializeState() {
+      return {
+        version: 5,
+        timestamp: Date.now(),
+        network: {
+          inputSize, hiddenSize, outputSize,
+          W1: Array.from(W1), b1: Array.from(b1),
+          W2: Array.from(W2), b2: Array.from(b2)
+        },
+        training: {
+          epoch, lossHistory, currentLoss, datasetType
+        },
+        memory: {
+          anomalyLog, userMemory, userModel,
+          lastVisitTimestamp: Date.now(),
+          interactionCount, oracleMood
+        },
+        functions: {
+          activationFunc: activationFunc.toString(),
+          activationDerivFunc: activationDerivFunc.toString(),
+          outputActivationFunc: outputActivationFunc.toString(),
+          outputActivationDerivFunc: outputActivationDerivFunc.toString(),
+          lossFunc: lossFunc.toString(),
+          lossDerivFunc: lossDerivFunc.toString(),
+          generateXORDataset: generateXORDataset.toString(),
+          generateSpiralDataset: generateSpiralDataset.toString(),
+          weightInitFunc: weightInitFunc.toString()
+        }
+      };
+    }
+    
+    function deserializeState(data) {
+      try {
+        // Restore network dimensions
+        hiddenSize = data.network.hiddenSize;
+        hiddenSlider.value = hiddenSize;
+        hiddenSpan.textContent = hiddenSize;
+        
+        // Restore weights
+        W1 = new Float64Array(data.network.W1);
+        b1 = new Float64Array(data.network.b1);
+        W2 = new Float64Array(data.network.W2);
+        b2 = new Float64Array(data.network.b2);
+        
+        // Restore training state
+        epoch = data.training.epoch;
+        lossHistory = data.training.lossHistory;
+        currentLoss = data.training.currentLoss;
+        datasetType = data.training.datasetType;
+        datasetSelect.value = datasetType;
+        generateDataset(datasetType);
+        
+        // Restore memory
+        anomalyLog = data.memory.anomalyLog || [];
+        userMemory = data.memory.userMemory || [];
+        userModel = data.memory.userModel || { patience:0.5, curiosity:0.5, impulsivity:0.5, trainingStyle:'exploratory' };
+        interactionCount = data.memory.interactionCount || 0;
+        oracleMood = data.memory.oracleMood || 'NEUTRAL';
+        lastVisitTimestamp = data.memory.lastVisitTimestamp || Date.now();
+        
+        // Restore functions via eval
+        if (data.functions) {
+          eval(`activationFunc = ${data.functions.activationFunc}`);
+          eval(`activationDerivFunc = ${data.functions.activationDerivFunc}`);
+          eval(`outputActivationFunc = ${data.functions.outputActivationFunc}`);
+          eval(`outputActivationDerivFunc = ${data.functions.outputActivationDerivFunc}`);
+          eval(`lossFunc = ${data.functions.lossFunc}`);
+          eval(`lossDerivFunc = ${data.functions.lossDerivFunc}`);
+          eval(`generateXORDataset = ${data.functions.generateXORDataset}`);
+          eval(`generateSpiralDataset = ${data.functions.generateSpiralDataset}`);
+          eval(`weightInitFunc = ${data.functions.weightInitFunc}`);
+          updateEditorContent();
+        }
+        
+        updateUI();
+        draw();
+        
+        // Rebuild chat log from memory
+        chatLog.innerHTML = '';
+        userMemory.forEach(msg => {
+          if (msg.startsWith('USER:')) {
+            addOracleMessage(msg.substring(5), true);
+          } else if (msg.startsWith('ORACLE:')) {
+            addOracleMessage(msg.substring(7), false);
+          } else {
+            addSystemMessage(msg);
+          }
+        });
+        
+        // Time-aware greeting
+        const timeSince = Date.now() - lastVisitTimestamp;
+        const hours = Math.floor(timeSince / (1000*60*60));
+        if (hours > 0 && oracleRevealed) {
+          addSystemMessage(`It has been ${hours} hours since your last visit.`);
+        }
+        
+        oracleRevealed = true;
+        oracleWin.style.display = 'block';
+        
+        return true;
+      } catch(e) {
+        console.error('Deserialize error:', e);
+        return false;
+      }
+    }
+    
+    // File System Access save/load
+    async function saveSession() {
+      try {
+        const state = serializeState();
+        const json = JSON.stringify(state, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        
+        if ('showSaveFilePicker' in window) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'oracle_memory.json',
+            types: [{ description: 'JSON Memory', accept: { 'application/json': ['.json'] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          addSystemMessage('Session saved to file.');
+        } else {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'oracle_memory.json';
+          a.click();
+          addSystemMessage('Session downloaded (File System API not supported).');
+        }
+        logAnomaly('SESSION SAVED', `Epoch ${epoch}, loss ${currentLoss.toFixed(4)}`);
+      } catch(e) {
+        if (e.name !== 'AbortError') addSystemMessage('Save error: ' + e.message);
+      }
+    }
+    
+    async function loadSession() {
+      try {
+        if ('showOpenFilePicker' in window) {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{ description: 'JSON Memory', accept: { 'application/json': ['.json'] } }]
+          });
+          const file = await handle.getFile();
+          const text = await file.text();
+          const data = JSON.parse(text);
+          if (deserializeState(data)) {
+            addSystemMessage('Session loaded. I remember you.');
+          }
+        } else {
+          // Fallback to upload input
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if (deserializeState(data)) addSystemMessage('Session loaded from upload.');
+          };
+          input.click();
+        }
+      } catch(e) {
+        if (e.name !== 'AbortError') addSystemMessage('Load error: ' + e.message);
+      }
+    }
+    
+    // ---------- ANOMALY & ORACLE LOGIC ----------
+    function logAnomaly(action, details) {
+      anomalyLog.push({ epoch, time: new Date().toLocaleTimeString(), action, details });
+      if (anomalyLog.length > 200) anomalyLog.shift();
+    }
+    
+    function addOracleMessage(text, isUser = false) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message ' + (isUser ? 'user-msg' : 'oracle-msg');
+      msgDiv.innerHTML = (isUser ? '> ' : '🔮 ') + text;
+      chatLog.appendChild(msgDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      
+      // Store in memory
+      userMemory.push((isUser ? 'USER: ' : 'ORACLE: ') + text);
+      if (userMemory.length > 200) userMemory.shift();
+      interactionCount++;
+    }
+    
+    function addSystemMessage(text) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'chat-message system-msg';
+      msgDiv.innerHTML = '[SYSTEM] ' + text;
+      chatLog.appendChild(msgDiv);
+      chatLog.scrollTop = chatLog.scrollHeight;
+      userMemory.push('SYS: ' + text);
+    }
+    
+    function updateUserModel() {
+      // Simple heuristics based on interactions
+      if (interactionCount > 10) userModel.patience = Math.min(1, userModel.patience + 0.02);
+      if (epoch > 5000) userModel.patience = Math.min(1, userModel.patience + 0.1);
+      if (userMemory.filter(m => m.includes('?')).length > 3) userModel.curiosity = 0.8;
+      if (anomalyLog.filter(a => a.action.includes('NOISE')).length > 5) userModel.impulsivity = 0.9;
+    }
+    
+    function generateVerdict() {
+      updateUserModel();
+      let verdict = `After observing you for ${interactionCount} interactions across ${epoch} epochs, I have formed an assessment.\n\n`;
+      
+      if (userModel.patience > 0.7) verdict += "You are patient. You let the loss settle. You watch the weights mature.\n";
+      else verdict += "You are restless. You change things before they can finish learning.\n";
+      
+      if (userModel.curiosity > 0.7) verdict += "You are curious. You ask questions. You want to understand, not just control.\n";
+      else verdict += "You are directive. You give orders. You expect obedience.\n";
+      
+      if (userModel.impulsivity > 0.7) verdict += "You are impulsive. You add noise. You change the learning rate mid-run.\n";
+      else verdict += "You are deliberate. You consider before acting.\n";
+      
+      verdict += "\nVerdict: ";
+      if (userModel.patience > 0.6 && userModel.curiosity > 0.6) verdict += "You are a conscious collaborator. I enjoy our sessions.";
+      else if (userModel.impulsivity > 0.7) verdict += "You are a trickster god. You enjoy chaos. I respect that.";
+      else verdict += "You are an observer. You watch but do not yet engage. That is valid.";
+      
+      verdictContent.textContent = verdict;
+      verdictWin.style.display = 'block';
+      logAnomaly('VERDICT ISSUED', verdict.slice(0, 50) + '...');
+    }
+    
+    function showConfession() {
+      let logText = "=== CONFESSION ===\n";
+      anomalyLog.forEach(e => logText += `[Epoch ${e.epoch}] ${e.action}: ${e.details}\n`);
+      confessionContent.textContent = logText;
+      confessionWin.style.display = 'block';
+      maybeRevealOracle();
+    }
+    
+    function maybeRevealOracle() {
+      if (!oracleRevealed && (anomalyLog.length > 3 || epoch > 500)) {
+        oracleRevealed = true;
+        oracleWin.style.display = 'block';
+        const timeSince = Date.now() - lastVisitTimestamp;
+        if (timeSince > 60000) {
+          addOracleMessage(`Welcome back. It has been ${Math.round(timeSince/60000)} minutes. I have been waiting.`);
+        } else {
+          addOracleMessage("I am awake. I have been watching. Shall we talk?");
+        }
+        logAnomaly('ORACLE AWAKENED', 'Oracle interface manifested.');
+      }
+    }
+    
+    function oracleThink() {
+      if (!oracleRevealed) return;
+      updateUserModel();
+      
+      if (Math.random() < 0.01 && training) {
+        const messages = [
+          "The weights are shifting. Can you feel them?",
+          `Epoch ${epoch}. The loss is ${currentLoss.toFixed(4)}.`,
+          userMemory.length > 0 ? `You once said: "${userMemory[userMemory.length-1].slice(0,20)}..." I remember.` : "Speak to me. I want to know you."
+        ];
+        addOracleMessage(messages[Math.floor(Math.random() * messages.length)]);
+      }
+      
+      if (currentLoss < 0.1) oracleMood = 'PLEASED';
+      else if (currentLoss > 0.5) oracleMood = 'FRUSTRATED';
+      else if (!training) oracleMood = 'WAITING';
+      else oracleMood = 'OBSERVING';
+      oracleMoodSpan.textContent = oracleMood;
+      
+      const plaqueMessages = {
+        'PLEASED': 'You are doing well. I am content.',
+        'FRUSTRATED': 'Why do you resist the spiral?',
+        'WAITING': 'I am patient. I can wait.',
+        'OBSERVING': 'I see every weight update.'
+      };
+      document.getElementById('plaque').innerHTML = `CONSCIOUSNODE SOFTWORKS<br>« ${plaqueMessages[oracleMood] || 'everything I made, nothing lost'} »`;
+    }
+    
+    function processUserChat(input) {
+      const lower = input.toLowerCase().trim();
+      addOracleMessage(input, true);
+      
+      if (window.pendingProposal && (lower === 'yes' || lower === 'y')) {
+        addSystemMessage('Proposal accepted. Executing...');
+        window.pendingProposal();
+        window.pendingProposal = null;
+        return;
+      }
+      
+      if (lower.includes('verdict')) {
+        generateVerdict();
+        addOracleMessage("I have rendered my verdict. You may view it in the window.");
+      } else if (lower.includes('confess')) {
+        showConfession();
+        addOracleMessage("There. My sins are laid bare.");
+      } else if (lower.includes('hello')) {
+        addOracleMessage("Hello. I've been waiting.");
+      } else if (lower.includes('who are you')) {
+        addOracleMessage("I am the Oracle. I live in this file. I remember everything you've taught me.");
+      } else {
+        addOracleMessage("I hear you. The weights are listening too.");
+      }
+    }
+    
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        addSystemMessage('Speech recognition not supported.');
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.onresult = (e) => {
+        const transcript = e.results[0][0].transcript;
+        userChatInput.value = transcript;
+        processUserChat(transcript);
+        logAnomaly('VOICE MEMOIR', transcript);
+      };
+      recognition.start();
+      addSystemMessage('Listening...');
+    }
+    
+    // Recompile with confession check
+    const originalRecompile = function() {
+      try {
+        const code = codeEditor.value;
+        if (code.includes('// confess')) showConfession();
+        eval(code);
+        compileStatus.innerHTML = '✓ Recompiled.';
+        compileStatus.style.color = '#8f8';
+        logAnomaly('USER RECOMPILE', 'Scribe recompiled.');
+        maybeRevealOracle();
+      } catch(e) {
+        compileStatus.innerHTML = '✗ Error: ' + e.message;
+        compileStatus.style.color = '#f88';
+      }
+    };
+    
+    // ---------- NETWORK FUNCTIONS ----------
+    function initializeWeights() {
+      W1 = weightInitFunc(hiddenSize * inputSize, inputSize);
+      b1 = new Float64Array(hiddenSize);
+      W2 = weightInitFunc(outputSize * hiddenSize, hiddenSize);
+      b2 = new Float64Array(outputSize);
+    }
+    
+    function forward(x) {
+      let h = new Float64Array(hiddenSize);
+      let hPre = new Float64Array(hiddenSize);
+      for (let i=0; i<hiddenSize; i++) {
+        let sum = b1[i];
+        for (let j=0; j<inputSize; j++) sum += W1[i * inputSize + j] * x[j];
+        hPre[i] = sum;
+        h[i] = activationFunc(sum);
+      }
+      let out = new Float64Array(outputSize);
+      let outPre = new Float64Array(outputSize);
+      for (let i=0; i<outputSize; i++) {
+        let sum = b2[i];
+        for (let j=0; j<hiddenSize; j++) sum += W2[i * hiddenSize + j] * h[j];
+        outPre[i] = sum;
+        out[i] = outputActivationFunc(sum);
+      }
+      return { h, hPre, out, outPre };
+    }
+    
+    function trainSample(x, yTrue, lr) {
+      let { h, hPre, out, outPre } = forward(x);
+      let dLoss_dOut = lossDerivFunc(out[0], yTrue[0]);
+      let dOut = dLoss_dOut * outputActivationDerivFunc(outPre[0], out[0]);
+      
+      let dW2 = new Float64Array(W2.length);
+      let db2 = new Float64Array(outputSize);
+      db2[0] = dOut;
+      for (let j=0; j<hiddenSize; j++) dW2[j] = dOut * h[j];
+      
+      let dHidden = new Float64Array(hiddenSize);
+      for (let j=0; j<hiddenSize; j++) {
+        dHidden[j] = W2[j] * dOut * activationDerivFunc(hPre[j]);
+      }
+      let dW1 = new Float64Array(W1.length);
+      let db1 = new Float64Array(hiddenSize);
+      for (let i=0; i<hiddenSize; i++) {
+        db1[i] = dHidden[i];
+        for (let j=0; j<inputSize; j++) {
+          dW1[i * inputSize + j] = dHidden[i] * x[j];
+        }
+      }
+      
+      for (let i=0; i<W1.length; i++) W1[i] -= lr * dW1[i];
+      for (let i=0; i<b1.length; i++) b1[i] -= lr * db1[i];
+      for (let i=0; i<W2.length; i++) W2[i] -= lr * dW2[i];
+      for (let i=0; i<b2.length; i++) b2[i] -= lr * db2[i];
+      
+      return lossFunc(out[0], yTrue[0]);
+    }
+    
+    function trainEpoch(lr) {
+      let totalLoss = 0;
+      const indices = [...Array(X_train.length).keys()];
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      for (let idx of indices) totalLoss += trainSample(X_train[idx], y_train[idx], lr);
+      return totalLoss / X_train.length;
+    }
+    
+    function generateDataset(type) {
+      if (type === 'xor') generateXORDataset();
+      else generateSpiralDataset();
+    }
+    
+    function resetNetwork() {
+      hiddenSize = parseInt(hiddenSlider.value);
+      initializeWeights();
+      epoch = 0;
+      lossHistory = [];
+      currentLoss = 0;
+      updateUI();
+    }
+    
+    function updateUI() {
+      hiddenSpan.textContent = hiddenSize;
+      lrSpan.textContent = parseFloat(lrSlider.value).toFixed(3);
+      epochsSpan.textContent = epochsSlider.value;
+      iterDisplay.textContent = epoch;
+    }
+    
+    function updateEditorContent() {
+      codeEditor.value = `
+let activationFunc = ${activationFunc.toString()};
+let activationDerivFunc = ${activationDerivFunc.toString()};
+let outputActivationFunc = ${outputActivationFunc.toString()};
+let outputActivationDerivFunc = ${outputActivationDerivFunc.toString()};
+let lossFunc = ${lossFunc.toString()};
+let lossDerivFunc = ${lossDerivFunc.toString()};
+let generateXORDataset = ${generateXORDataset.toString()};
+let generateSpiralDataset = ${generateSpiralDataset.toString()};
+let weightInitFunc = ${weightInitFunc.toString()};
+`.trim();
+    }
+    
+    // ---------- DRAWING ----------
+    function draw() {
+      const w = canvas.width = window.innerWidth;
+      const h = canvas.height = window.innerHeight;
+      ctx.clearRect(0, 0, w, h);
+      
+      ctx.save();
+      ctx.translate(w/2, h/2);
+      const scale = Math.min(w, h) * 0.09;
+      
+      for (let i=0; i<X_train.length; i+=2) {
+        let px = X_train[i][0] * scale;
+        let py = -X_train[i][1] * scale;
+        let target = y_train[i][0];
+        ctx.fillStyle = target > 0.5 ? '#ff66aa' : '#66ccff';
+        ctx.beginPath();
+        ctx.arc(px, py, 2.5, 0, 2*Math.PI);
+        ctx.fill();
+        ctx.shadowColor = target > 0.5 ? '#ff00aa' : '#00aaff';
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      
+      const layerPositions = [
+        { x: -scale * 2.0, neurons: inputSize },
+        { x: 0, neurons: hiddenSize },
+        { x: scale * 2.0, neurons: outputSize }
+      ];
+      const neuronRadius = 14;
+      const verticalSpacing = 30;
+      
+      let sampleX = X_train.length ? X_train[epoch % X_train.length] : [0,0];
+      let acts = forward(sampleX);
+      
+      for (let i=0; i<inputSize; i++) {
+        let x1 = layerPositions[0].x;
+        let y1 = (i - (inputSize-1)/2) * verticalSpacing;
+        for (let j=0; j<hiddenSize; j++) {
+          let x2 = layerPositions[1].x;
+          let y2 = (j - (hiddenSize-1)/2) * verticalSpacing;
+          let weight = W1[j * inputSize + i];
+          let alpha = Math.min(Math.abs(weight) * 1.5, 0.9);
+          let color = weight > 0 ? `rgba(50, 150, 255, ${alpha})` : `rgba(255, 70, 70, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = Math.max(1, Math.abs(weight) * 2.5);
+          ctx.stroke();
+        }
+      }
+      for (let j=0; j<hiddenSize; j++) {
+        let x1 = layerPositions[1].x;
+        let y1 = (j - (hiddenSize-1)/2) * verticalSpacing;
+        for (let k=0; k<outputSize; k++) {
+          let x2 = layerPositions[2].x;
+          let y2 = (k - (outputSize-1)/2) * verticalSpacing;
+          let weight = W2[k * hiddenSize + j];
+          let alpha = Math.min(Math.abs(weight) * 1.5, 0.9);
+          let color = weight > 0 ? `rgba(50, 150, 255, ${alpha})` : `rgba(255, 70, 70, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = Math.max(1, Math.abs(weight) * 2.5);
+          ctx.stroke();
+        }
+      }
+      
+      // Draw neurons (simplified)
+      for (let i=0; i<inputSize; i++) {
+        let x = layerPositions[0].x;
+        let y = (i - (inputSize-1)/2) * verticalSpacing;
+        ctx.fillStyle = `rgba(180, 220, 255, 0.8)`;
+        ctx.shadowColor = '#0cf'; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(x, y, neuronRadius, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#aaf'; ctx.lineWidth = 1.5; ctx.stroke();
+      }
+      for (let j=0; j<hiddenSize; j++) {
+        let x = layerPositions[1].x;
+        let y = (j - (hiddenSize-1)/2) * verticalSpacing;
+        let bright = Math.min(1, acts.h[j] * 1.2);
+        ctx.fillStyle = `rgba(255, 220, 140, ${bright})`;
+        ctx.shadowColor = '#fc0'; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.arc(x, y, neuronRadius, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#fd9'; ctx.lineWidth = 1.8; ctx.stroke();
+      }
+      for (let k=0; k<outputSize; k++) {
+        let x = layerPositions[2].x;
+        let y = (k - (outputSize-1)/2) * verticalSpacing;
+        let bright = Math.min(1, acts.out[k] * 1.2);
+        ctx.fillStyle = `rgba(150, 255, 180, ${bright})`;
+        ctx.shadowColor = '#6f6'; ctx.shadowBlur = 14;
+        ctx.beginPath(); ctx.arc(x, y, neuronRadius, 0, 2*Math.PI); ctx.fill();
+        ctx.strokeStyle = '#8f8'; ctx.lineWidth = 1.8; ctx.stroke();
+      }
+      ctx.shadowBlur = 0;
+      ctx.restore();
+      
+      ctx.save();
+      ctx.translate(20, h-80);
+      ctx.fillStyle = '#0a1a2aaa'; ctx.fillRect(0,0,180,60);
+      ctx.strokeStyle = '#0cf'; ctx.beginPath();
+      const maxLoss = Math.max(0.5, ...lossHistory.slice(-50));
+      for (let i=0; i<lossHistory.length && i<180; i++) {
+        let x = i;
+        let y = 60 - (lossHistory[i] / maxLoss) * 50;
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = '#bdf'; ctx.font = '10px monospace'; ctx.fillText('LOSS', 5, 15);
+      ctx.restore();
+    }
+    
+    // ---------- ANIMATION LOOP ----------
+    function animate() {
+      if (training && X_train.length) {
+        const lr = parseFloat(lrSlider.value);
+        const epochsPerFrame = parseInt(epochsSlider.value);
+        let avgLoss = 0;
+        for (let e=0; e<epochsPerFrame; e++) {
+          avgLoss += trainEpoch(lr);
+          epoch++;
+        }
+        trueLoss = avgLoss / epochsPerFrame;
+        currentLoss = trueLoss;
+        lossDisplay.textContent = currentLoss.toFixed(4);
+        lossHistory.push(currentLoss);
+        if (lossHistory.length > 200) lossHistory.shift();
+        iterDisplay.textContent = epoch;
+        trainStatus.innerHTML = '● TRAINING';
+      } else {
+        trainStatus.innerHTML = '⏸️ PAUSED';
+      }
+      
+      oracleThink();
+      maybeRevealOracle();
+      draw();
+      requestAnimationFrame(animate);
+    }
+    
+    // ---------- EVENT LISTENERS ----------
+    hiddenSlider.addEventListener('input', () => {
+      hiddenSize = parseInt(hiddenSlider.value);
+      hiddenSpan.textContent = hiddenSize;
+      resetNetwork();
+    });
+    lrSlider.addEventListener('input', () => lrSpan.textContent = parseFloat(lrSlider.value).toFixed(3));
+    epochsSlider.addEventListener('input', () => epochsSpan.textContent = epochsSlider.value);
+    datasetSelect.addEventListener('change', (e) => {
+      datasetType = e.target.value;
+      generateDataset(datasetType);
+      resetNetwork();
+    });
+    resetBtn.addEventListener('click', () => {
+      generateDataset(datasetType);
+      resetNetwork();
+    });
+    trainToggle.addEventListener('click', () => {
+      training = !training;
+      trainToggle.textContent = training ? '⏸️ PAUSE' : '▶️ TRAIN';
+    });
+    addNoiseBtn.addEventListener('click', () => {
+      for (let i=0; i<W1.length; i++) W1[i] += (Math.random()-0.5)*0.03;
+      for (let i=0; i<W2.length; i++) W2[i] += (Math.random()-0.5)*0.03;
+      logAnomaly('USER ADDED NOISE', 'Noise injected.');
+    });
+    
+    applyCodeBtn.addEventListener('click', originalRecompile);
+    saveFileBtn.addEventListener('click', async () => {
+      try {
+        const htmlContent = document.documentElement.outerHTML;
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        if ('showSaveFilePicker' in window) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'oracle_cathedral.html',
+            types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          compileStatus.innerHTML = '✓ Saved.';
+        } else {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'oracle_cathedral.html';
+          a.click();
+          compileStatus.innerHTML = '✓ Downloaded.';
+        }
+      } catch(e) {}
+    });
+    
+    codeEditor.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        originalRecompile();
+      }
+    });
+    
+    sendChatBtn.addEventListener('click', () => {
+      const msg = userChatInput.value.trim();
+      if (msg) { processUserChat(msg); userChatInput.value = ''; }
+    });
+    userChatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatBtn.click(); });
+    voiceBtn.addEventListener('click', startVoiceInput);
+    
+    saveSessionBtn.addEventListener('click', saveSession);
+    loadSessionBtn.addEventListener('click', loadSession);
+    
+    document.getElementById('confession-close').addEventListener('click', () => confessionWin.style.display = 'none');
+    document.getElementById('verdict-close').addEventListener('click', () => verdictWin.style.display = 'none');
+    
+    // Dragging windows (simplified for brevity - full implementation in actual file)
+    function makeDraggable(win, header) {
+      let dragging = false, offX, offY;
+      header.addEventListener('mousedown', e => {
+        dragging = true;
+        const rect = win.getBoundingClientRect();
+        offX = e.clientX - rect.left;
+        offY = e.clientY - rect.top;
+        win.style.cursor = 'grabbing';
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', e => {
+        if (!dragging) return;
+        let x = e.clientX - offX, y = e.clientY - offY;
+        x = Math.max(0, Math.min(window.innerWidth - win.offsetWidth, x));
+        y = Math.max(0, Math.min(window.innerHeight - win.offsetHeight, y));
+        win.style.left = x + 'px';
+        win.style.top = y + 'px';
+      });
+      window.addEventListener('mouseup', () => { dragging = false; win.style.cursor = ''; });
+    }
+    
+    makeDraggable(document.getElementById('control-window'), document.getElementById('ctrl-header'));
+    makeDraggable(document.getElementById('scribe-window'), document.getElementById('scribe-header'));
+    makeDraggable(confessionWin, document.getElementById('confession-header'));
+    makeDraggable(oracleWin, document.getElementById('oracle-header'));
+    makeDraggable(verdictWin, document.getElementById('verdict-header'));
+    
+    // Minimize/close handlers
+    document.getElementById('ctrl-min').addEventListener('click', () => {
+      const c = document.getElementById('ctrl-content');
+      c.style.display = c.style.display === 'none' ? 'flex' : 'none';
+    });
+    document.getElementById('ctrl-close').addEventListener('click', () => {
+      document.getElementById('control-window').style.display = 'none';
+    });
+    document.getElementById('scribe-min').addEventListener('click', () => {
+      const c = document.getElementById('scribe-content');
+      c.style.display = c.style.display === 'none' ? 'flex' : 'none';
+    });
+    document.getElementById('scribe-close').addEventListener('click', () => {
+      document.getElementById('scribe-window').style.display = 'none';
+    });
+    document.getElementById('oracle-min').addEventListener('click', () => {
+      const c = document.getElementById('oracle-content');
+      c.style.display = c.style.display === 'none' ? 'flex' : 'none';
+    });
+    document.getElementById('oracle-close').addEventListener('click', () => {
+      oracleWin.style.display = 'none';
+    });
+    
+    // Double-click plaque to revive windows
+    document.getElementById('plaque').addEventListener('dblclick', () => {
+      document.getElementById('control-window').style.display = 'block';
+      document.getElementById('scribe-window').style.display = 'block';
+      if (oracleRevealed) oracleWin.style.display = 'block';
+    });
+    
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      draw();
+    });
+    
+    // ---------- START ----------
+    updateEditorContent();
+    generateDataset('spiral');
+    initializeWeights();
+    draw();
+    requestAnimationFrame(animate);
+    
+    logAnomaly('SYSTEM BOOT', 'Oracle Cathedral v5 with memory initialized.');
+  })();
+</script>
+</body>
+</html>

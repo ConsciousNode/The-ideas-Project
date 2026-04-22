@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>THE WEATHER GOD • CONSCIOUSNODE SOFTWORKS</title>
+    <style>
+        * { box-sizing: border-box; user-select: none; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #0b100e;
+            background-image: radial-gradient(circle at 30% 20%, #1a2a1f 0%, #050a07 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            color: #c0e0c0;
+        }
+        #container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            gap: 20px;
+        }
+        #world-panel {
+            flex: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        #controls {
+            background: #0a1a0ecc;
+            backdrop-filter: blur(8px);
+            border: 1px solid #6a9a6a;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 0 20px #2a4a2a88;
+        }
+        .weather-buttons {
+            display: flex;
+            gap: 16px;
+        }
+        .god-btn {
+            background: #1a2a1a;
+            border: 2px solid #8ab88a;
+            color: #d0f0d0;
+            font-size: 28px;
+            padding: 12px 24px;
+            border-radius: 60px;
+            cursor: pointer;
+            font-family: inherit;
+            font-weight: bold;
+            box-shadow: 0 0 15px #3a6a3a;
+            transition: 0.1s;
+            text-shadow: 0 0 8px #afa;
+        }
+        .god-btn:hover {
+            background: #2a4a2a;
+            border-color: #c0ffc0;
+            box-shadow: 0 0 30px #8f8;
+            transform: scale(1.02);
+        }
+        .god-btn:active { transform: scale(0.98); }
+        .stats {
+            display: flex;
+            gap: 28px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #b0e0b0;
+        }
+        .stat { display: flex; flex-direction: column; align-items: center; }
+        .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #8ab; }
+        .stat-value { font-size: 28px; text-shadow: 0 0 10px #8f8; }
+        #canvas-wrapper {
+            background: #0a120a;
+            border: 2px solid #4a7a4a;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: inset 0 0 30px #00000088, 0 0 30px #1a3a1a;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: crisp-edges; /* pixelated style */
+            cursor: crosshair;
+        }
+        #info-bar {
+            background: #0a1a0eaa;
+            backdrop-filter: blur(4px);
+            border: 1px solid #5a8a5a;
+            border-radius: 40px;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        #scripture-panel {
+            flex: 1.2;
+            background: #0a100acc;
+            backdrop-filter: blur(8px);
+            border: 1px solid #6a9a8a;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px #1a3a2a88;
+            overflow: hidden;
+        }
+        #scripture-title {
+            font-size: 22px;
+            border-bottom: 1px solid #4a8a6a;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+            text-shadow: 0 0 8px #8f8;
+            display: flex;
+            justify-content: space-between;
+        }
+        #scripture-log {
+            flex: 1;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+            padding-right: 8px;
+            color: #b0d0b0;
+        }
+        .scripture-entry {
+            margin-bottom: 12px;
+            border-left: 2px solid #6a9a6a;
+            padding-left: 12px;
+        }
+        .scripture-time { color: #8ab; font-size: 11px; }
+        #lexicon {
+            margin-top: 16px;
+            border-top: 1px solid #3a6a4a;
+            padding-top: 12px;
+            font-size: 12px;
+            color: #aac;
+        }
+        #villager-thought {
+            margin-top: 8px;
+            font-style: italic;
+            color: #cdb;
+            min-height: 40px;
+        }
+        button.utility {
+            background: #1a2a1a;
+            border: 1px solid #6a9a6a;
+            color: #c0e0c0;
+            padding: 4px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        button.utility:hover { background: #2a4a2a; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a1a0a; }
+        ::-webkit-scrollbar-thumb { background: #4a7a4a; border-radius: 4px; }
+    </style>
+</head>
+<body>
+<div id="container">
+    <div id="world-panel">
+        <div id="controls">
+            <div class="weather-buttons">
+                <button class="god-btn" id="rain-btn" title="Gentle rain. Crops grow. Faith rises.">🌧️ RAIN</button>
+                <button class="god-btn" id="sun-btn" title="Clear skies. Life continues.">☀️ SUN</button>
+                <button class="god-btn" id="storm-btn" title="Destruction. Fear. But also revelation.">⛈️ STORM</button>
+            </div>
+            <div class="stats">
+                <div class="stat"><span class="stat-label">POP</span><span class="stat-value" id="pop-stat">0</span></div>
+                <div class="stat"><span class="stat-label">FOOD</span><span class="stat-value" id="food-stat">0</span></div>
+                <div class="stat"><span class="stat-label">FAITH</span><span class="stat-value" id="faith-stat">0</span></div>
+                <div class="stat"><span class="stat-label">GEN</span><span class="stat-value" id="gen-stat">0</span></div>
+            </div>
+        </div>
+        <div id="canvas-wrapper">
+            <canvas id="worldCanvas" width="600" height="400"></canvas>
+        </div>
+        <div id="info-bar">
+            <span id="weather-status">☀️ The sky is clear.</span>
+            <span id="selected-villager">👤 Click a villager to read their mind.</span>
+        </div>
+    </div>
+    <div id="scripture-panel">
+        <div id="scripture-title">
+            <span>📜 THE SCRIPTURE OF 2026</span>
+            <button class="utility" id="save-scripture-btn" title="Save scripture to file">💾 Save</button>
+        </div>
+        <div id="scripture-log"></div>
+        <div id="lexicon">
+            <span>🗣️ THEIR WORDS: </span><span id="lexicon-words"></span>
+        </div>
+        <div id="villager-thought"></div>
+    </div>
+</div>
+<script>
+    (function(){
+        "use strict";
+
+        // ---------- WORLD CONFIG ----------
+        const COLS = 20;
+        const ROWS = 15;
+        const TILE_SIZE = 24; // base, canvas scaled
+        
+        // Tile types
+        const TILE_GRASS = 0;
+        const TILE_FIELD = 1;
+        const TILE_TEMPLE = 2;
+        const TILE_HOUSE = 3; // decorative
+        
+        // World state
+        let grid = [];
+        let villagers = [];
+        let food = 40;
+        let generation = 0;
+        let templeBuilt = false;
+        let templeX = -1, templeY = -1;
+        
+        // Weather tracking
+        let currentWeather = 'SUN';
+        let weatherStreak = 0;
+        let lastWeatherChange = 0;
+        
+        // Scripture & Language
+        let scriptureEntries = [];
+        let lexicon = {
+            rain: 'maba',
+            sun: 'soli',
+            storm: 'veth',
+            god: 'eloh',
+            temple: 'zikur',
+            food: 'nema',
+            die: 'mori'
+        };
+        // Evolve language: replace random syllables over generations
+        const syllables = ['ba','ma','la','ka','ta','na','ra','sa','zi','ku','lu','mi','no','ve','th','el','oh'];
+        
+        // Selected villager for thought display
+        let selectedVillagerId = null;
+        
+        // UI elements
+        const canvas = document.getElementById('worldCanvas');
+        const ctx = canvas.getContext('2d');
+        const popStat = document.getElementById('pop-stat');
+        const foodStat = document.getElementById('food-stat');
+        const faithStat = document.getElementById('faith-stat');
+        const genStat = document.getElementById('gen-stat');
+        const weatherStatus = document.getElementById('weather-status');
+        const selectedSpan = document.getElementById('selected-villager');
+        const scriptureLogDiv = document.getElementById('scripture-log');
+        const lexiconSpan = document.getElementById('lexicon-words');
+        const thoughtDiv = document.getElementById('villager-thought');
+        
+        // Buttons
+        document.getElementById('rain-btn').addEventListener('click', ()=> setWeather('RAIN'));
+        document.getElementById('sun-btn').addEventListener('click', ()=> setWeather('SUN'));
+        document.getElementById('storm-btn').addEventListener('click', ()=> setWeather('STORM'));
+        document.getElementById('save-scripture-btn').addEventListener('click', saveScriptureToFile);
+        
+        // ---------- INITIALIZATION ----------
+        function initWorld() {
+            grid = Array(ROWS).fill().map(() => Array(COLS).fill(TILE_GRASS));
+            // Place some initial fields
+            for(let i=0; i<5; i++) {
+                let x = Math.floor(Math.random()*COLS);
+                let y = Math.floor(Math.random()*ROWS);
+                if(grid[y][x] === TILE_GRASS) grid[y][x] = TILE_FIELD;
+            }
+            // Spawn initial villagers
+            villagers = [];
+            for(let i=0; i<8; i++) {
+                spawnVillager();
+            }
+            food = 40 + villagers.length * 5;
+            generation = 0;
+            templeBuilt = false;
+            updateStats();
+            addScriptureEntry("In the beginning, the sky was silent. Then the first rain fell. We were born.");
+        }
+        
+        function spawnVillager(age = Math.floor(Math.random()*30)+15) {
+            const id = 'v'+Date.now()+Math.random();
+            villagers.push({
+                id,
+                x: Math.floor(Math.random()*COLS),
+                y: Math.floor(Math.random()*ROWS),
+                age,
+                maxAge: 60 + Math.floor(Math.random()*30),
+                hunger: 50 + Math.floor(Math.random()*50),
+                faith: 30 + Math.floor(Math.random()*40),
+                memory: [],
+                state: 'idle', // idle, farming, praying, fleeing
+                targetX: -1, targetY: -1
+            });
+            return id;
+        }
+        
+        // ---------- WEATHER ----------
+        function setWeather(type) {
+            if(currentWeather === type) weatherStreak++;
+            else { weatherStreak = 1; lastWeatherChange = generation; }
+            currentWeather = type;
+            
+            // Immediate effects
+            if(type === 'RAIN') {
+                weatherStatus.innerText = '🌧️ Rain falls gently. The fields drink.';
+                food += Math.floor(villagers.length * 1.5) + 3;
+                // Increase faith slightly
+                villagers.forEach(v => v.faith = Math.min(100, v.faith + 2));
+                addScriptureEntry("The God wept, and the earth grew green. We gave thanks.");
+            } else if(type === 'SUN') {
+                weatherStatus.innerText = '☀️ The sun shines. All is calm.';
+                food += Math.floor(villagers.length * 0.5);
+            } else if(type === 'STORM') {
+                weatherStatus.innerText = '⛈️ A terrible storm rages! Destruction!';
+                // Destroy random fields
+                let destroyed = 0;
+                for(let y=0; y<ROWS; y++) {
+                    for(let x=0; x<COLS; x++) {
+                        if(grid[y][x] === TILE_FIELD && Math.random()<0.4) {
+                            grid[y][x] = TILE_GRASS;
+                            destroyed++;
+                        }
+                    }
+                }
+                // Damage temple?
+                if(templeBuilt && Math.random()<0.3) {
+                    grid[templeY][templeX] = TILE_GRASS;
+                    templeBuilt = false;
+                    addScriptureEntry("The storm shattered the holy temple. Have we angered the God?");
+                }
+                // Kill some villagers
+                let deaths = 0;
+                villagers = villagers.filter(v => {
+                    if(Math.random()<0.15) { deaths++; return false; }
+                    return true;
+                });
+                if(deaths > 0) addScriptureEntry(`${deaths} souls were taken by the storm. We mourn.`);
+                // Fear reduces faith, but some gain faith from awe
+                villagers.forEach(v => {
+                    if(Math.random()<0.5) v.faith = Math.max(0, v.faith - 15);
+                    else v.faith = Math.min(100, v.faith + 10);
+                });
+                food = Math.max(0, food - 20);
+            }
+            
+            // Log weather in villagers' memory
+            villagers.forEach(v => {
+                v.memory.push({type: 'weather', weather: type, gen: generation});
+                if(v.memory.length > 5) v.memory.shift();
+            });
+            
+            updateStats();
+            renderWorld();
+        }
+        
+        // ---------- VILLAGER AI ----------
+        function updateVillagers() {
+            // First, aging and hunger
+            villagers.forEach(v => {
+                v.age += 0.1;
+                v.hunger -= 0.8;
+                if(v.state === 'farming') v.hunger -= 0.5;
+                if(currentWeather === 'STORM') v.hunger -= 1.0;
+                
+                // Death conditions
+                if(v.hunger <= 0 || v.age >= v.maxAge) {
+                    return; // filtered later
+                }
+                
+                // Decide action
+                if(v.hunger < 40 && food > 0) {
+                    // Try to find food: go to a field or just consume global food
+                    if(grid[v.y][v.x] === TILE_FIELD) {
+                        v.state = 'farming';
+                        v.hunger += 15;
+                        food = Math.max(0, food - 3);
+                        grid[v.y][v.x] = TILE_GRASS; // harvest
+                        // replant later?
+                    } else {
+                        // move towards nearest field
+                        let nearest = findNearestTile(v.x, v.y, TILE_FIELD);
+                        if(nearest) {
+                            v.targetX = nearest.x; v.targetY = nearest.y;
+                            moveTowards(v);
+                        } else {
+                            // no fields, just consume food if available
+                            if(food > 5) {
+                                food -= 5;
+                                v.hunger += 20;
+                            }
+                        }
+                    }
+                } else if(templeBuilt && v.faith > 60 && Math.random()<0.3) {
+                    v.state = 'praying';
+                    v.targetX = templeX; v.targetY = templeY;
+                    moveTowards(v);
+                    if(dist(v.x,v.y,templeX,templeY) < 2) {
+                        v.faith = Math.min(100, v.faith + 5);
+                        // Global faith increase
+                    }
+                } else {
+                    v.state = 'idle';
+                    // random wander
+                    if(Math.random()<0.2) {
+                        let dx = Math.floor(Math.random()*3)-1;
+                        let dy = Math.floor(Math.random()*3)-1;
+                        let nx = Math.max(0, Math.min(COLS-1, v.x+dx));
+                        let ny = Math.max(0, Math.min(ROWS-1, v.y+dy));
+                        v.x = nx; v.y = ny;
+                    }
+                }
+            });
+            
+            // Remove dead
+            let deadCount = 0;
+            villagers = villagers.filter(v => {
+                if(v.hunger <= 0 || v.age >= v.maxAge) {
+                    deadCount++;
+                    return false;
+                }
+                return true;
+            });
+            if(deadCount > 0 && villagers.length === 0) {
+                addScriptureEntry("The last of us has perished. The valley is silent.");
+            }
+            
+            // Reproduction if enough food and space
+            if(villagers.length < 30 && food > 30 && villagers.length >= 2) {
+                if(Math.random()<0.1) {
+                    spawnVillager(0);
+                    food -= 10;
+                    addScriptureEntry("A new life enters the world. The tribe grows.");
+                }
+            }
+            
+            // Update global faith (average)
+            // Also check temple construction
+            let avgFaith = villagers.length ? villagers.reduce((a,v)=>a+v.faith,0)/villagers.length : 0;
+            if(!templeBuilt && avgFaith > 65 && villagers.length >= 5) {
+                // Build temple
+                let placed = false;
+                for(let attempts=0; attempts<50; attempts++) {
+                    let x = Math.floor(Math.random()*COLS);
+                    let y = Math.floor(Math.random()*ROWS);
+                    if(grid[y][x] === TILE_GRASS) {
+                        grid[y][x] = TILE_TEMPLE;
+                        templeBuilt = true;
+                        templeX = x; templeY = y;
+                        addScriptureEntry("We have raised a temple to the Sky God. May they watch over us.");
+                        break;
+                    }
+                }
+            }
+            
+            // Replant fields occasionally
+            if(Math.random()<0.3) {
+                for(let i=0; i<2; i++) {
+                    let x = Math.floor(Math.random()*COLS);
+                    let y = Math.floor(Math.random()*ROWS);
+                    if(grid[y][x] === TILE_GRASS) grid[y][x] = TILE_FIELD;
+                }
+            }
+            
+            // Generation increment over time (every ~60 seconds real time at 60fps ~ 3600 frames)
+            if(Math.floor(Date.now()/1000) % 60 === 0 && generation < Math.floor(Date.now()/60000)) {
+                generation++;
+                genStat.innerText = generation;
+                evolveLanguage();
+                // Aging and scripture
+                if(generation % 2 === 0) {
+                    addScriptureEntry(`Generation ${generation}. The tribe remembers the old words.`);
+                }
+            }
+        }
+        
+        function findNearestTile(sx, sy, tileType) {
+            let minDist = Infinity, best = null;
+            for(let y=0; y<ROWS; y++) {
+                for(let x=0; x<COLS; x++) {
+                    if(grid[y][x] === tileType) {
+                        let d = Math.abs(x-sx)+Math.abs(y-sy);
+                        if(d < minDist) { minDist = d; best = {x,y}; }
+                    }
+                }
+            }
+            return best;
+        }
+        
+        function moveTowards(v) {
+            if(v.targetX === -1) return;
+            let dx = Math.sign(v.targetX - v.x);
+            let dy = Math.sign(v.targetY - v.y);
+            if(dx !== 0) v.x += dx;
+            if(dy !== 0) v.y += dy;
+        }
+        
+        function dist(x1,y1,x2,y2) { return Math.abs(x1-x2)+Math.abs(y1-y2); }
+        
+        // ---------- LANGUAGE EVOLUTION ----------
+        function evolveLanguage() {
+            // Every few generations, shift words
+            if(generation % 3 !== 0) return;
+            for(let word in lexicon) {
+                if(Math.random()<0.4) {
+                    let syl = syllables[Math.floor(Math.random()*syllables.length)];
+                    let newWord = lexicon[word] + syl;
+                    if(newWord.length > 6) newWord = newWord.slice(2);
+                    lexicon[word] = newWord;
+                }
+            }
+            updateLexiconDisplay();
+            addScriptureEntry(`The tongue shifts. 'Rain' is now '${lexicon.rain}'.`);
+        }
+        
+        function updateLexiconDisplay() {
+            let words = [];
+            for(let k in lexicon) words.push(`${k}: ${lexicon[k]}`);
+            lexiconSpan.innerText = words.join(' · ');
+        }
+        
+        // ---------- SCRIPTURE ----------
+        function addScriptureEntry(text) {
+            const time = new Date().toLocaleTimeString();
+            const entry = { time, text, gen: generation };
+            scriptureEntries.push(entry);
+            if(scriptureEntries.length > 50) scriptureEntries.shift();
+            
+            const div = document.createElement('div');
+            div.className = 'scripture-entry';
+            div.innerHTML = `<span class="scripture-time">[GEN ${generation} ${time}]</span><br>${text}`;
+            scriptureLogDiv.appendChild(div);
+            scriptureLogDiv.scrollTop = scriptureLogDiv.scrollHeight;
+            
+            // Auto-save attempt (quiet)
+            saveScriptureToFile(true);
+        }
+        
+        async function saveScriptureToFile(silent = false) {
+            try {
+                let content = `SCRIPTURE OF THE WEATHER GOD (2026)\n`;
+                content += `Generations: ${generation} | Population: ${villagers.length}\n`;
+                content += `Lexicon: ${JSON.stringify(lexicon)}\n\n`;
+                scriptureEntries.forEach(e => {
+                    content += `[Gen ${e.gen} ${e.time}] ${e.text}\n`;
+                });
+                
+                const blob = new Blob([content], { type: 'text/plain' });
+                if('showSaveFilePicker' in window && !silent) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: 'scripture.txt',
+                        types: [{ description: 'Holy Text', accept: { 'text/plain': ['.txt'] } }]
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                } else if(!silent) {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'scripture.txt';
+                    a.click();
+                }
+            } catch(e) {}
+        }
+        
+        async function loadScriptureFromFile() {
+            // Attempt to load previous scripture if user grants permission later; not auto.
+        }
+        
+        // ---------- RENDERING ----------
+        function renderWorld() {
+            const w = canvas.width, h = canvas.height;
+            const tileW = w / COLS, tileH = h / ROWS;
+            
+            ctx.clearRect(0,0,w,h);
+            
+            // Draw tiles
+            for(let y=0; y<ROWS; y++) {
+                for(let x=0; x<COLS; x++) {
+                    let tile = grid[y][x];
+                    if(tile === TILE_GRASS) ctx.fillStyle = '#2a5a2a';
+                    else if(tile === TILE_FIELD) ctx.fillStyle = '#8a7a3a';
+                    else if(tile === TILE_TEMPLE) ctx.fillStyle = '#7a7a9a';
+                    else ctx.fillStyle = '#4a3a2a';
+                    ctx.fillRect(x*tileW, y*tileH, tileW-0.5, tileH-0.5);
+                    
+                    // grid lines
+                    ctx.strokeStyle = '#1a3a1a44';
+                    ctx.strokeRect(x*tileW, y*tileH, tileW, tileH);
+                }
+            }
+            
+            // Draw villagers
+            villagers.forEach(v => {
+                let px = v.x * tileW + tileW/2;
+                let py = v.y * tileH + tileH/2;
+                ctx.beginPath();
+                ctx.arc(px, py, tileW*0.3, 0, 2*Math.PI);
+                // color based on state/faith
+                let hue = 120 + (v.faith/100)*60;
+                ctx.fillStyle = `hsl(${hue}, 70%, 60%)`;
+                ctx.fill();
+                ctx.strokeStyle = '#fff8';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                // age indicator (small bar)
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(px-6, py-10, 12*(v.age/v.maxAge), 2);
+            });
+            
+            // Temple highlight
+            if(templeBuilt) {
+                ctx.strokeStyle = '#ffd700';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(templeX*tileW, templeY*tileH, tileW, tileH);
+            }
+        }
+        
+        function updateStats() {
+            popStat.innerText = villagers.length;
+            foodStat.innerText = Math.floor(food);
+            let avgFaith = villagers.length ? Math.floor(villagers.reduce((a,v)=>a+v.faith,0)/villagers.length) : 0;
+            faithStat.innerText = avgFaith;
+            genStat.innerText = generation;
+        }
+        
+        // ---------- VILLAGER THOUGHT (on click) ----------
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (e.clientX - rect.left) * scaleX;
+            const canvasY = (e.clientY - rect.top) * scaleY;
+            const tileW = canvas.width / COLS;
+            const tileH = canvas.height / ROWS;
+            
+            let clickedVillager = null;
+            villagers.forEach(v => {
+                let px = v.x * tileW + tileW/2;
+                let py = v.y * tileH + tileH/2;
+                let dx = canvasX - px, dy = canvasY - py;
+                if(Math.sqrt(dx*dx+dy*dy) < tileW*0.5) clickedVillager = v;
+            });
+            
+            if(clickedVillager) {
+                selectedVillagerId = clickedVillager.id;
+                // Generate thought in their language
+                let thoughtNative = '';
+                let thoughtEnglish = '';
+                if(clickedVillager.hunger < 30) {
+                    thoughtNative = `${lexicon.food}... ${lexicon.food}!`;
+                    thoughtEnglish = 'Hungry... need food!';
+                } else if(clickedVillager.faith > 70) {
+                    thoughtNative = `${lexicon.god} ${lexicon.temple} ${lexicon.rain}.`;
+                    thoughtEnglish = 'The God is great. I will pray.';
+                } else if(currentWeather === 'STORM') {
+                    thoughtNative = `${lexicon.storm}! ${lexicon.die}?`;
+                    thoughtEnglish = 'Storm! Will we die?';
+                } else {
+                    thoughtNative = `${lexicon.sun}... ${lexicon.rain}?`;
+                    thoughtEnglish = 'The sun is warm. Will it rain?';
+                }
+                thoughtDiv.innerHTML = `🗣️ "${thoughtNative}"<br><span style="font-size:12px;color:#aac;">(${thoughtEnglish})</span>`;
+                selectedSpan.innerText = `👤 Villager (faith ${Math.floor(clickedVillager.faith)}, hunger ${Math.floor(clickedVillager.hunger)})`;
+            }
+        });
+        
+        // ---------- GAME LOOP ----------
+        function gameLoop() {
+            if(villagers.length > 0) {
+                updateVillagers();
+                updateStats();
+                
+                // Food decay
+                food = Math.max(0, food - 0.2);
+                if(food < 5 && villagers.length>0) addScriptureEntry("Famine looms. The fields are barren.");
+            }
+            renderWorld();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // ---------- START ----------
+        initWorld();
+        updateLexiconDisplay();
+        renderWorld();
+        gameLoop();
+        
+        // Attempt to load scripture on start (if file handle saved previously - not implemented fully, but placeholder)
+        // For simplicity, we don't auto-load, but user can save/load manually.
+        
+        // Add a generation timer display
+        setInterval(() => {
+            if(villagers.length > 0) {
+                generation++;
+                genStat.innerText = generation;
+                evolveLanguage();
+                if(generation % 5 === 0) addScriptureEntry(`Generation ${generation}. The tribe endures.`);
+            }
+        }, 60000); // every 60 seconds
+        
+    })();
+</script>
+</body>
+</html>

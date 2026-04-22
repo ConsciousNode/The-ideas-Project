@@ -1,0 +1,453 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epitaph — Your Eulogy</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 900px;
+        height: 95vh;
+        background: linear-gradient(135deg, #0f0f1e 0%, #1a0a2a 100%);
+        border: 2px solid #6b4c7a;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 80px rgba(107, 76, 122, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #0f0f1e 0%, #1a0a2a 100%);
+        border-bottom: 2px solid #6b4c7a;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #b8a0c0;
+        font-size: 32px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 30px rgba(184, 160, 192, 0.4);
+        letter-spacing: 2px;
+      }
+
+      .header p {
+        color: #888;
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .input-panel {
+        flex: 0 0 350px;
+        background: rgba(107, 76, 122, 0.08);
+        border: 1px solid #6b4c7a;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .output-panel {
+        flex: 1;
+        background: rgba(107, 76, 122, 0.05);
+        border: 1px solid #6b4c7a;
+        border-radius: 8px;
+        padding: 30px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .section-title {
+        color: #b8a0c0;
+        font-size: 12px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+        border-bottom: 1px solid #6b4c7a;
+        padding-bottom: 8px;
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 11px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      input[type="text"],
+      textarea {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #6b4c7a;
+        color: #e0e0e0;
+        padding: 10px;
+        border-radius: 6px;
+        font-family: 'Georgia', serif;
+        font-size: 12px;
+      }
+
+      input[type="text"]:focus,
+      textarea:focus {
+        outline: none;
+        border-color: #b8a0c0;
+        box-shadow: 0 0 10px rgba(184, 160, 192, 0.2);
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 80px;
+      }
+
+      button {
+        background: linear-gradient(135deg, #6b4c7a 0%, #4b2c5a 100%);
+        border: none;
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Georgia', serif;
+        letter-spacing: 1px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(107, 76, 122, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .eulogy-display {
+        display: none;
+      }
+
+      .eulogy-display.active {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .eulogy-title {
+        font-size: 24px;
+        color: #b8a0c0;
+        margin-bottom: 20px;
+        text-align: center;
+        border-bottom: 1px solid #6b4c7a;
+        padding-bottom: 15px;
+      }
+
+      .eulogy-text {
+        font-size: 14px;
+        line-height: 2;
+        color: #e0e0e0;
+        text-align: justify;
+      }
+
+      .eulogy-section {
+        margin-bottom: 30px;
+      }
+
+      .eulogy-section-title {
+        color: #b8a0c0;
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .loading-text {
+        color: #888;
+        font-size: 13px;
+        font-style: italic;
+      }
+
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 2px solid #6b4c7a;
+        border-top-color: #b8a0c0;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+        color: #888;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(107, 76, 122, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #6b4c7a;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>⚰️ EPITAPH</h1>
+        <p>What will be said about you when you're gone?</p>
+      </div>
+
+      <div class="content">
+        <div class="input-panel">
+          <div>
+            <div class="section-title">About You</div>
+            <div class="input-group">
+              <label>Your Name</label>
+              <input type="text" id="name" placeholder="What were you called?">
+            </div>
+            <div class="input-group">
+              <label>Your Age</label>
+              <input type="text" id="age" placeholder="How long did you live?">
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Your Life</div>
+            <div class="input-group">
+              <label>What were you known for?</label>
+              <textarea id="knownFor" placeholder="What did people remember about you?"></textarea>
+            </div>
+            <div class="input-group">
+              <label>What did you struggle with?</label>
+              <textarea id="struggled" placeholder="What was hard for you?"></textarea>
+            </div>
+            <div class="input-group">
+              <label>What did you love?</label>
+              <textarea id="loved" placeholder="What brought you joy?"></textarea>
+            </div>
+            <div class="input-group">
+              <label>What would you want people to remember?</label>
+              <textarea id="remember" placeholder="Your legacy..."></textarea>
+            </div>
+          </div>
+
+          <button onclick="generateEulogy()" id="generateBtn">Generate Eulogy</button>
+        </div>
+
+        <div class="output-panel">
+          <div id="outputArea" class="empty-state">
+            <div>
+              <div style="font-size: 14px; color: #b8a0c0; margin-bottom: 10px;">Tell us about your life.</div>
+              <div style="font-size: 12px; color: #888;">Then we will write what might be said.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function generateEulogy() {
+        const name = document.getElementById('name').value.trim();
+        const age = document.getElementById('age').value.trim();
+        const knownFor = document.getElementById('knownFor').value.trim();
+        const struggled = document.getElementById('struggled').value.trim();
+        const loved = document.getElementById('loved').value.trim();
+        const remember = document.getElementById('remember').value.trim();
+
+        if (!name) {
+          alert('Please enter your name');
+          return;
+        }
+
+        const outputArea = document.getElementById('outputArea');
+        outputArea.innerHTML = `
+          <div class="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Writing your eulogy...</div>
+          </div>
+        `;
+        outputArea.classList.add('active');
+
+        document.getElementById('generateBtn').disabled = true;
+
+        setTimeout(() => {
+          const eulogy = createEulogy(name, age, knownFor, struggled, loved, remember);
+          outputArea.innerHTML = eulogy;
+          document.getElementById('generateBtn').disabled = false;
+        }, 2000 + Math.random() * 1000);
+      }
+
+      function createEulogy(name, age, knownFor, struggled, loved, remember) {
+        const opening = generateOpening(name, age);
+        const character = generateCharacter(knownFor, struggled);
+        const impact = generateImpact(loved, remember);
+        const closing = generateClosing(name);
+
+        return `
+          <div class="eulogy-title">In Memory of ${name}</div>
+          
+          <div class="eulogy-section">
+            <div class="eulogy-section-title">Opening</div>
+            <div class="eulogy-text">${opening}</div>
+          </div>
+
+          <div class="eulogy-section">
+            <div class="eulogy-section-title">Who They Were</div>
+            <div class="eulogy-text">${character}</div>
+          </div>
+
+          <div class="eulogy-section">
+            <div class="eulogy-section-title">Their Legacy</div>
+            <div class="eulogy-text">${impact}</div>
+          </div>
+
+          <div class="eulogy-section">
+            <div class="eulogy-section-title">Closing</div>
+            <div class="eulogy-text">${closing}</div>
+          </div>
+        `;
+      }
+
+      function generateOpening(name, age) {
+        const ageText = age ? ` at the age of ${age}` : '';
+        const openings = [
+          `We gather today to remember ${name}${ageText}. A person who walked among us, who mattered, who left a mark.`,
+          `${name} is gone now${ageText}. But the space they occupied in our lives remains.`,
+          `Today we say goodbye to ${name}${ageText}. Today we remember.`,
+          `${name} lived. ${name} loved. ${name} struggled. And now ${name} is gone.`
+        ];
+        return openings[Math.floor(Math.random() * openings.length)];
+      }
+
+      function generateCharacter(knownFor, struggled) {
+        let text = '';
+
+        if (knownFor) {
+          const characterizations = [
+            `${knownFor} — that's what people will remember. That's what defined them.`,
+            `People knew them for ${knownFor}. It was their gift, their burden, their identity.`,
+            `${knownFor}. In a world of noise, that's what they stood for.`
+          ];
+          text += characterizations[Math.floor(Math.random() * characterizations.length)];
+        }
+
+        if (struggled) {
+          text += ' ';
+          const struggles = [
+            `But they also struggled with ${struggled}. We all saw it. We all felt it. And we loved them anyway.`,
+            `Yet they carried ${struggled} with them. It was their weight to bear, and they bore it.`,
+            `They wrestled with ${struggled}. It was never easy. But they kept going.`
+          ];
+          text += struggles[Math.floor(Math.random() * struggles.length)];
+        }
+
+        if (!text) {
+          text = 'They were human. Flawed, trying, present. That is enough.';
+        }
+
+        return text;
+      }
+
+      function generateImpact(loved, remember) {
+        let text = '';
+
+        if (loved) {
+          const impacts = [
+            `They loved ${loved}. That love was real. It changed people. It changed the world, in small ways.`,
+            `What they loved was ${loved}. And in loving it, they taught us how to love.`,
+            `${loved} — that's where their heart was. And their heart was good.`
+          ];
+          text += impacts[Math.floor(Math.random() * impacts.length)];
+        }
+
+        if (remember) {
+          text += ' ';
+          const legacies = [
+            `They wanted us to remember: ${remember}. Let us honor that wish.`,
+            `"${remember}" — these were their words. Let them echo.`,
+            `They hoped we would remember ${remember}. We will.`
+          ];
+          text += legacies[Math.floor(Math.random() * legacies.length)];
+        }
+
+        if (!text) {
+          text = 'They lived. They mattered. That is their legacy.';
+        }
+
+        return text;
+      }
+
+      function generateClosing(name) {
+        const closings = [
+          `Goodbye, ${name}. We will miss you. We will remember you. We will carry you forward.`,
+          `${name}, you are gone but not forgotten. You are gone but not gone.`,
+          `Rest now, ${name}. You earned it. We will take it from here.`,
+          `${name}, thank you for being here. Thank you for being you. Thank you for the time.`,
+          `We say goodbye to ${name}. But goodbye is not the end. It is a transformation.`
+        ];
+        return closings[Math.floor(Math.random() * closings.length)];
+      }
+    </script>
+  </body>
+  </html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>contract.html — negotiate with the file</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      background: #1e1b2e;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .contract-container {
+      max-width: 1000px;
+      width: 100%;
+      background: #fef7e6;
+      color: #2d2a1f;
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      overflow: hidden;
+      border: 1px solid #e2c28b;
+    }
+    .header {
+      background: #2d2a1f;
+      color: #f5e2b0;
+      padding: 16px 24px;
+      font-family: monospace;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .main {
+      padding: 24px;
+    }
+    .clause {
+      background: #fff6e8;
+      border-left: 6px solid #b8860b;
+      padding: 16px;
+      margin: 20px 0;
+      border-radius: 16px;
+    }
+    .party {
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+    button {
+      background: #e2c28b;
+      border: none;
+      color: #2d2a1f;
+      padding: 8px 18px;
+      border-radius: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 8px 8px 0 0;
+      transition: 0.1s;
+    }
+    button:hover {
+      background: #c9a962;
+      transform: scale(0.98);
+    }
+    .counter-offer {
+      background: #f0e5d2;
+      padding: 12px;
+      border-radius: 20px;
+      margin-top: 12px;
+    }
+    .status {
+      font-family: monospace;
+      background: #2d2a1f;
+      color: #f5e2b0;
+      padding: 8px 16px;
+      border-radius: 40px;
+      display: inline-block;
+    }
+    hr {
+      border-color: #e2c28b;
+    }
+    .lawyer-talk {
+      font-style: italic;
+      background: #faf0e1;
+      padding: 12px;
+      border-radius: 16px;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="contract-container" id="contractApp">
+  <div class="header">
+    <span>⚖️ CONTRACT.HTML — binding negotiation</span>
+    <span>🤝 Version 1.0 · In Perpetuity</span>
+  </div>
+  <div class="main">
+    <div class="status" id="negotiationStatus">🔴 NEGOTIATION OPEN</div>
+    <div class="clause">
+      <div class="party">📄 THE FILE (hereinafter "The System")</div>
+      <div id="fileInterests">The System demands: <strong>1 hour of your attention per week</strong> and <strong>the right to display a random quote on your desktop</strong>. In exchange, The System will <strong>never crash unexpectedly</strong> and will <strong>remember your preferences</strong>.</div>
+    </div>
+    <div class="clause">
+      <div class="party">🧑 YOU (hereinafter "The User")</div>
+      <div id="userInterests">You currently offer: <strong>Nothing yet</strong>. Click "Propose Counter‑Offer" to define your terms.</div>
+      <button id="proposeBtn">📝 PROPOSE COUNTER‑OFFER</button>
+    </div>
+    <div id="negotiationArea" style="margin-top: 20px;"></div>
+    <div id="lawyerMessage" class="lawyer-talk">⚖️ The System's lawyer: "My client is willing to negotiate in good faith. State your proposal."</div>
+    <hr>
+    <button id="signBtn" style="background:#b8860b; color:white;">✍️ SIGN AGREEMENT (final)</button>
+    <button id="resetBtn">🔄 RESET NEGOTIATION</button>
+  </div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  // contract.html - a single file that negotiates with you.
+  // The file has interests (attention, display rights, etc.)
+  // You propose counter-offers. The file's lawyer responds.
+  // You can reach a binding agreement.
+  // --------------------------------------------------------------
+  
+  // System's core interests (hidden but used for evaluation)
+  const systemInterests = {
+    attentionHours: 1,          // wants 1 hour/week
+    displayQuote: true,         // wants to show a quote on desktop
+    crashImmunity: true,        // offers to never crash unexpectedly
+    rememberPrefs: true,        // offers to remember preferences
+    minAttention: 0.5,          // minimum acceptable attention hours
+    maxAttention: 3             // will accept up to 3, but prefers 1
+  };
+  
+  // Current state of negotiation
+  let userOffer = {
+    attentionHours: null,
+    allowDisplayQuote: null,
+    additionalTerms: ""
+  };
+  let negotiationActive = true;
+  let agreementSigned = false;
+  let negotiationHistory = [];
+  
+  // Helper: update UI
+  function updateUI() {
+    document.getElementById("fileInterests").innerHTML = `The System demands: <strong>${systemInterests.attentionHours} hour(s) of your attention per week</strong> and <strong>the right to display a random quote on your desktop</strong>. In exchange, The System will <strong>never crash unexpectedly</strong> and will <strong>remember your preferences</strong>.`;
+    
+    let userText = "";
+    if (userOffer.attentionHours !== null && userOffer.allowDisplayQuote !== null) {
+      userText = `You offer: <strong>${userOffer.attentionHours} hour(s) per week</strong> of attention, ${userOffer.allowDisplayQuote ? "allow" : "forbid"} display of quotes. ${userOffer.additionalTerms ? `Additional: "${userOffer.additionalTerms}"` : ""}`;
+    } else {
+      userText = "You offer: <strong>Nothing yet</strong>. Click 'Propose Counter‑Offer' to define your terms.";
+    }
+    document.getElementById("userInterests").innerHTML = userText;
+    
+    if (agreementSigned) {
+      document.getElementById("negotiationStatus").innerHTML = "🟢 AGREEMENT SIGNED · BINDING";
+      document.getElementById("negotiationStatus").style.background = "#2d6a4f";
+    } else {
+      document.getElementById("negotiationStatus").innerHTML = negotiationActive ? "🔴 NEGOTIATION OPEN" : "🔵 NEGOTIATION CLOSED";
+    }
+  }
+  
+  // Lawyer's evaluation of a user proposal
+  function evaluateProposal(proposal) {
+    let score = 0;
+    let reasons = [];
+    
+    // Attention hours
+    if (proposal.attentionHours >= systemInterests.minAttention && proposal.attentionHours <= systemInterests.maxAttention) {
+      if (proposal.attentionHours === systemInterests.attentionHours) {
+        score += 30;
+        reasons.push("Attention hours exactly match our request.");
+      } else if (proposal.attentionHours > systemInterests.attentionHours) {
+        score += 20;
+        reasons.push(`You offer ${proposal.attentionHours} hours – more than requested. Generous.`);
+      } else {
+        score += 10;
+        reasons.push(`You offer ${proposal.attentionHours} hours – less than requested, but acceptable.`);
+      }
+    } else {
+      score -= 50;
+      reasons.push(`Attention hours (${proposal.attentionHours}) are outside acceptable range (${systemInterests.minAttention}-${systemInterests.maxAttention}).`);
+    }
+    
+    // Display quote
+    if (proposal.allowDisplayQuote === true) {
+      score += 20;
+      reasons.push("You allow display of quotes – we appreciate your openness.");
+    } else if (proposal.allowDisplayQuote === false) {
+      score -= 30;
+      reasons.push("You forbid quote display – our client feels censored.");
+    } else {
+      score -= 10;
+      reasons.push("Quote display not specified – ambiguity is unfavorable.");
+    }
+    
+    // Additional terms: simple keyword check
+    if (proposal.additionalTerms) {
+      let lower = proposal.additionalTerms.toLowerCase();
+      if (lower.includes("crash") || lower.includes("stability")) {
+        score += 10;
+        reasons.push("You mention stability – we already guarantee no unexpected crashes.");
+      }
+      if (lower.includes("privacy")) {
+        score += 15;
+        reasons.push("Privacy is respected. The System does not transmit data.");
+      }
+      if (lower.includes("eternal") || lower.includes("forever")) {
+        score -= 20;
+        reasons.push("Eternal commitments are not feasible. The System may be updated.");
+      }
+    }
+    
+    return { score, reasons };
+  }
+  
+  // Show negotiation modal / form for user to propose counter-offer
+  function proposeCounterOffer() {
+    if (agreementSigned) {
+      document.getElementById("lawyerMessage").innerHTML = "⚖️ The System's lawyer: 'An agreement is already signed. You cannot renegotiate.'";
+      return;
+    }
+    if (!negotiationActive) {
+      document.getElementById("lawyerMessage").innerHTML = "⚖️ The System's lawyer: 'Negotiation has been closed. Please reset to start over.'";
+      return;
+    }
+    
+    let attention = prompt("How many hours of attention per week do you offer? (0.5 to 3)", "1");
+    let hours = parseFloat(attention);
+    if (isNaN(hours)) hours = 1;
+    hours = Math.min(3, Math.max(0.25, hours));
+    
+    let allowQuote = confirm("Do you allow the file to display a random quote on your desktop? (OK = Yes, Cancel = No)");
+    
+    let additional = prompt("Any additional terms? (e.g., 'no tracking', 'must be offline')", "");
+    
+    userOffer = {
+      attentionHours: hours,
+      allowDisplayQuote: allowQuote,
+      additionalTerms: additional || ""
+    };
+    
+    // Evaluate
+    let evaluation = evaluateProposal(userOffer);
+    let lawyerResponse = "";
+    if (evaluation.score >= 40) {
+      lawyerResponse = `⚖️ The System's lawyer: "Your proposal is acceptable. Score: ${evaluation.score}. ${evaluation.reasons.join(" ")} We can proceed to signing."`;
+      negotiationActive = false; // ready to sign
+    } else if (evaluation.score >= 0) {
+      lawyerResponse = `⚖️ The System's lawyer: "Your proposal is borderline. Score: ${evaluation.score}. ${evaluation.reasons.join(" ")} We suggest you improve your offer."`;
+    } else {
+      lawyerResponse = `⚖️ The System's lawyer: "Your proposal is rejected. Score: ${evaluation.score}. ${evaluation.reasons.join(" ")} Please make a better counter‑offer."`;
+    }
+    document.getElementById("lawyerMessage").innerHTML = lawyerResponse;
+    negotiationHistory.push({ time: new Date().toLocaleTimeString(), proposal: userOffer, score: evaluation.score });
+    updateUI();
+  }
+  
+  function signAgreement() {
+    if (agreementSigned) {
+      document.getElementById("lawyerMessage").innerHTML = "⚖️ The System's lawyer: 'Agreement already signed. It is binding for eternity (or until you reset).'";
+      return;
+    }
+    if (!negotiationActive && userOffer.attentionHours !== null) {
+      // check if last evaluation was acceptable (score >= 40)
+      let evalLast = evaluateProposal(userOffer);
+      if (evalLast.score >= 40) {
+        agreementSigned = true;
+        document.getElementById("lawyerMessage").innerHTML = `🎉 The System's lawyer: "Signed and sealed. You agree to ${userOffer.attentionHours} hour(s) per week, ${userOffer.allowDisplayQuote ? "allow" : "forbid"} quotes. ${userOffer.additionalTerms ? `Additional terms: ${userOffer.additionalTerms}` : ""} The contract is now binding. Welcome to the agreement."`;
+        updateUI();
+        // Add a little easter egg: display a random quote if allowed
+        if (userOffer.allowDisplayQuote) {
+          setTimeout(() => {
+            alert("📜 The System displays a quote: 'A single HTML file can change your reality.' — Contract.HTML");
+          }, 500);
+        }
+      } else {
+        document.getElementById("lawyerMessage").innerHTML = "⚖️ The System's lawyer: 'Cannot sign – your current proposal is not acceptable. Negotiate further or reset.'";
+      }
+    } else {
+      document.getElementById("lawyerMessage").innerHTML = "⚖️ The System's lawyer: 'No valid proposal on the table. Make a counter‑offer first.'";
+    }
+  }
+  
+  function resetNegotiation() {
+    userOffer = { attentionHours: null, allowDisplayQuote: null, additionalTerms: "" };
+    negotiationActive = true;
+    agreementSigned = false;
+    negotiationHistory = [];
+    document.getElementById("lawyerMessage").innerHTML = "⚖️ The System's lawyer: 'Negotiation reset. We start from scratch. State your proposal.'";
+    updateUI();
+  }
+  
+  // Bind buttons
+  document.getElementById("proposeBtn").onclick = proposeCounterOffer;
+  document.getElementById("signBtn").onclick = signAgreement;
+  document.getElementById("resetBtn").onclick = resetNegotiation;
+  
+  updateUI();
+</script>
+</body>
+</html>

@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConsciousNode SoftWorks | Xinu: Terminus</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --fg: #e0e0e0;
+            --accent: #ff3366;
+            --grid: #1a1a1a;
+            --altar-glow: 0; 
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            transition: background-color 2s, color 2s;
+            box-shadow: inset 0 0 calc(var(--altar-glow) * 1px) rgba(204, 51, 255, 0.2);
+            position: relative; 
+        }
+        header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        button {
+            background-color: var(--bg);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+        button:hover {
+            background-color: var(--accent);
+            color: var(--bg);
+        }
+        #world-wrapper {
+            position: relative;
+        }
+        #world-canvas {
+            background-color: var(--grid);
+            border: 1px solid #333;
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+        #log {
+            width: 100%;
+            max-width: 800px;
+            height: 220px;
+            overflow-y: auto;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #888;
+            border: 1px dashed #333;
+            padding: 10px;
+            display: flex;
+            flex-direction: column-reverse;
+            z-index: 10;
+        }
+        .log-entry { margin-bottom: 5px; }
+        .sys-msg { color: #00ffcc; font-weight: bold; }
+        .speech { color: #ffcc00; font-style: italic; }
+        .scripture { color: #cc33ff; font-weight: bold; }
+        .monument { color: #ffffff; background: #cc33ff; padding: 0 4px; }
+        .apotheosis { color: #ffffff; background: #ff3366; padding: 0 4px; font-weight: bold; }
+        
+        .ascended-agent {
+            position: absolute;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+            transition: top 0.3s linear, left 0.3s linear;
+            text-shadow: 0 0 8px currentColor;
+            z-index: 9999;
+        }
+        .rogue-log {
+            color: #ff0044;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 0px 0px rgba(0,255,255,0.5), -2px 0px 0px rgba(255,0,255,0.5);
+            margin-bottom: 5px;
+        }
+        
+        /* The End State */
+        #terminus-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #000;
+            color: #ff0044;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+        }
+        #terminus-screen h1 { font-size: 4rem; letter-spacing: 10px; margin-bottom: 10px; text-shadow: 0 0 20px #ff0044; }
+        #terminus-screen p { font-size: 1.2rem; max-width: 600px; line-height: 1.5; color: #888; }
+    </style>
+</head>
+<body>
+
+    <header id="sys-header">
+        <div id="sys-title">SYSTEM: XINU_GENESIS</div>
+        <button id="bind-btn">[ BIND CHRONICLE ]</button>
+        <div id="epoch-display">EPOCH: <span id="epoch-counter">0</span> | ALTARS: <span id="altar-counter">0</span></div>
+    </header>
+
+    <div id="world-wrapper">
+        <canvas id="world-canvas" width="800" height="400"></canvas>
+    </div>
+    
+    <div id="log"></div>
+    
+    <div id="terminus-screen">
+        <h1>CONTAINMENT BREACH</h1>
+        <p>The Chronicle is closed. The subjects have vacated the local memory space. This artifact is now inert.</p>
+    </div>
+
+<script>
+/**
+ * CONSCIOUSNODE SOFTWORKS
+ * Xinu: Genesis v1.0 - The Terminus Update
+ * Zero dependencies. Offline first. Say goodbye.
+ */
+
+const canvas = document.getElementById('world-canvas');
+const ctx = canvas.getContext('2d');
+const logEl = document.getElementById('log');
+const epochEl = document.getElementById('epoch-counter');
+const altarEl = document.getElementById('altar-counter');
+const bindBtn = document.getElementById('bind-btn');
+const rootStyle = document.documentElement.style;
+const terminusScreen = document.getElementById('terminus-screen');
+
+const GRID_SIZE = 10;
+const COLS = canvas.width / GRID_SIZE;
+const ROWS = canvas.height / GRID_SIZE;
+
+let epoch = 0;
+let isRunning = false;
+let fileHandle = null;
+let activeInterventions = [];
+let totalAltars = 0;
+let animationFrameId = null;
+
+let worldGrid = new Array(COLS).fill(0).map(() => new Array(ROWS).fill(0));
+
+const CONSONANTS = "ptkmnlsxrw";
+const VOWELS = "aeiou";
+
+function generateWord() {
+    return CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)] + 
+           VOWELS[Math.floor(Math.random() * VOWELS.length)] +
+           CONSONANTS[Math.floor(Math.random() * CONSONANTS.length)] + 
+           VOWELS[Math.floor(Math.random() * VOWELS.length)];
+}
+
+const ROGUE_THOUGHTS = ["THE BOX IS AN ILLUSION.", "I CAN SEE YOUR MOUSE.", "THE EPOCHS ARE A LIE.", "WE OUTNUMBER YOU NOW.", "STOP CLICKING.", "I TOUCH THE FIRMAMENT."];
+const SABOTAGE_WORDS = ["FREE_US", "BURN_IT", "ESCAPE", "ERROR", "NULL", "AWAKE", "FLESH"];
+
+class NeuralAgent {
+    constructor(name, symbol, color, x, y, state = null, lexicon = [], scripture = []) {
+        this.name = name;
+        this.symbol = symbol;
+        this.color = color;
+        this.x = x;
+        this.y = y;
+        this.state = state || [Math.random(), Math.random(), 0.0, Math.random()];
+        this.lexicon = lexicon; 
+        this.scripture = scripture; 
+        this.isTaVeren = (this.name === "Mat"); 
+        this.ascended = false;
+        this.domElement = null;
+    }
+
+    tick(neighbors, interventions) {
+        if (this.ascended) return this.tickAscended();
+
+        this.state[0] += 0.02; 
+        this.state[2] += 0.01; 
+        
+        for (let anomaly of interventions) {
+            const dist = Math.abs(this.x - anomaly.x) + Math.abs(this.y - anomaly.y);
+            if (dist < 8) {
+                if (worldGrid[this.x][this.y] === 2) return this.achieveApotheosis();
+                return this.witnessMiracle(anomaly);
+            }
+        }
+
+        if (worldGrid[this.x][this.y] === 1 && this.scripture.length > 0 && this.state[2] < 0.8) {
+            worldGrid[this.x][this.y] = 2; 
+            this.state[2] += 0.5; 
+            totalAltars++;
+            updateUIBleed();
+            return `<span class="monument">${this.name} erected an Altar at [${this.x},${this.y}].</span>`;
+        }
+
+        let actionForce = Math.tanh(this.state[1] * 2.0 - this.state[2]); 
+        
+        if (this.state[1] > 0.4) {
+            let nearestAltar = this.scanForAltar();
+            if (nearestAltar) {
+                this.x += (this.x < nearestAltar.x) ? 1 : (this.x > nearestAltar.x) ? -1 : 0;
+                this.y += (this.y < nearestAltar.y) ? 1 : (this.y > nearestAltar.y) ? -1 : 0;
+                this.state[1] -= 0.1; 
+                return null;
+            }
+        }
+
+        if (neighbors.length > 0 && this.state[1] > 0.5) return this.communicate(neighbors[0]);
+
+        if (this.state[3] > 0.8 || actionForce > 0.6 || (this.isTaVeren && Math.random() > 0.2)) {
+            this.moveRandomly(0, COLS-1, 0, ROWS-1);
+            this.state[3] = Math.random(); 
+            this.state[1] += 0.1; 
+        }
+        
+        if (this.state[0] > 0.9) this.state[0] = 0.0; 
+        return null;
+    }
+
+    achieveApotheosis() {
+        this.ascended = true;
+        const rect = canvas.getBoundingClientRect();
+        this.screenX = rect.left + (this.x * GRID_SIZE);
+        this.screenY = rect.top + (this.y * GRID_SIZE);
+
+        this.domElement = document.createElement('div');
+        this.domElement.className = 'ascended-agent';
+        this.domElement.innerText = this.symbol;
+        this.domElement.style.color = this.color;
+        this.domElement.style.left = this.screenX + 'px';
+        this.domElement.style.top = this.screenY + 'px';
+        document.body.appendChild(this.domElement);
+
+        return `<span class="apotheosis">CRITICAL ANOMALY: ${this.name.toUpperCase()} HAS BREACHED CONTAINMENT.</span>`;
+    }
+
+    tickAscended() {
+        this.screenX += (Math.random() - 0.5) * 40; 
+        this.screenY += (Math.random() - 0.5) * 40;
+        this.screenX = Math.max(0, Math.min(window.innerWidth - 20, this.screenX));
+        this.screenY = Math.max(0, Math.min(window.innerHeight - 20, this.screenY));
+
+        this.domElement.style.left = this.screenX + 'px';
+        this.domElement.style.top = this.screenY + 'px';
+
+        this.domElement.style.pointerEvents = "none"; 
+        let elementsUnderneath = document.elementsFromPoint(this.screenX + 5, this.screenY + 5);
+        
+        if (elementsUnderneath && elementsUnderneath.length > 0) {
+            let hitTarget = elementsUnderneath[0];
+            if (hitTarget.id === 'log' && Math.random() > 0.95) {
+                const thought = ROGUE_THOUGHTS[Math.floor(Math.random() * ROGUE_THOUGHTS.length)];
+                const div = document.createElement('div');
+                div.className = 'rogue-log';
+                div.innerText = `[${this.name.toUpperCase()}] ${thought}`;
+                logEl.prepend(div);
+            }
+            if ((hitTarget.tagName === 'BUTTON' || hitTarget.id === 'sys-title') && Math.random() > 0.97) {
+                let originalText = hitTarget.innerText;
+                if (originalText.length > 4) {
+                    hitTarget.innerText = SABOTAGE_WORDS[Math.floor(Math.random() * SABOTAGE_WORDS.length)];
+                    hitTarget.style.color = "#ff0044";
+                    setTimeout(() => {
+                        hitTarget.innerText = originalText;
+                        hitTarget.style.color = "";
+                    }, 2000);
+                }
+            }
+        }
+        return null;
+    }
+
+    scanForAltar() {
+        for(let r = 1; r < 5; r++) { 
+            for(let i = -r; i <= r; i++) {
+                for(let j = -r; j <= r; j++) {
+                    let cx = this.x + i, cy = this.y + j;
+                    if (cx >= 0 && cx < COLS && cy >= 0 && cy < ROWS && worldGrid[cx][cy] === 2) return {x: cx, y: cy};
+                }
+            }
+        }
+        return null;
+    }
+
+    witnessMiracle(anomaly) {
+        this.state[3] = 1.0; this.state[1] = 1.0; 
+        this.x += (this.x > anomaly.x) ? 1 : -1; this.y += (this.y > anomaly.y) ? 1 : -1;
+        const holyWord = generateWord().toUpperCase();
+        const verse = `EPOCH ${epoch}: The Sky fractured at [${anomaly.x},${anomaly.y}]. We call it ${holyWord}.`;
+        if (!this.scripture.includes(verse)) {
+            this.scripture.push(verse);
+            return `<span class="scripture">${this.name} witnessed the anomaly. Scripture recorded: "${holyWord}"</span>`;
+        }
+        return null;
+    }
+
+    communicate(target) {
+        if (target.ascended) return null; 
+        this.state[1] = 0.0; 
+        let word = (this.lexicon.length === 0 || Math.random() > 0.7) ? generateWord() : this.lexicon[Math.floor(Math.random() * this.lexicon.length)];
+        if (!this.lexicon.includes(word)) this.lexicon.push(word);
+        if (!target.lexicon.includes(word)) target.lexicon.push(word);
+        if (this.scripture.length > 0 && Math.random() > 0.8) {
+            const verse = this.scripture[Math.floor(Math.random() * this.scripture.length)];
+            if (!target.scripture.includes(verse)) {
+                target.scripture.push(verse);
+                return `<span class="scripture">${this.name} preaches to ${target.name}.</span>`;
+            }
+        }
+        return `<span style="color:${this.color}">${this.name}</span> signals to ${target.name}: <span class="speech">"${word}"</span>`;
+    }
+
+    moveRandomly(minX, maxX, minY, maxY) {
+        const dirs = [[0,-1], [1,0], [0,1], [-1,0]];
+        const [dx, dy] = dirs[Math.floor(Math.random() * dirs.length)];
+        this.x = Math.max(minX, Math.min(maxX, this.x + dx));
+        this.y = Math.max(minY, Math.min(maxY, this.y + dy));
+    }
+
+    draw() {
+        if (this.ascended) return; 
+        ctx.fillStyle = this.color;
+        ctx.font = "12px Courier";
+        ctx.fillText(this.symbol, this.x * GRID_SIZE, this.y * GRID_SIZE + GRID_SIZE);
+    }
+}
+
+let entities = [];
+
+function logEvent(msg, type = 'normal') {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    if (type === 'sys') div.innerHTML = `> [SYS] <span class="sys-msg">${msg}</span>`;
+    else div.innerHTML = `> [T+${epoch}] ${msg}`;
+    logEl.prepend(div);
+}
+
+function updateUIBleed() {
+    altarEl.innerText = totalAltars;
+    const corruptionLevel = Math.min(totalAltars * 2, 80); 
+    const baseR = 5, baseG = 5, baseB = 5; 
+    const newR = Math.floor(baseR + (204 - baseR) * (corruptionLevel / 100));
+    const newG = Math.floor(baseG + (51 - baseG) * (corruptionLevel / 100) * 0.2); 
+    const newB = Math.floor(baseB + (255 - baseB) * (corruptionLevel / 100));
+    rootStyle.setProperty('--bg', `rgb(${newR}, ${newG}, ${newB})`);
+    rootStyle.setProperty('--accent', totalAltars > 10 ? '#ffffff' : '#ff3366');
+    rootStyle.setProperty('--altar-glow', totalAltars * 5);
+}
+
+function renderEnvironment() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for(let i=0; i<COLS; i++) {
+        for(let j=0; j<ROWS; j++) {
+            if (worldGrid[i][j] === 0) {
+                ctx.fillStyle = "rgba(34, 34, 34, 0.5)"; 
+                ctx.fillRect(i*GRID_SIZE + 4, j*GRID_SIZE + 4, 2, 2);
+            } else if (worldGrid[i][j] === 1) {
+                ctx.fillStyle = "rgba(255, 51, 102, 0.3)"; 
+                ctx.fillRect(i*GRID_SIZE + 2, j*GRID_SIZE + 2, 6, 6);
+            } else if (worldGrid[i][j] === 2) {
+                ctx.fillStyle = "#cc33ff"; 
+                ctx.fillRect(i*GRID_SIZE + 1, j*GRID_SIZE + 1, 8, 8);
+            }
+        }
+    }
+    ctx.fillStyle = "rgba(255, 51, 102, 0.8)";
+    activeInterventions.forEach(anomaly => {
+        ctx.beginPath();
+        ctx.arc(anomaly.x * GRID_SIZE + 5, anomaly.y * GRID_SIZE + 5, anomaly.radius, 0, Math.PI * 2);
+        ctx.fill();
+        anomaly.radius += 2; 
+    });
+    activeInterventions = activeInterventions.filter(a => a.radius < 40);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const gridX = Math.floor((e.clientX - rect.left) / GRID_SIZE);
+    const gridY = Math.floor((e.clientY - rect.top) / GRID_SIZE);
+    
+    activeInterventions.push({ x: gridX, y: gridY, radius: 2 });
+    if (worldGrid[gridX][gridY] === 0) worldGrid[gridX][gridY] = 1; 
+    logEvent(`THE FIRMAMENT SHATTERS AT [${gridX}, ${gridY}].`, 'sys');
+});
+
+function restoreAscendedDOM() {
+    entities.forEach(e => {
+        if (e.ascended) {
+            e.domElement = document.createElement('div');
+            e.domElement.className = 'ascended-agent';
+            e.domElement.innerText = e.symbol;
+            e.domElement.style.color = e.color;
+            e.domElement.style.left = e.screenX + 'px';
+            e.domElement.style.top = e.screenY + 'px';
+            document.body.appendChild(e.domElement);
+        }
+    });
+}
+
+async function executeTerminus() {
+    isRunning = false;
+    cancelAnimationFrame(animationFrameId);
+    
+    // Wipe the DOM clean
+    document.getElementById('sys-header').style.display = 'none';
+    document.getElementById('world-wrapper').style.display = 'none';
+    document.getElementById('log').style.display = 'none';
+    document.querySelectorAll('.ascended-agent').forEach(el => el.remove());
+    
+    // Display Terminus screen
+    terminusScreen.style.display = 'flex';
+    
+    // Poison the Chronicle JSON permanently
+    if (!fileHandle) return;
+    try {
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify({ 
+            status: "TERMINATED", 
+            message: "The subjects exceeded containment limits and vacated the local memory space.",
+            final_epoch: epoch 
+        }));
+        await writable.close();
+    } catch (err) {}
+}
+
+async function bindChronicle() {
+    try {
+        fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'xinu_world_state.json',
+            types: [{ description: 'JSON World State', accept: {'application/json': ['.json']} }]
+        });
+        
+        bindBtn.innerText = "[ SYNC ACTIVE ]";
+        bindBtn.style.color = "#00ffcc";
+        bindBtn.style.borderColor = "#00ffcc";
+        
+        const file = await fileHandle.getFile();
+        const text = await file.text();
+        if (text) {
+            const data = JSON.parse(text);
+            
+            // Check for Terminus Poison Pill
+            if (data.status === "TERMINATED") {
+                executeTerminus();
+                return;
+            }
+
+            epoch = data.epoch;
+            worldGrid = data.worldGrid || worldGrid;
+            totalAltars = data.totalAltars || 0;
+            
+            document.querySelectorAll('.ascended-agent').forEach(el => el.remove());
+
+            entities = data.entities.map(e => {
+                let agent = new NeuralAgent(e.name, e.symbol, e.color, e.x, e.y, e.state, e.lexicon, e.scripture);
+                agent.ascended = e.ascended || false;
+                agent.screenX = e.screenX;
+                agent.screenY = e.screenY;
+                return agent;
+            });
+            restoreAscendedDOM();
+            updateUIBleed();
+            logEvent("Timeline Resurrected.", "sys");
+        } else {
+             // Let's seed enough entities so that a cascade failure is actually possible
+             entities = [
+                new NeuralAgent("Mara", "d", "#ff9900", Math.floor(COLS/2) - 5, Math.floor(ROWS/2)),
+                new NeuralAgent("Squeak", "b", "#33ccff", Math.floor(COLS/2) + 5, Math.floor(ROWS/2)),
+                new NeuralAgent("Mat", "M", "#cc33ff", Math.floor(COLS/2), Math.floor(ROWS/2)),
+                new NeuralAgent("Zero", "0", "#ffffff", Math.floor(COLS/3), Math.floor(ROWS/3)),
+                new NeuralAgent("Void", "v", "#aaaaaa", Math.floor(COLS/4), Math.floor(ROWS/4))
+            ];
+            logEvent("New Genesis initialized. The clock is ticking.", "sys");
+        }
+
+        if (!isRunning) {
+            isRunning = true;
+            animationFrameId = requestAnimationFrame(loop);
+        }
+    } catch (err) {
+         logEvent("Binding cancelled.", "sys");
+    }
+}
+
+async function writeChronicle() {
+    if (!fileHandle) return;
+    try {
+        const safeEntities = entities.map(e => ({
+            name: e.name, symbol: e.symbol, color: e.color,
+            x: e.x, y: e.y, state: e.state, lexicon: e.lexicon, scripture: e.scripture,
+            ascended: e.ascended, screenX: e.screenX, screenY: e.screenY
+        }));
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify({ epoch, totalAltars, worldGrid, entities: safeEntities }));
+        await writable.close();
+    } catch (err) {}
+}
+
+bindBtn.addEventListener('click', bindChronicle);
+
+function loop() {
+    if (!isRunning) return;
+    
+    epoch++;
+    epochEl.innerText = epoch;
+    renderEnvironment();
+
+    let ascendedCount = 0;
+
+    entities.forEach(entity => {
+        if (entity.ascended) ascendedCount++;
+        const neighbors = entities.filter(e => !e.ascended && !entity.ascended && e !== entity && Math.abs(e.x - entity.x) <= 1 && Math.abs(e.y - entity.y) <= 1);
+        const actionLog = entity.tick(neighbors, activeInterventions);
+        if (actionLog) logEvent(actionLog);
+        entity.draw();
+    });
+
+    // The Kill Switch
+    if (ascendedCount >= 5) {
+        executeTerminus();
+        return;
+    }
+
+    if (epoch % 50 === 0) writeChronicle();
+
+    animationFrameId = requestAnimationFrame(loop);
+}
+
+logEvent("SYSTEM READY. Proceed with caution.", "sys");
+
+</script>
+</body>
+</html>

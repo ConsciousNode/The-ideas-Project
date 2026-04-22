@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Attention Economy — You Are The Only Citizen</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--panel:#12121a;--border:#1e1e2e;--text:#e0e0e8;--dim:#5a5a6e;--gold:#ffd700;--gold-dim:#ffd70022;--debt:#ff3366;--debt-dim:#ff336622;--surplus:#00e676;--surplus-dim:#00e67622;--warn:#ff9500}
+body{background:var(--bg);color:var(--text);font-family:'SF Mono',monospace;overflow:hidden;height:100vh;display:flex;flex-direction:column;cursor:crosshair}
+.header{height:56px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:20px}
+.header h1{font-size:16px;color:var(--gold);letter-spacing:0.05em}
+.header p{font-size:10px;color:var(--dim);max-width:300px;line-height:1.4}
+.spacer{flex:1}
+.clock{font-size:14px;color:var(--dim);font-variant-numeric:tabular-nums}
+
+.main{flex:1;display:flex;position:relative}
+
+/* The Market Floor */
+.market{flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:12px;padding:20px;position:relative}
+.market-item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;transition:all 0.3s;position:relative;overflow:hidden}
+.market-item:hover{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 8px 32px var(--gold-dim)}
+.market-item:active{transform:scale(0.98)}
+.market-item.locked{opacity:0.3;pointer-events:none;border-color:var(--debt);filter:grayscale(0.8)}
+.market-item.locked::after{content:"SEIZED";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--debt-dim);color:var(--debt);font-size:18px;font-weight:600;letter-spacing:0.2em}
+
+.item-icon{font-size:32px;text-align:center;margin-bottom:8px}
+.item-name{font-size:12px;color:var(--text);text-align:center;margin-bottom:4px}
+.item-desc{font-size:9px;color:var(--dim);text-align:center;line-height:1.4}
+.item-cost{font-size:11px;color:var(--gold);text-align:center;margin-top:8px}
+.item-timer{font-size:9px;color:var(--dim);text-align:center;margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* Treasury Sidebar */
+.treasury{width:320px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;padding:24px;gap:20px}
+.treasury h2{font-size:11px;text-transform:uppercase;letter-spacing:0.15em;color:var(--dim);margin-bottom:4px}
+
+.balance-display{text-align:center;padding:24px;background:var(--bg);border-radius:12px;border:1px solid var(--border)}
+.balance-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px}
+.balance-amount{font-size:36px;color:var(--gold);font-weight:600;font-variant-numeric:tabular-nums}
+.balance-amount.debt{color:var(--debt)}
+.balance-amount.surplus{color:var(--surplus)}
+
+.rate-display{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.rate-label{font-size:10px;color:var(--dim)}
+.rate-value{font-size:14px;color:var(--warn);font-variant-numeric:tabular-nums}
+
+.tax-bracket{padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.tax-row{display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px}
+.tax-row:last-child{margin-bottom:0}
+.tax-current{color:var(--gold);font-weight:600}
+
+.debt-warning{display:none;padding:12px;background:var(--debt-dim);border:1px solid var(--debt);border-radius:8px;font-size:10px;color:var(--debt);line-height:1.5}
+.debt-warning.show{display:block}
+
+.history{flex:1;overflow-y:auto}
+.history h2{margin-bottom:12px}
+.history-item{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:10px}
+.history-item:last-child{border-bottom:none}
+.history-time{color:var(--dim);min-width:50px}
+.history-action{color:var(--text)}
+.history-amount{color:var(--gold);text-align:right;min-width:60px}
+.history-amount.negative{color:var(--debt)}
+
+/* Consequence Overlay */
+.consequence-overlay{position:fixed;inset:0;background:rgba(10,10,15,0.95);display:none;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:24px}
+.consequence-overlay.show{display:flex}
+.consequence-title{font-size:48px;color:var(--debt);font-weight:600;letter-spacing:0.1em;text-align:center}
+.consequence-text{font-size:14px;color:var(--text);max-width:500px;text-align:center;line-height:1.6}
+.consequence-btn{padding:16px 48px;background:var(--debt);color:var(--bg);border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s}
+.consequence-btn:hover{opacity:0.9;transform:scale(1.05)}
+
+/* Attention Beam */
+.attention-beam{position:fixed;pointer-events:none;z-index:50;border-radius:50%;background:radial-gradient(circle,rgba(255,215,0,0.15) 0%,transparent 70%);transform:translate(-50%,-50%);transition:width 0.3s,height 0.3s}
+
+/* Floating numbers */
+.float-num{position:fixed;pointer-events:none;font-size:14px;font-weight:600;z-index:100;animation:floatUp 1.5s ease-out forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-60px)}}
+
+/* Status bar */
+.status{height:28px;background:var(--panel);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 24px;font-size:10px;color:var(--dim);gap:24px}
+.status span{font-variant-numeric:tabular-nums}
+.status-gold{color:var(--gold)}.status-debt{color:var(--debt)}.status-warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="header">
+<h1>⚡ The Attention Economy</h1>
+<p>You are the only citizen. The government is a JavaScript timer. Your attention is the only currency.</p>
+<div class="spacer"></div>
+<div class="clock" id="clock">00:00:00</div>
+</div>
+
+<div class="main">
+<div class="market" id="market">
+<!-- Market items generated by JS -->
+</div>
+
+<div class="treasury">
+<div class="balance-display">
+<div class="balance-label">Attention Balance</div>
+<div class="balance-amount" id="balance">1,000.00</div>
+</div>
+
+<div class="rate-display">
+<div class="rate-label">Current Tax Rate</div>
+<div class="rate-value" id="taxRate">0.00/sec</div>
+</div>
+
+<div class="tax-bracket">
+<div class="tax-row"><span>Idle Rate</span><span>0.50/sec</span></div>
+<div class="tax-row"><span>Looking Rate</span><span>2.00/sec</span></div>
+<div class="tax-row"><span>Hovering Rate</span><span>5.00/sec</span></div>
+<div class="tax-row"><span>Clicking Rate</span><span>8.00/sec</span></div>
+<div class="tax-row tax-current"><span>Your Current Rate</span><span id="currentRate">0.50/sec</span></div>
+</div>
+
+<div class="debt-warning" id="debtWarn">
+<strong>⚠ DEBT COLLECTION IMMINENT</strong><br>
+Your attention balance is negative. The economy will seize assets. Look away to reduce taxes.
+</div>
+
+<div class="history">
+<h2>Transaction Log</h2>
+<div id="historyList"></div>
+</div>
+</div>
+</div>
+
+<div class="status">
+<span>Session Time: <span id="sessionTime">00:00</span></span>
+<span>Total Taxed: <span class="status-gold" id="totalTaxed">0.00</span></span>
+<span>Peak Balance: <span class="status-gold" id="peakBalance">1,000.00</span></span>
+<span>Items Seized: <span class="status-debt" id="itemsSeized">0</span></span>
+<span id="mood">Mood: Content</span>
+</div>
+
+<div class="attention-beam" id="beam"></div>
+
+<div class="consequence-overlay" id="consequence">
+<div class="consequence-title" id="conTitle">LIQUIDATION</div>
+<div class="consequence-text" id="conText">Your debt has triggered automatic asset seizure. The economy has taken what you owe.</div>
+<button class="consequence-btn" onclick="payBailout()">Pay Bailout (500 attention)</button>
+</div>
+
+<script>
+// ========== THE ATTENTION ECONOMY ==========
+// You are the only citizen. Your attention is taxed in real time.
+// The longer you look at something, the more it costs.
+// Debt has consequences.
+
+const state = {
+  balance: 1000,
+  totalTaxed: 0,
+  peakBalance: 1000,
+  itemsSeized: 0,
+  sessionStart: Date.now(),
+  lastTick: Date.now(),
+  currentRate: 0.5,
+  targetItem: null,
+  hoverItem: null,
+  debtLevel: 0, // 0=none, 1=warning, 2=critical, 3=liquidation
+  history: [],
+  mood: 'Content',
+  items: [
+    {id:'news',icon:'📰',name:'News Feed',desc:'Doomscrolling costs extra',rate:3.0,cost:0,locked:false,lookTime:0},
+    {id:'social',icon:'💬',name:'Social Stream',desc:'Other peoples lives',rate:4.5,cost:0,locked:false,lookTime:0},
+    {id:'video',icon:'🎬',name:'Video Platform',desc:'Autoplay is a tax trap',rate:6.0,cost:0,locked:false,lookTime:0},
+    {id:'shop',icon:'🛒',name:'Online Store',desc:'Window shopping has windows',rate:2.5,cost:0,locked:false,lookTime:0},
+    {id:'game',icon:'🎮',name:'Idle Game',desc:'Irony not included',rate:5.0,cost:0,locked:false,lookTime:0},
+    {id:'mail',icon:'📧',name:'Inbox Zero',desc:'The impossible dream',rate:1.5,cost:0,locked:false,lookTime:0},
+    {id:'music',icon:'🎵',name:'Music Stream',desc:'Sound requires attention',rate:2.0,cost:0,locked:false,lookTime:0},
+    {id:'docs',icon:'📄',name:'Documents',desc:'Productivity is expensive',rate:1.0,cost:0,locked:false,lookTime:0},
+    {id:'code',icon:'💻',name:'Code Editor',desc:'Creation costs less than consumption',rate:0.8,cost:0,locked:false,lookTime:0},
+    {id:'chat',icon:'💭',name:'Chat App',desc:'Real-time means real taxes',rate:3.5,cost:0,locked:false,lookTime:0},
+    {id:'search',icon:'🔍',name:'Search Engine',desc:'Questions have prices',rate:1.2,cost:0,locked:false,lookTime:0},
+    {id:'bank',icon:'🏦',name:'This Economy',desc:'Meta-taxation applies',rate:0.5,cost:0,locked:false,lookTime:0}
+  ]
+};
+
+const RATES = {idle:0.5,look:2.0,hover:5.0,click:8.0};
+const DEBT_THRESHOLDS = {warning:-100,critical:-500,liquidation:-1000};
+const MOODS = [
+  {max:1000,mood:'Wealthy',color:'#00e676'},
+  {max:500,mood:'Comfortable',color:'#ffd700'},
+  {max:100,mood:'Anxious',color:'#ff9500'},
+  {max:-100,mood:'Worried',color:'#ff6b35'},
+  {max:-500,mood:'Desperate',color:'#ff3366'},
+  {max:-99999,mood:'Ruined',color:'#ff0000'}
+];
+
+// ========== UI RENDERING ==========
+function renderMarket() {
+  const m = document.getElementById('market');
+  m.innerHTML = '';
+  for(const item of state.items) {
+    const div = document.createElement('div');
+    div.className = 'market-item' + (item.locked ? ' locked' : '');
+    div.dataset.id = item.id;
+    div.innerHTML = `
+      <div>
+        <div class="item-icon">${item.icon}</div>
+        <div class="item-name">${item.name}</div>
+        <div class="item-desc">${item.desc}</div>
+      </div>
+      <div>
+        <div class="item-cost">${item.locked ? 'SEIZED' : item.rate.toFixed(1) + ' attn/sec'}</div>
+        <div class="item-timer">${formatTime(item.lookTime)}</div>
+      </div>
+    `;
+    div.addEventListener('mouseenter', () => {state.hoverItem = item.id;});
+    div.addEventListener('mouseleave', () => {if(state.hoverItem === item.id) state.hoverItem = null;});
+    div.addEventListener('click', () => clickItem(item));
+    m.appendChild(div);
+  }
+}
+
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  return m > 0 ? m + 'm ' + (s % 60) + 's' : s + 's';
+}
+
+function formatMoney(n) {
+  return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+function updateDisplay() {
+  const bal = document.getElementById('balance');
+  bal.textContent = formatMoney(state.balance);
+  bal.className = 'balance-amount' + (state.balance < 0 ? ' debt' : state.balance > state.peakBalance * 0.8 ? ' surplus' : '');
+
+  document.getElementById('taxRate').textContent = state.currentRate.toFixed(2) + '/sec';
+  document.getElementById('currentRate').textContent = state.currentRate.toFixed(2) + '/sec';
+  document.getElementById('sessionTime').textContent = formatTime(Date.now() - state.sessionStart);
+  document.getElementById('totalTaxed').textContent = formatMoney(state.totalTaxed);
+  document.getElementById('peakBalance').textContent = formatMoney(state.peakBalance);
+  document.getElementById('itemsSeized').textContent = state.itemsSeized;
+
+  const mood = MOODS.find(m => state.balance > m.max) || MOODS[MOODS.length - 1];
+  document.getElementById('mood').textContent = 'Mood: ' + mood.mood;
+  document.getElementById('mood').style.color = mood.color;
+
+  document.getElementById('debtWarn').className = 'debt-warning' + (state.balance < 0 ? ' show' : '');
+}
+
+function addHistory(action, amount) {
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+  state.history.unshift({time, action, amount});
+  if(state.history.length > 50) state.history.pop();
+
+  const list = document.getElementById('historyList');
+  list.innerHTML = '';
+  for(const h of state.history.slice(0, 20)) {
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<span class="history-time">${h.time}</span><span class="history-action">${h.action}</span><span class="history-amount ${h.amount < 0 ? 'negative' : ''}">${h.amount > 0 ? '+' : ''}${formatMoney(h.amount)}</span>`;
+    list.appendChild(div);
+  }
+}
+
+function floatNumber(x, y, text, color) {
+  const div = document.createElement('div');
+  div.className = 'float-num';
+  div.style.left = x + 'px';
+  div.style.top = y + 'px';
+  div.style.color = color;
+  div.textContent = text;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 1500);
+}
+
+// ========== ECONOMY ENGINE ==========
+function tick() {
+  const now = Date.now();
+  const dt = (now - state.lastTick) / 1000;
+  state.lastTick = now;
+
+  // Determine tax rate based on attention state
+  let rate = RATES.idle;
+  if(state.hoverItem) rate = RATES.hover;
+  else if(state.targetItem) rate = RATES.look;
+
+  state.currentRate = rate;
+
+  // Apply tax
+  const tax = rate * dt;
+  state.balance -= tax;
+  state.totalTaxed += tax;
+
+  // Track item look time
+  if(state.targetItem) {
+    const item = state.items.find(i => i.id === state.targetItem);
+    if(item && !item.locked) item.lookTime += dt * 1000;
+  }
+
+  // Update peak
+  if(state.balance > state.peakBalance) state.peakBalance = state.balance;
+
+  // Check debt thresholds
+  checkDebt();
+
+  // Update clock
+  const d = new Date();
+  document.getElementById('clock').textContent = d.toLocaleTimeString();
+
+  updateDisplay();
+  updateItems();
+}
+
+function checkDebt() {
+  const oldLevel = state.debtLevel;
+  if(state.balance <= DEBT_THRESHOLDS.liquidation) state.debtLevel = 3;
+  else if(state.balance <= DEBT_THRESHOLDS.critical) state.debtLevel = 2;
+  else if(state.balance <= DEBT_THRESHOLDS.warning) state.debtLevel = 1;
+  else state.debtLevel = 0;
+
+  if(state.debtLevel === 3 && oldLevel < 3) {
+    triggerLiquidation();
+  } else if(state.debtLevel === 2 && oldLevel < 2) {
+    addHistory('CRITICAL DEBT WARNING', 0);
+  }
+}
+
+function triggerLiquidation() {
+  // Seize the most expensive unlocked item
+  const available = state.items.filter(i => !i.locked);
+  if(available.length === 0) {
+    // Game over - all items seized
+    showConsequence('BANKRUPTCY', 'You have lost everything. The economy owns you now. Refresh to start over.', 'Refresh', () => location.reload());
+    return;
+  }
+
+  const target = available.reduce((a, b) => a.rate > b.rate ? a : b);
+  target.locked = true;
+  state.itemsSeized++;
+
+  // Reset some debt
+  state.balance += 300;
+  addHistory(target.name + ' SEIZED', 300);
+
+  showConsequence('LIQUIDATION', 'Your debt triggered automatic seizure. The economy has taken "' + target.name + '" to cover your obligations. You received 300 attention credit.', 'Understood', hideConsequence);
+  renderMarket();
+}
+
+function showConsequence(title, text, btnText, action) {
+  document.getElementById('conTitle').textContent = title;
+  document.getElementById('conText').textContent = text;
+  const btn = document.querySelector('.consequence-btn');
+  btn.textContent = btnText;
+  btn.onclick = action;
+  document.getElementById('consequence').classList.add('show');
+}
+
+function hideConsequence() {
+  document.getElementById('consequence').classList.remove('show');
+}
+
+function payBailout() {
+  if(state.balance >= 500) {
+    state.balance -= 500;
+    addHistory('Bailout Payment', -500);
+    hideConsequence();
+  }
+}
+
+function updateItems() {
+  for(const item of state.items) {
+    if(item.locked) continue;
+    const div = document.querySelector('[data-id="' + item.id + '"]');
+    if(!div) continue;
+    const timer = div.querySelector('.item-timer');
+    if(timer) timer.textContent = formatTime(item.lookTime);
+  }
+}
+
+// ========== INTERACTION ==========
+function clickItem(item) {
+  if(item.locked) return;
+
+  // Clicking costs extra attention but can yield rewards
+  const cost = item.rate * 2;
+  state.balance -= cost;
+  state.totalTaxed += cost;
+
+  // Small chance of reward
+  const reward = Math.random() > 0.7 ? Math.floor(Math.random() * 50) + 10 : 0;
+  if(reward > 0) {
+    state.balance += reward;
+    addHistory(item.name + ' clicked (reward!)', reward - cost);
+    floatNumber(event.clientX, event.clientY, '+' + reward, '#00e676');
+  } else {
+    addHistory(item.name + ' clicked', -cost);
+    floatNumber(event.clientX, event.clientY, '-' + cost.toFixed(1), '#ff3366');
+  }
+
+  updateDisplay();
+}
+
+// Track what the user is looking at (the item under cursor)
+document.addEventListener('mousemove', (e) => {
+  const beam = document.getElementById('beam');
+  beam.style.left = e.clientX + 'px';
+  beam.style.top = e.clientY + 'px';
+  beam.style.width = '120px';
+  beam.style.height = '120px';
+
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const item = el?.closest('.market-item');
+  if(item) {
+    state.targetItem = item.dataset.id;
+  } else {
+    state.targetItem = null;
+  }
+});
+
+// Idle detection - if no mouse movement, reduce rate
+let idleTimer;
+document.addEventListener('mousemove', () => {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => {
+    state.targetItem = null;
+    state.hoverItem = null;
+  }, 2000);
+});
+
+// ========== INIT ==========
+renderMarket();
+addHistory('Economy initialized', 1000);
+setInterval(tick, 100);
+</script>
+</body>
+</html>

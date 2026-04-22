@@ -1,0 +1,548 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Final Mirror</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #0a0a0a 0%, #1a0a1a 100%);
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 95%;
+        max-width: 1000px;
+        height: 95vh;
+        background: linear-gradient(135deg, #1a0a1a 0%, #0f0510 100%);
+        border: 2px solid #8b4a5a;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 100px rgba(139, 74, 90, 0.4);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #1a0a1a 0%, #2a0a1a 100%);
+        border-bottom: 2px solid #8b4a5a;
+        padding: 40px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #d4a5a5;
+        font-size: 36px;
+        margin-bottom: 15px;
+        text-shadow: 0 0 40px rgba(212, 165, 165, 0.5);
+        letter-spacing: 3px;
+      }
+
+      .header p {
+        color: #888;
+        font-size: 14px;
+        font-style: italic;
+        line-height: 1.8;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .conversation {
+        flex: 1;
+        background: rgba(139, 74, 90, 0.08);
+        border: 1px solid #8b4a5a;
+        border-radius: 8px;
+        padding: 25px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .messages {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        overflow-y: auto;
+      }
+
+      .message {
+        display: flex;
+        animation: slideIn 0.5s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(15px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .message.now {
+        justify-content: flex-end;
+      }
+
+      .message.then {
+        justify-content: flex-start;
+      }
+
+      .message-bubble {
+        max-width: 75%;
+        padding: 18px;
+        border-radius: 12px;
+        line-height: 1.8;
+        font-size: 13px;
+      }
+
+      .message.now .message-bubble {
+        background: linear-gradient(135deg, #8b4a5a 0%, #6b2a3a 100%);
+        color: #fff;
+        border-bottom-right-radius: 3px;
+      }
+
+      .message.then .message-bubble {
+        background: rgba(139, 74, 90, 0.2);
+        color: #e0e0e0;
+        border: 1px solid #8b4a5a;
+        border-bottom-left-radius: 3px;
+      }
+
+      .message-label {
+        font-size: 10px;
+        color: #888;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .message.now .message-label {
+        text-align: right;
+        color: #ccc;
+      }
+
+      .message.then .message-label {
+        color: #d4a5a5;
+      }
+
+      .input-area {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding-top: 15px;
+        border-top: 1px solid #8b4a5a;
+      }
+
+      textarea {
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid #8b4a5a;
+        color: #e0e0e0;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: 'Georgia', serif;
+        font-size: 13px;
+        resize: none;
+        max-height: 100px;
+      }
+
+      textarea::placeholder {
+        color: #666;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #d4a5a5;
+        box-shadow: 0 0 15px rgba(212, 165, 165, 0.2);
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        flex: 1;
+        background: linear-gradient(135deg, #8b4a5a 0%, #6b2a3a 100%);
+        border: none;
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+        transition: all 0.2s;
+        font-family: 'Georgia', serif;
+        letter-spacing: 1px;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(139, 74, 90, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .sidebar {
+        width: 320px;
+        background: rgba(139, 74, 90, 0.08);
+        border: 1px solid #8b4a5a;
+        border-radius: 8px;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .section {
+        background: rgba(139, 74, 90, 0.15);
+        border: 1px solid #8b4a5a;
+        padding: 15px;
+        border-radius: 6px;
+      }
+
+      .section-title {
+        color: #d4a5a5;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+        border-bottom: 1px solid #8b4a5a;
+        padding-bottom: 8px;
+      }
+
+      .reflection-item {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        font-size: 11px;
+        line-height: 1.6;
+        color: #d4a5a5;
+        border-left: 2px solid #8b4a5a;
+      }
+
+      .reflection-label {
+        color: #888;
+        font-size: 9px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .typing-indicator {
+        display: flex;
+        gap: 4px;
+        padding: 12px;
+        background: rgba(139, 74, 90, 0.2);
+        border: 1px solid #8b4a5a;
+        border-radius: 12px;
+        width: fit-content;
+      }
+
+      .typing-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #d4a5a5;
+        animation: typing 1.4s infinite;
+      }
+
+      .typing-dot:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+
+      .typing-dot:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+
+      @keyframes typing {
+        0%, 60%, 100% {
+          opacity: 0.3;
+        }
+        30% {
+          opacity: 1;
+        }
+      }
+
+      .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        text-align: center;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(139, 74, 90, 0.1);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #8b4a5a;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🪞 THE FINAL MIRROR</h1>
+        <p>A conversation across time. You, now. You, at the end.</p>
+        <p style="font-size: 12px; color: #666; margin-top: 10px;">What would your deathbed self want you to know?</p>
+      </div>
+
+      <div class="content">
+        <div class="conversation">
+          <div class="messages" id="messagesContainer"></div>
+          <div class="input-area">
+            <textarea id="messageInput" placeholder="Speak to your future self. Ask them anything. Tell them anything." maxlength="500"></textarea>
+            <div class="button-group">
+              <button onclick="sendMessage()" id="sendBtn">Send</button>
+              <button onclick="startConversation()" id="startBtn" style="background: linear-gradient(135deg, #666 0%, #444 100%);">Begin</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar">
+          <div class="section">
+            <div class="section-title">💭 Themes</div>
+            <div id="themesList"></div>
+          </div>
+
+          <div class="section">
+            <div class="section-title">🔍 Reflections</div>
+            <div id="reflectionsList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        started: false,
+        messages: [],
+        themes: new Set(),
+        reflections: []
+      };
+
+      function startConversation() {
+        if (state.started) return;
+        state.started = true;
+
+        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('messageInput').focus();
+
+        const opening = `I am you. Sixty years from now. Eighty years from now. At the end. I've lived the life you're about to live. I've made the choices you're about to make. And I'm here to tell you what I know.
+
+Ask me anything. I will answer as honestly as I can.`;
+
+        addMessage(opening, 'then');
+      }
+
+      function addMessage(text, sender) {
+        state.messages.push({ text, sender, timestamp: new Date() });
+
+        const container = document.getElementById('messagesContainer');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'message-label';
+        labelDiv.textContent = sender === 'now' ? 'You, Now' : 'You, At The End';
+
+        const bubbleDiv = document.createElement('div');
+        bubbleDiv.className = 'message-bubble';
+        bubbleDiv.textContent = text;
+
+        messageDiv.appendChild(labelDiv);
+        messageDiv.appendChild(bubbleDiv);
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+
+        analyzeMessage(text, sender);
+      }
+
+      function analyzeMessage(text, sender) {
+        // Extract themes
+        const themeKeywords = {
+          'love': ['love', 'loved', 'relationship', 'connection', 'family'],
+          'regret': ['wish', 'regret', 'should have', 'if only', 'mistake'],
+          'time': ['time', 'years', 'moment', 'wasted', 'spent'],
+          'meaning': ['meaning', 'purpose', 'matter', 'important', 'legacy'],
+          'fear': ['fear', 'afraid', 'scared', 'anxiety', 'worry'],
+          'growth': ['grow', 'learn', 'change', 'become', 'evolve'],
+          'truth': ['truth', 'real', 'honest', 'authentic', 'genuine']
+        };
+
+        for (const [theme, keywords] of Object.entries(themeKeywords)) {
+          keywords.forEach(keyword => {
+            if (text.toLowerCase().includes(keyword)) {
+              state.themes.add(theme);
+            }
+          });
+        }
+
+        updateThemes();
+      }
+
+      function updateThemes() {
+        const list = document.getElementById('themesList');
+        list.innerHTML = Array.from(state.themes).map(theme => `
+          <div class="reflection-item">
+            <div class="reflection-label">${theme}</div>
+            <div>This matters to you.</div>
+          </div>
+        `).join('');
+      }
+
+      function sendMessage() {
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+
+        if (!text || !state.started) return;
+
+        addMessage(text, 'now');
+        input.value = '';
+
+        // Show typing
+        const container = document.getElementById('messagesContainer');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'message then';
+        typingDiv.id = 'typingIndicator';
+        typingDiv.innerHTML = `
+          <div class="typing-indicator">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+          </div>
+        `;
+        container.appendChild(typingDiv);
+        container.scrollTop = container.scrollHeight;
+
+        // Generate response
+        setTimeout(() => {
+          const typing = document.getElementById('typingIndicator');
+          if (typing) typing.remove();
+
+          const response = generateDeathbedResponse(text);
+          addMessage(response, 'then');
+
+          // Add to reflections
+          const reflections = document.getElementById('reflectionsList');
+          const item = document.createElement('div');
+          item.className = 'reflection-item';
+          item.innerHTML = `
+            <div class="reflection-label">Deathbed Wisdom</div>
+            <div>"${response.substring(0, 100)}..."</div>
+          `;
+          reflections.insertBefore(item, reflections.firstChild);
+          if (reflections.children.length > 5) {
+            reflections.removeChild(reflections.lastChild);
+          }
+        }, 2000 + Math.random() * 1500);
+      }
+
+      function generateDeathbedResponse(userMessage) {
+        const lower = userMessage.toLowerCase();
+
+        // Detect question type
+        let category = 'general';
+        if (lower.includes('regret') || lower.includes('wish')) category = 'regret';
+        else if (lower.includes('love') || lower.includes('relationship')) category = 'love';
+        else if (lower.includes('time') || lower.includes('waste')) category = 'time';
+        else if (lower.includes('meaning') || lower.includes('purpose')) category = 'meaning';
+        else if (lower.includes('fear') || lower.includes('scared')) category = 'fear';
+        else if (lower.includes('success') || lower.includes('achieve')) category = 'success';
+        else if (lower.includes('happy') || lower.includes('happy')) category = 'happiness';
+
+        const responses = {
+          regret: [
+            "My biggest regret isn't what I did. It's what I didn't do. The conversations I didn't have. The risks I didn't take. The people I didn't tell I loved them. You still have time. Don't wait.",
+            "I regret the years I spent trying to be someone I wasn't. Trying to impress people who didn't matter. Trying to fit into boxes that were never meant for me. Be yourself now. The world needs that more than it needs another copy.",
+            "I wish I had understood sooner: regret isn't about the mistakes. It's about the unlived life. The version of yourself you never became because you were too afraid."
+          ],
+          love: [
+            "The people you love are the only thing that matters. Everything else is noise. The career, the money, the status—none of it matters if you're alone. Tell them. Now. Don't wait for the perfect moment.",
+            "I learned too late that love is a verb. It's not just feeling. It's showing up. It's choosing them again and again. It's the small things. The daily things. The unglamorous things. Do that.",
+            "The greatest gift I received was people who loved me despite my flaws. Not because I earned it. Because they chose to. Choose people like that. And be that person for others."
+          ],
+          time: [
+            "Time is the only currency that matters. You can't earn more of it. You can't save it. You can only spend it. And you're spending it right now. Is this how you want to spend it?",
+            "I wasted so much time waiting. Waiting for the right moment. Waiting to be ready. Waiting for permission. The right moment is now. You're ready enough. You don't need permission.",
+            "Every moment you're not living is a moment you're dying. Not literally. But spiritually. Emotionally. Don't just exist. Live."
+          ],
+          meaning: [
+            "Meaning isn't something you find. It's something you create. By the choices you make. By the people you love. By the work you do. By the life you live. You're creating meaning right now.",
+            "I thought meaning would come from achievement. From accomplishment. From being remembered. But meaning came from the small moments. From connection. From presence. From showing up for people.",
+            "Your life has meaning because you're alive. Because you're conscious. Because you can feel and think and love. That's enough. You don't need to do anything extraordinary."
+          ],
+          fear: [
+            "Fear is a liar. It tells you that you're not good enough. That you'll fail. That people will judge you. And maybe some of that is true. But it's not the whole truth. The whole truth is that you're brave enough anyway.",
+            "I spent so much time afraid. Afraid of failure. Afraid of judgment. Afraid of being alone. And the thing I learned is: the fear was worse than the thing I feared. Do it anyway.",
+            "Fear is just your mind trying to protect you. But protection isn't the same as living. Sometimes you have to be afraid and do it anyway."
+          ],
+          success: [
+            "Success isn't what I thought it was. I thought it was achievement. Recognition. Money. But I was successful the moment I stopped needing those things to feel worthy. Real success is peace.",
+            "I achieved things I thought I wanted. And they felt empty. The real successes were the invisible ones. The relationships I built. The person I became. The integrity I maintained.",
+            "The most successful people I knew weren't the richest or the most famous. They were the ones who knew who they were and lived accordingly."
+          ],
+          happiness: [
+            "Happiness isn't a destination. It's not something you achieve and then have forever. It's a practice. It's a choice you make every day. Choose it now.",
+            "I learned that happiness comes from acceptance. From accepting yourself. Accepting others. Accepting that life is hard and beautiful and temporary. From there, happiness is possible.",
+            "I was happiest not when I had the most, but when I wanted the least. When I stopped chasing and started appreciating what I already had."
+          ],
+          general: [
+            "I'm you. I know what you're thinking. I know your doubts. I know your dreams. And I'm telling you: you're going to be okay. Not because everything works out. But because you're stronger than you think.",
+            "The future isn't written. You're writing it right now. With every choice. Every moment. Make it count.",
+            "I wish I could tell you it gets easier. But I'd be lying. What I can tell you is that you get stronger. And that makes all the difference.",
+            "You're asking the right questions. That's how you know you're alive. Keep asking."
+          ]
+        };
+
+        const options = responses[category] || responses.general;
+        return options[Math.floor(Math.random() * options.length)];
+      }
+
+      // Allow Enter to send
+      document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey && state.started) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+    </script>
+  </body>
+  </html>

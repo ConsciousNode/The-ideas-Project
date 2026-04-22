@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE CONCERNED • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #1a1e24;
+      background-image: radial-gradient(circle at 30% 20%, #2a3040 0%, #0f1118 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      transition: background 1.5s;
+      overflow: hidden;
+    }
+    #app {
+      width: 700px;
+      max-width: 90vw;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      background: #f5f0e8;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: opacity 1s;
+    }
+    #writing-area {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      font-size: 18px;
+      line-height: 1.7;
+      color: #2c2a28;
+      background: #faf7f2;
+      outline: none;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: 'Georgia', serif;
+    }
+    #writing-area:empty::before {
+      content: "Begin writing...";
+      color: #aaa;
+      font-style: italic;
+    }
+    #status-bar {
+      padding: 8px 20px;
+      background: #e0d9cd;
+      color: #5a5248;
+      font-size: 13px;
+      font-family: monospace;
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid #ccc5b8;
+    }
+    /* Intervention overlay */
+    #intervention-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #0a0c0e;
+      background-image: radial-gradient(circle at 20% 30%, #1a1e2a 0%, #050608 100%);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      color: #e0d8c8;
+      font-family: 'Georgia', serif;
+      padding: 40px;
+      opacity: 0;
+      transition: opacity 2s;
+    }
+    .circle-of-chairs {
+      display: flex;
+      gap: 40px;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .character {
+      text-align: center;
+      width: 100px;
+    }
+    .character-silhouette {
+      width: 80px;
+      height: 80px;
+      background: #2a3040;
+      border-radius: 50%;
+      margin: 0 auto 15px;
+      box-shadow: 0 0 20px #00000088;
+      border: 2px solid #6a7a8a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      color: #b0a890;
+    }
+    .character-name {
+      font-weight: bold;
+      color: #c0b8a0;
+    }
+    .letter-box {
+      background: #1e222a;
+      border-left: 4px solid #a08060;
+      padding: 25px 35px;
+      max-width: 600px;
+      border-radius: 4px;
+      box-shadow: 0 10px 20px #00000055;
+      margin-bottom: 30px;
+      font-size: 18px;
+      line-height: 1.6;
+      color: #d8d0c0;
+    }
+    .continue-btn {
+      background: transparent;
+      border: 2px solid #a08060;
+      color: #d8c8b0;
+      padding: 12px 30px;
+      font-size: 18px;
+      font-family: 'Georgia', serif;
+      cursor: pointer;
+      border-radius: 40px;
+      transition: 0.2s;
+    }
+    .continue-btn:hover {
+      background: #a0806022;
+      border-color: #c0a880;
+      color: #f0e8d8;
+    }
+    #metrics-debug { display: none; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="writing-area" contenteditable="true"></div>
+  <div id="status-bar">
+    <span id="time-indicator">● recording</span>
+    <span id="stats-indicator"></span>
+  </div>
+</div>
+
+<div id="intervention-overlay">
+  <div class="circle-of-chairs" id="characters-container"></div>
+  <div class="letter-box" id="letter-content"></div>
+  <button class="continue-btn" id="continue-intervention">Listen to the next letter</button>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- Metrics Tracking ----------
+    let sessionStart = Date.now();
+    let keystrokes = 0;
+    let backspaces = 0;
+    let pauses = []; // durations in seconds
+    let lastKeyTime = Date.now();
+    let burstLengths = [];
+    let currentBurst = 0;
+    let totalDeletes = 0;
+    let longestPause = 0;
+    let sessionPaused = false;
+    let interventionTriggered = false;
+    let interventionStep = 0;
+    let characters = [];
+    let letters = [];
+
+    const writingArea = document.getElementById('writing-area');
+    const timeIndicator = document.getElementById('time-indicator');
+    const statsIndicator = document.getElementById('stats-indicator');
+    const overlay = document.getElementById('intervention-overlay');
+    const letterContent = document.getElementById('letter-content');
+    const continueBtn = document.getElementById('continue-intervention');
+    const charsContainer = document.getElementById('characters-container');
+
+    // Character archetypes
+    const archetypes = [
+      { name: 'The Mentor', emoji: '🧙', role: 'wise' },
+      { name: 'The Inner Child', emoji: '🧒', role: 'emotional' },
+      { name: 'The Critic', emoji: '🎭', role: 'harsh' },
+      { name: 'The Friend', emoji: '🤝', role: 'supportive' }
+    ];
+
+    // Letter templates (with placeholders)
+    const letterTemplates = [
+      {
+        role: 'wise',
+        text: `"I've been watching you write. You've pressed backspace {backspaces} times today. You pause for minutes, then erupt in a flurry of words. I know that rhythm. That's the rhythm of someone who is afraid of being misunderstood. But here's the truth: the words that scare you the most are the ones that need to be written. Stop deleting. Let it be messy. Let it be true."`
+      },
+      {
+        role: 'emotional',
+        text: `"Do you remember when writing felt like play? Before the weight of getting it 'right' crushed the joy? You used to write for the sheer delight of watching thoughts become words. I miss that version of you. I think you do too. Maybe today, write something just for us. Just for fun. No backspaces allowed."`
+      },
+      {
+        role: 'harsh',
+        text: `"I've counted {backspaces} deletions. That's {backspaces} moments of self-doubt. You're not editing; you're self-censoring. And the longest pause you took was {longestPause} seconds. What were you doing? Staring at the void? You're better than this. Stop performing for an audience that doesn't exist yet. Write the damn thing."`
+      },
+      {
+        role: 'supportive',
+        text: `"Hey. I see you. I know this is hard. You've been here for {sessionMinutes} minutes, and that takes courage. The fact that you keep coming back, even after all that deleting, means something important is trying to come out. I believe in you. Take a breath. We're all here because we care. You've got this."`
+      }
+    ];
+
+    // Helper: format time
+    function formatDuration(ms) {
+      let sec = Math.floor(ms/1000);
+      if(sec < 60) return sec + 's';
+      let min = Math.floor(sec/60);
+      return min + 'm ' + (sec%60) + 's';
+    }
+
+    // Update stats display
+    function updateStats() {
+      let mins = Math.floor((Date.now() - sessionStart)/60000);
+      statsIndicator.innerText = `keystrokes: ${keystrokes} | ⌫ ${backspaces} | pauses: ${pauses.length}`;
+      timeIndicator.innerText = `● recording (${mins}m)`;
+    }
+
+    // Pause detection
+    function checkPause() {
+      if(interventionTriggered) return;
+      let now = Date.now();
+      let diff = (now - lastKeyTime) / 1000;
+      if(diff > 5 && !sessionPaused) {
+        pauses.push(diff);
+        if(diff > longestPause) longestPause = diff;
+        if(currentBurst > 0) {
+          burstLengths.push(currentBurst);
+          currentBurst = 0;
+        }
+        sessionPaused = true;
+      } else if(diff < 2 && sessionPaused) {
+        sessionPaused = false;
+      }
+      lastKeyTime = now;
+    }
+    setInterval(checkPause, 2000);
+
+    // Check for intervention threshold
+    function evaluateIntervention() {
+      if(interventionTriggered) return;
+      let sessionLength = (Date.now() - sessionStart)/60000;
+      let highBackspace = backspaces > 30;
+      let manyPauses = pauses.length > 8;
+      let longSession = sessionLength > 10;
+      let longPauseCondition = longestPause > 180; // 3 min
+      
+      if( (highBackspace && manyPauses) || (longSession && longPauseCondition) || backspaces > 60 ) {
+        triggerIntervention();
+      }
+    }
+
+    function triggerIntervention() {
+      if(interventionTriggered) return;
+      interventionTriggered = true;
+      
+      // Build characters based on metrics
+      characters = [];
+      let shuffled = [...archetypes].sort(()=>Math.random()-0.5);
+      characters = shuffled.slice(0, 3);
+      
+      // Generate letters
+      letters = [];
+      let sessionMins = Math.floor((Date.now() - sessionStart)/60000);
+      letterTemplates.forEach(tmpl => {
+        let char = characters.find(c => 
+          (tmpl.role === 'wise' && c.role === 'wise') ||
+          (tmpl.role === 'emotional' && c.role === 'emotional') ||
+          (tmpl.role === 'harsh' && c.role === 'harsh') ||
+          (tmpl.role === 'supportive' && c.role === 'supportive')
+        );
+        if(char) {
+          let text = tmpl.text
+            .replace('{backspaces}', backspaces)
+            .replace('{longestPause}', Math.round(longestPause))
+            .replace('{sessionMinutes}', sessionMins);
+          letters.push({ character: char, text });
+        }
+      });
+      
+      renderCharacters();
+      interventionStep = 0;
+      showLetter(0);
+      
+      overlay.style.display = 'flex';
+      setTimeout(() => overlay.style.opacity = 1, 50);
+    }
+
+    function renderCharacters() {
+      charsContainer.innerHTML = '';
+      characters.forEach(c => {
+        let div = document.createElement('div');
+        div.className = 'character';
+        div.innerHTML = `
+          <div class="character-silhouette">${c.emoji}</div>
+          <div class="character-name">${c.name}</div>
+        `;
+        charsContainer.appendChild(div);
+      });
+    }
+
+    function showLetter(index) {
+      if(index >= letters.length) {
+        // End of intervention
+        letterContent.innerHTML = `"We've said what we needed to say. Now it's your turn. The page is waiting."`;
+        continueBtn.textContent = 'Return to writing';
+        continueBtn.onclick = () => {
+          overlay.style.opacity = 0;
+          setTimeout(() => {
+            overlay.style.display = 'none';
+            writingArea.focus();
+            // Reset some metrics but keep memory
+            backspaces = 0;
+            pauses = [];
+            longestPause = 0;
+            interventionTriggered = false; // can trigger again later
+          }, 1000);
+        };
+        return;
+      }
+      
+      let letter = letters[index];
+      letterContent.innerHTML = `<span style="color:#b0a890;">${letter.character.name}:</span><br><br>${letter.text}`;
+      continueBtn.textContent = index === letters.length-1 ? 'One more letter...' : 'Listen to the next letter';
+      continueBtn.onclick = () => showLetter(index+1);
+    }
+
+    // Input handling
+    writingArea.addEventListener('keydown', (e) => {
+      if(interventionTriggered) {
+        e.preventDefault();
+        return;
+      }
+      
+      let now = Date.now();
+      let diff = (now - lastKeyTime)/1000;
+      if(diff > 2) {
+        if(currentBurst > 0) burstLengths.push(currentBurst);
+        currentBurst = 0;
+        if(diff > 5) pauses.push(diff);
+      } else {
+        currentBurst++;
+      }
+      
+      keystrokes++;
+      if(e.key === 'Backspace') {
+        backspaces++;
+        totalDeletes++;
+      }
+      if(e.key.length === 1) {
+        // character key
+      }
+      
+      lastKeyTime = now;
+      updateStats();
+      
+      // Evaluate after a batch of keystrokes
+      if(keystrokes % 20 === 0) evaluateIntervention();
+    });
+
+    writingArea.addEventListener('paste', (e) => {
+      // track paste as potential avoidance
+      if(!interventionTriggered) {
+        // large paste might be sign of copying instead of writing
+        let pasteLength = (e.clipboardData.getData('text/plain')).length;
+        if(pasteLength > 200) {
+          backspaces += 5; // artificially increase backspace metric
+        }
+      }
+    });
+
+    // Visibility change (tab switch) is a pause
+    document.addEventListener('visibilitychange', () => {
+      if(document.hidden) {
+        pauses.push(10);
+        if(currentBurst > 0) {
+          burstLengths.push(currentBurst);
+          currentBurst = 0;
+        }
+        evaluateIntervention();
+      }
+    });
+
+    // Manual trigger for testing (double click status)
+    document.getElementById('status-bar').addEventListener('dblclick', () => {
+      triggerIntervention();
+    });
+
+    // Initialize
+    updateStats();
+    setInterval(updateStats, 5000);
+    setInterval(evaluateIntervention, 30000);
+
+    // Make writing area focus
+    writingArea.focus();
+
+    // Save metrics to localStorage as a diary
+    window.addEventListener('beforeunload', () => {
+      let sessionData = {
+        date: new Date().toISOString(),
+        keystrokes, backspaces, pauses: pauses.length, longestPause,
+        sessionMinutes: Math.floor((Date.now() - sessionStart)/60000)
+      };
+      let history = JSON.parse(localStorage.getItem('writing_sessions') || '[]');
+      history.push(sessionData);
+      localStorage.setItem('writing_sessions', JSON.stringify(history.slice(-20)));
+    });
+
+  })();
+</script>
+</body>
+</html>

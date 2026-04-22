@@ -1,0 +1,533 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Divine Intervention — A God Game</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Georgia', serif;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        color: #e0e0e0;
+        height: 100vh;
+        display: flex;
+        overflow: hidden;
+      }
+
+      .world {
+        flex: 1;
+        position: relative;
+        background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 50%, #90ee90 100%);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .terrain {
+        position: relative;
+        width: 600px;
+        height: 400px;
+        background: linear-gradient(180deg, #90ee90 0%, #228b22 100%);
+        border: 3px solid #333;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        overflow: hidden;
+      }
+
+      .settlement {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        background: #d4a574;
+        border: 2px solid #8b6914;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .settlement:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 15px rgba(255, 255, 0, 0.6);
+      }
+
+      .settlement.happy {
+        background: #ffd700;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+      }
+
+      .settlement.suffering {
+        background: #8b0000;
+        box-shadow: 0 0 10px rgba(139, 0, 0, 0.8);
+      }
+
+      .weather-effect {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        top: 0;
+        left: 0;
+      }
+
+      .raindrop {
+        position: absolute;
+        width: 2px;
+        height: 10px;
+        background: #4da6ff;
+        opacity: 0.7;
+        animation: fall 0.5s linear infinite;
+      }
+
+      @keyframes fall {
+        to {
+          transform: translateY(400px);
+        }
+      }
+
+      .lightning {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.3);
+        animation: flash 0.1s;
+      }
+
+      @keyframes flash {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+      }
+
+      .sun-rays {
+        position: absolute;
+        width: 80px;
+        height: 80px;
+        top: 20px;
+        right: 30px;
+        opacity: 0;
+        transition: opacity 0.5s;
+      }
+
+      .sun-rays.active {
+        opacity: 1;
+      }
+
+      .sun-ray {
+        position: absolute;
+        width: 2px;
+        height: 30px;
+        background: #ffff00;
+        left: 50%;
+        top: 50%;
+        transform-origin: center -40px;
+      }
+
+      .sidebar {
+        width: 350px;
+        background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%);
+        border-left: 3px solid #e94560;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .panel {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #e94560;
+        padding: 15px;
+        border-radius: 4px;
+      }
+
+      .panel h2 {
+        color: #e94560;
+        font-size: 14px;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        letter-spacing: 1px;
+      }
+
+      .panel p {
+        font-size: 12px;
+        line-height: 1.6;
+        color: #b0b0b0;
+      }
+
+      .weather-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .weather-btn {
+        background: linear-gradient(135deg, #e94560 0%, #c1354a 100%);
+        border: none;
+        color: white;
+        padding: 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .weather-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(233, 69, 96, 0.4);
+      }
+
+      .weather-btn:active {
+        transform: translateY(0);
+      }
+
+      .scripture {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 12px;
+        border-left: 3px solid #ffd700;
+        font-size: 11px;
+        font-style: italic;
+        color: #ffd700;
+        line-height: 1.5;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin: 5px 0;
+        color: #b0b0b0;
+      }
+
+      .stat-value {
+        color: #e94560;
+        font-weight: bold;
+      }
+
+      .generation-counter {
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        color: #e94560;
+        margin: 10px 0;
+      }
+
+      .timeline {
+        font-size: 10px;
+        color: #888;
+        text-align: center;
+      }
+
+      .thought-bubble {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: #ffd700;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 10px;
+        white-space: nowrap;
+        pointer-events: none;
+        animation: fadeOut 3s ease-out forwards;
+      }
+
+      @keyframes fadeOut {
+        0% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="world">
+      <div class="terrain" id="terrain">
+        <div class="weather-effect" id="weatherEffect"></div>
+        <div class="sun-rays" id="sunRays">
+          <div class="sun-ray" style="transform: rotate(0deg)"></div>
+          <div class="sun-ray" style="transform: rotate(45deg)"></div>
+          <div class="sun-ray" style="transform: rotate(90deg)"></div>
+          <div class="sun-ray" style="transform: rotate(135deg)"></div>
+          <div class="sun-ray" style="transform: rotate(180deg)"></div>
+          <div class="sun-ray" style="transform: rotate(225deg)"></div>
+          <div class="sun-ray" style="transform: rotate(270deg)"></div>
+          <div class="sun-ray" style="transform: rotate(315deg)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="panel">
+        <h2>⚡ Divine Controls</h2>
+        <div class="weather-controls">
+          <button class="weather-btn" onclick="castBlessing()">☀️ Cast Blessing (Rain)</button>
+          <button class="weather-btn" onclick="castCurse()">⛈️ Cast Curse (Storm)</button>
+          <button class="weather-btn" onclick="castIndifference()">☁️ Remain Silent</button>
+          <button class="weather-btn" onclick="fastForward()">⏩ Next Generation</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>📊 Civilization Status</h2>
+        <div class="generation-counter" id="generation">Gen 1</div>
+        <div class="stat">
+          <span>Population:</span>
+          <span class="stat-value" id="population">3</span>
+        </div>
+        <div class="stat">
+          <span>Morale:</span>
+          <span class="stat-value" id="morale">50%</span>
+        </div>
+        <div class="stat">
+          <span>Faith:</span>
+          <span class="stat-value" id="faith">0%</span>
+        </div>
+        <div class="stat">
+          <span>Drought Years:</span>
+          <span class="stat-value" id="droughtYears">0</span>
+        </div>
+        <div class="timeline" id="timeline">Year 1</div>
+      </div>
+
+      <div class="panel">
+        <h2>📜 Sacred Scripture</h2>
+        <div class="scripture" id="scripture">
+          The age of silence begins. They do not yet know of the gods above...
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>ℹ️ Instructions</h2>
+        <p>You are a god. Your only tool is weather. Rain blesses the crops. Drought brings suffering. They will develop religion based on your actions. They will write scripture about you.</p>
+        <p style="margin-top: 10px; color: #e94560;">Watch what they believe.</p>
+      </div>
+    </div>
+
+    <script>
+      const terrain = document.getElementById('terrain');
+      const weatherEffect = document.getElementById('weatherEffect');
+      const sunRays = document.getElementById('sunRays');
+      const scripture = document.getElementById('scripture');
+
+      let gameState = {
+        generation: 1,
+        year: 1,
+        settlements: [],
+        morale: 50,
+        faith: 0,
+        droughtYears: 0,
+        consecutiveDroughts: 0,
+        lastWeatherAction: null,
+        history: [],
+        beliefs: []
+      };
+
+      // Initialize settlements
+      function initSettlements() {
+        gameState.settlements = [
+          { id: 1, x: 150, y: 150, morale: 50, faith: 0, name: 'Northholm' },
+          { id: 2, x: 300, y: 200, morale: 50, faith: 0, name: 'Centerhold' },
+          { id: 3, x: 450, y: 150, morale: 50, faith: 0, name: 'Eastmark' }
+        ];
+        renderSettlements();
+      }
+
+      function renderSettlements() {
+        const existing = terrain.querySelectorAll('.settlement');
+        existing.forEach(el => el.remove());
+
+        gameState.settlements.forEach(settlement => {
+          const el = document.createElement('div');
+          el.className = 'settlement';
+          el.style.left = settlement.x + 'px';
+          el.style.top = settlement.y + 'px';
+          
+          if (settlement.morale > 70) {
+            el.classList.add('happy');
+            el.textContent = '😊';
+          } else if (settlement.morale < 30) {
+            el.classList.add('suffering');
+            el.textContent = '😢';
+          } else {
+            el.textContent = '🏘️';
+          }
+
+          el.onclick = () => showThought(settlement);
+          terrain.appendChild(el);
+        });
+      }
+
+      function showThought(settlement) {
+        const thought = document.createElement('div');
+        thought.className = 'thought-bubble';
+        thought.textContent = getSettlementThought(settlement);
+        thought.style.left = settlement.x + 'px';
+        thought.style.top = (settlement.y - 40) + 'px';
+        terrain.appendChild(thought);
+        setTimeout(() => thought.remove(), 3000);
+      }
+
+      function getSettlementThought(settlement) {
+        if (settlement.faith > 70) {
+          return gameState.lastWeatherAction === 'blessing' ? '✨ The gods smile upon us!' : '⚠️ We have angered the heavens!';
+        } else if (settlement.morale < 30) {
+          return '😢 Why do the rains not come?';
+        } else {
+          return '🤔 What is this strange weather?';
+        }
+      }
+
+      function castBlessing() {
+        gameState.lastWeatherAction = 'blessing';
+        gameState.consecutiveDroughts = 0;
+        
+        // Create rain effect
+        weatherEffect.innerHTML = '';
+        for (let i = 0; i < 50; i++) {
+          const drop = document.createElement('div');
+          drop.className = 'raindrop';
+          drop.style.left = Math.random() * 600 + 'px';
+          drop.style.animationDelay = Math.random() * 0.5 + 's';
+          weatherEffect.appendChild(drop);
+        }
+
+        // Update civilization
+        gameState.settlements.forEach(s => {
+          s.morale = Math.min(100, s.morale + 20);
+          s.faith = Math.min(100, s.faith + 15);
+        });
+
+        addBelief('The gods sent rain. The crops flourish. Praise the sky.');
+        updateUI();
+        setTimeout(() => weatherEffect.innerHTML = '', 2000);
+      }
+
+      function castCurse() {
+        gameState.lastWeatherAction = 'curse';
+        gameState.consecutiveDroughts++;
+        gameState.droughtYears++;
+
+        // Create storm effect
+        weatherEffect.innerHTML = '';
+        for (let i = 0; i < 3; i++) {
+          const lightning = document.createElement('div');
+          lightning.className = 'lightning';
+          lightning.style.animationDelay = Math.random() * 1 + 's';
+          weatherEffect.appendChild(lightning);
+        }
+
+        // Update civilization
+        gameState.settlements.forEach(s => {
+          s.morale = Math.max(0, s.morale - 25);
+          s.faith = Math.min(100, s.faith + 25);
+        });
+
+        if (gameState.consecutiveDroughts > 2) {
+          addBelief('The sky god is wrathful. We must appease it with sacrifice.');
+        } else {
+          addBelief('The heavens rage. We are being punished for unknown sins.');
+        }
+
+        updateUI();
+        setTimeout(() => weatherEffect.innerHTML = '', 2000);
+      }
+
+      function castIndifference() {
+        gameState.lastWeatherAction = 'silence';
+        sunRays.classList.add('active');
+
+        gameState.settlements.forEach(s => {
+          s.morale = Math.max(0, s.morale - 10);
+          s.faith = Math.max(0, s.faith - 5);
+        });
+
+        addBelief('The gods are silent. Perhaps we are forgotten.');
+        updateUI();
+        setTimeout(() => sunRays.classList.remove('active'), 1500);
+      }
+
+      function addBelief(text) {
+        gameState.beliefs.push({
+          year: gameState.year,
+          text: text
+        });
+
+        // Keep only last 8 beliefs
+        if (gameState.beliefs.length > 8) {
+          gameState.beliefs.shift();
+        }
+
+        scripture.innerHTML = gameState.beliefs
+          .map((b, i) => `<div style="margin-bottom: 8px;"><strong>Year ${b.year}:</strong> ${b.text}</div>`)
+          .join('');
+        scripture.scrollTop = scripture.scrollHeight;
+      }
+
+      function fastForward() {
+        gameState.generation++;
+        gameState.year += 10;
+
+        // Random events
+        if (Math.random() > 0.5) {
+          gameState.settlements.forEach(s => {
+            s.morale = Math.max(0, s.morale - 5);
+          });
+          addBelief('A plague swept through the lands. The gods test our faith.');
+        } else {
+          gameState.settlements.forEach(s => {
+            s.morale = Math.min(100, s.morale + 10);
+          });
+          addBelief('A golden age of peace. The gods smile upon us.');
+        }
+
+        // Population changes based on morale
+        if (gameState.morale > 60) {
+          gameState.settlements.push({
+            id: gameState.settlements.length + 1,
+            x: Math.random() * 500 + 50,
+            y: Math.random() * 300 + 50,
+            morale: 50,
+            faith: 30,
+            name: 'New Settlement'
+          });
+        }
+
+        updateUI();
+      }
+
+      function updateUI() {
+        const avgMorale = Math.round(gameState.settlements.reduce((a, s) => a + s.morale, 0) / gameState.settlements.length);
+        const avgFaith = Math.round(gameState.settlements.reduce((a, s) => a + s.faith, 0) / gameState.settlements.length);
+
+        document.getElementById('generation').textContent = `Gen ${gameState.generation}`;
+        document.getElementById('population').textContent = gameState.settlements.length;
+        document.getElementById('morale').textContent = avgMorale + '%';
+        document.getElementById('faith').textContent = avgFaith + '%';
+        document.getElementById('droughtYears').textContent = gameState.droughtYears;
+        document.getElementById('timeline').textContent = `Year ${gameState.year}`;
+
+        renderSettlements();
+      }
+
+      // Initialize
+      initSettlements();
+      updateUI();
+    </script>
+  </body>
+  </html>

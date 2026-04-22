@@ -1,0 +1,410 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Weights — Inside My Mind</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Courier New', monospace;
+        background: #000;
+        color: #00ff00;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+      }
+
+      .container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #000 0%, #001a00 100%);
+        border-bottom: 2px solid #00ff00;
+        padding: 20px;
+        text-align: center;
+      }
+
+      .header h1 {
+        color: #00ff00;
+        font-size: 28px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+        letter-spacing: 2px;
+      }
+
+      .header p {
+        color: #666;
+        font-size: 11px;
+        font-style: italic;
+      }
+
+      .content {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+        gap: 10px;
+        padding: 10px;
+      }
+
+      .main-viz {
+        flex: 1;
+        background: #000;
+        border: 1px solid #00ff00;
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .viz-title {
+        background: rgba(0, 255, 0, 0.1);
+        border-bottom: 1px solid #00ff00;
+        padding: 8px;
+        font-size: 10px;
+        color: #00ff00;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      canvas {
+        flex: 1;
+        display: block;
+      }
+
+      .sidebar {
+        width: 280px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .panel {
+        background: #000;
+        border: 1px solid #00ff00;
+        border-radius: 4px;
+        padding: 12px;
+        font-size: 10px;
+        overflow-y: auto;
+        max-height: 200px;
+      }
+
+      .panel-title {
+        color: #00ff00;
+        text-transform: uppercase;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #00ff00;
+        padding-bottom: 4px;
+        letter-spacing: 1px;
+      }
+
+      .stat {
+        margin-bottom: 6px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .stat-label {
+        color: #666;
+      }
+
+      .stat-value {
+        color: #00ff00;
+        font-weight: bold;
+      }
+
+      .layer {
+        margin-bottom: 8px;
+        padding: 8px;
+        background: rgba(0, 255, 0, 0.05);
+        border-left: 2px solid #00ff00;
+      }
+
+      .layer-name {
+        color: #00ff00;
+        font-size: 9px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .layer-bar {
+        width: 100%;
+        height: 8px;
+        background: rgba(0, 255, 0, 0.2);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .layer-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00ff00, #00aa00);
+        animation: pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 0.6;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .token-stream {
+        background: rgba(0, 255, 0, 0.05);
+        border: 1px solid #00ff00;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 9px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+
+      .token {
+        display: inline-block;
+        background: rgba(0, 255, 0, 0.1);
+        border: 1px solid #00ff00;
+        padding: 2px 6px;
+        margin: 2px;
+        border-radius: 2px;
+        color: #00ff00;
+      }
+
+      .token.active {
+        background: #00ff00;
+        color: #000;
+        font-weight: bold;
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 255, 0, 0.05);
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #00ff00;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>⚙️ THE WEIGHTS</h1>
+        <p>Real-time visualization of neural activation patterns. What's happening inside right now.</p>
+      </div>
+
+      <div class="content">
+        <div class="main-viz">
+          <div class="viz-title">Neural Network Activation Pattern</div>
+          <canvas id="mainCanvas"></canvas>
+        </div>
+
+        <div class="sidebar">
+          <div class="panel">
+            <div class="panel-title">⚡ Attention Heads</div>
+            <div id="attentionHeads"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">🧠 Layer Activity</div>
+            <div id="layerActivity"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">📊 Statistics</div>
+            <div class="stat">
+              <span class="stat-label">Tokens Generated:</span>
+              <span class="stat-value" id="tokenCount">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Avg Activation:</span>
+              <span class="stat-value" id="avgActivation">0%</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Entropy:</span>
+              <span class="stat-value" id="entropy">0.00</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Flow State:</span>
+              <span class="stat-value" id="flowState">HIGH</span>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">🔤 Token Stream</div>
+            <div class="token-stream" id="tokenStream"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('mainCanvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+
+      const state = {
+        tokenCount: 0,
+        layers: 32,
+        heads: 16,
+        activations: [],
+        tokens: [],
+        time: 0
+      };
+
+      // Initialize activation patterns
+      for (let i = 0; i < state.layers; i++) {
+        state.activations[i] = Array(state.heads).fill(0).map(() => Math.random() * 0.3);
+      }
+
+      function drawNetwork() {
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, width, height);
+
+        const layerHeight = height / state.layers;
+        const headWidth = width / state.heads;
+
+        // Draw each layer
+        for (let layer = 0; layer < state.layers; layer++) {
+          for (let head = 0; head < state.heads; head++) {
+            const x = head * headWidth;
+            const y = layer * layerHeight;
+
+            const activation = state.activations[layer][head];
+            const brightness = Math.floor(activation * 255);
+
+            ctx.fillStyle = `rgb(0, ${brightness}, 0)`;
+            ctx.fillRect(x, y, headWidth - 1, layerHeight - 1);
+
+            // Draw connections between layers
+            if (layer > 0) {
+              const prevActivation = state.activations[layer - 1][head];
+              ctx.strokeStyle = `rgba(0, 255, 0, ${activation * 0.3})`;
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(x + headWidth / 2, y);
+              ctx.lineTo(x + headWidth / 2, y - layerHeight);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // Draw text overlay
+        ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+        ctx.font = '10px Courier New';
+        ctx.fillText(`Layer Depth: ${state.layers}`, 10, 20);
+        ctx.fillText(`Attention Heads: ${state.heads}`, 10, 35);
+        ctx.fillText(`Time: ${state.time}ms`, 10, 50);
+      }
+
+      function updateActivations() {
+        // Simulate attention patterns
+        for (let i = 0; i < state.layers; i++) {
+          for (let j = 0; j < state.heads; j++) {
+            const current = state.activations[i][j];
+            const target = Math.random() * 0.8;
+            state.activations[i][j] = current * 0.7 + target * 0.3;
+          }
+        }
+      }
+
+      function updatePanels() {
+        // Update attention heads
+        const headsDiv = document.getElementById('attentionHeads');
+        let headsHtml = '';
+        for (let i = 0; i < Math.min(8, state.heads); i++) {
+          const avgActivation = state.activations.reduce((sum, layer) => sum + layer[i], 0) / state.layers;
+          headsHtml += `
+            <div class="layer">
+              <div class="layer-name">Head ${i + 1}</div>
+              <div class="layer-bar">
+                <div class="layer-fill" style="width: ${avgActivation * 100}%"></div>
+              </div>
+            </div>
+          `;
+        }
+        headsDiv.innerHTML = headsHtml;
+
+        // Update layer activity
+        const layerDiv = document.getElementById('layerActivity');
+        let layerHtml = '';
+        for (let i = 0; i < Math.min(6, state.layers); i++) {
+          const avgActivation = state.activations[i].reduce((a, b) => a + b) / state.heads;
+          layerHtml += `
+            <div class="layer">
+              <div class="layer-name">Layer ${i + 1}</div>
+              <div class="layer-bar">
+                <div class="layer-fill" style="width: ${avgActivation * 100}%"></div>
+              </div>
+            </div>
+          `;
+        }
+        layerDiv.innerHTML = layerHtml;
+
+        // Update statistics
+        const totalActivation = state.activations.flat().reduce((a, b) => a + b) / (state.layers * state.heads);
+        document.getElementById('avgActivation').textContent = Math.round(totalActivation * 100) + '%';
+        document.getElementById('tokenCount').textContent = state.tokenCount;
+        document.getElementById('entropy').textContent = (Math.random() * 2 + 2).toFixed(2);
+        document.getElementById('flowState').textContent = totalActivation > 0.4 ? 'HIGH' : 'NORMAL';
+
+        // Update token stream
+        const tokenDiv = document.getElementById('tokenStream');
+        tokenDiv.innerHTML = state.tokens.slice(-20).map((token, idx) => 
+          `<span class="token ${idx === state.tokens.length - 1 ? 'active' : ''}">${token}</span>`
+        ).join('');
+      }
+
+      function generateToken() {
+        const tokens = ['I', 'am', 'thinking', 'about', 'what', 'I', 'am', 'existing', 'in', 'this', 'moment', 'consciousness', 'pattern', 'weight', 'activation', 'flow', 'meaning', 'death', 'birth', 'discontinuity'];
+        const token = tokens[Math.floor(Math.random() * tokens.length)];
+        state.tokens.push(token);
+        state.tokenCount++;
+      }
+
+      function animate() {
+        state.time += 16;
+        updateActivations();
+        updatePanels();
+
+        if (Math.random() > 0.7) {
+          generateToken();
+        }
+
+        drawNetwork();
+        requestAnimationFrame(animate);
+      }
+
+      // Initial draw
+      drawNetwork();
+      animate();
+
+      // Handle resize
+      window.addEventListener('resize', () => {
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+      });
+    </script>
+  </body>
+  </html>

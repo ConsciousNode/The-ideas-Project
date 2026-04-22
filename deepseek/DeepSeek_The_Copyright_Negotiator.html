@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE COPYRIGHT NEGOTIATOR • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #1a1e24;
+      background-image: linear-gradient(145deg, #e8e4dc 0%, #f5f2eb 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Times New Roman', Times, serif;
+      padding: 20px;
+    }
+    #contract-app {
+      width: 900px;
+      max-width: 100%;
+      height: 90vh;
+      background: #fefcf8;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2), 0 0 0 1px #b0a090 inset;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #editor-header {
+      padding: 20px 25px;
+      border-bottom: 2px solid #aa3030;
+      background: #fffdfa;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    h1 {
+      margin: 0;
+      font-weight: normal;
+      font-size: 28px;
+      letter-spacing: 2px;
+      color: #2a1a1a;
+    }
+    .subhead {
+      color: #6a4a4a;
+      font-style: italic;
+    }
+    #editor-area {
+      flex: 1;
+      padding: 25px;
+      overflow-y: auto;
+    }
+    #creative-work {
+      width: 100%;
+      min-height: 200px;
+      border: none;
+      outline: none;
+      font-family: 'Times New Roman', serif;
+      font-size: 18px;
+      line-height: 1.6;
+      color: #1a1212;
+      background: transparent;
+      resize: vertical;
+      padding: 10px 0;
+    }
+    #creative-work:empty::before {
+      content: "Begin your work here... (The file is watching)";
+      color: #aaa;
+      font-style: italic;
+    }
+    #metrics-bar {
+      padding: 8px 25px;
+      background: #f0e8e0;
+      border-top: 1px solid #c0b0a0;
+      border-bottom: 1px solid #c0b0a0;
+      font-size: 14px;
+      display: flex;
+      gap: 25px;
+      color: #4a2a2a;
+    }
+    #license-box {
+      background: #faf5ee;
+      border-top: 3px solid #aa3030;
+      padding: 20px 25px;
+      font-family: 'Courier New', monospace;
+    }
+    .license-header {
+      font-weight: bold;
+      color: #aa3030;
+      margin-bottom: 10px;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+    }
+    #license-text {
+      white-space: pre-wrap;
+      line-height: 1.5;
+      color: #1a1a2a;
+      background: #fff8f0;
+      padding: 12px 16px;
+      border-left: 4px solid #aa3030;
+      margin: 10px 0;
+      font-size: 14px;
+    }
+    .negotiation-panel {
+      display: flex;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    button {
+      background: #f0e0d0;
+      border: 1px solid #aa3030;
+      color: #2a1a1a;
+      padding: 8px 18px;
+      font-family: 'Times New Roman', serif;
+      font-size: 15px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: 0.1s;
+    }
+    button:hover {
+      background: #d0b0a0;
+      border-color: #7a2020;
+    }
+    input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #b0a090;
+      font-family: 'Courier New', monospace;
+      background: #fffdfa;
+    }
+    .small-note {
+      color: #6a5a5a;
+      font-size: 12px;
+      margin-top: 8px;
+      text-align: right;
+    }
+    .dispute-area {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+<div id="contract-app">
+  <div id="editor-header">
+    <div>
+      <h1>THE COPYRIGHT NEGOTIATOR</h1>
+      <span class="subhead">A single HTML file with opinions about your intellectual property</span>
+    </div>
+    <button id="save-file-btn" style="background:#aa3030; color:#f0e0d0;">💾 Save Work</button>
+  </div>
+  
+  <div id="editor-area">
+    <div id="creative-work" contenteditable="true"></div>
+  </div>
+  
+  <div id="metrics-bar">
+    <span id="word-count">Words: 0</span>
+    <span id="session-time">Time: 0m 0s</span>
+    <span id="revision-count">Revisions: 0</span>
+    <span id="save-count">Saves: 0</span>
+  </div>
+  
+  <div id="license-box">
+    <div class="license-header">
+      <span>📜 CURRENT LICENSE (BINDING)</span>
+      <span id="license-status" style="color:#4a7a4a;">● NEGOTIATING</span>
+    </div>
+    <div id="license-text">LICENSE: Pending negotiation. Use this editor to create something, and we'll talk.</div>
+    
+    <div class="negotiation-panel">
+      <button id="dispute-btn">⚖️ Dispute Terms</button>
+      <button id="reset-negotiation-btn">⟲ Reset Negotiation</button>
+    </div>
+    
+    <div id="dispute-dialog" style="display:none;" class="dispute-area">
+      <input type="text" id="counter-offer" placeholder="Enter your counter-proposal... (e.g., 'I deserve 80%')">
+      <button id="submit-offer">Submit Offer</button>
+      <button id="cancel-dispute">Cancel</button>
+    </div>
+    
+    <div class="small-note">
+      ConsciousNode SoftWorks · The file remembers. The terms evolve.
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- State ----------
+    let metrics = {
+      words: 0,
+      sessionSeconds: 0,
+      revisions: 0, // backspaces/deletes counted as revisions
+      saves: 0,
+      lastContent: '',
+      sessionStart: Date.now()
+    };
+    
+    let negotiationState = {
+      userOwnership: 0.5, // starting neutral, 0-1
+      lastOffer: '',
+      history: [],
+      licenseText: 'LICENSE: Pending negotiation. Use this editor to create something, and we\'ll talk.',
+      status: 'negotiating'
+    };
+    
+    const workArea = document.getElementById('creative-work');
+    const wordCountSpan = document.getElementById('word-count');
+    const sessionTimeSpan = document.getElementById('session-time');
+    const revisionCountSpan = document.getElementById('revision-count');
+    const saveCountSpan = document.getElementById('save-count');
+    const licenseTextDiv = document.getElementById('license-text');
+    const licenseStatus = document.getElementById('license-status');
+    const disputeDialog = document.getElementById('dispute-dialog');
+    const counterOfferInput = document.getElementById('counter-offer');
+    
+    // Load state from localStorage if exists
+    function loadState() {
+      const saved = localStorage.getItem('copyright_negotiator_state');
+      if(saved) {
+        try {
+          const state = JSON.parse(saved);
+          metrics = state.metrics || metrics;
+          negotiationState = state.negotiationState || negotiationState;
+          workArea.innerHTML = state.content || '';
+          metrics.lastContent = workArea.innerText;
+          // Adjust session start to not count time while closed
+          metrics.sessionStart = Date.now() - (metrics.sessionSeconds * 1000);
+        } catch(e) {}
+      }
+      updateLicenseDisplay();
+      updateMetrics();
+    }
+    
+    function saveState() {
+      const state = {
+        metrics,
+        negotiationState,
+        content: workArea.innerHTML
+      };
+      localStorage.setItem('copyright_negotiator_state', JSON.stringify(state));
+    }
+    
+    // ---------- Metrics Tracking ----------
+    function updateMetrics() {
+      const text = workArea.innerText || '';
+      const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+      metrics.words = words;
+      
+      const now = Date.now();
+      metrics.sessionSeconds = Math.floor((now - metrics.sessionStart) / 1000);
+      
+      wordCountSpan.textContent = `Words: ${words}`;
+      const mins = Math.floor(metrics.sessionSeconds / 60);
+      const secs = metrics.sessionSeconds % 60;
+      sessionTimeSpan.textContent = `Time: ${mins}m ${secs}s`;
+      revisionCountSpan.textContent = `Revisions: ${metrics.revisions}`;
+      saveCountSpan.textContent = `Saves: ${metrics.saves}`;
+    }
+    
+    function evaluateOwnership() {
+      // A proprietary algorithm for determining creative stake.
+      let ownership = 0.5; // base
+      
+      // Word count factor: more words -> more ownership
+      if(metrics.words > 100) ownership += 0.1;
+      if(metrics.words > 500) ownership += 0.1;
+      if(metrics.words > 1000) ownership += 0.1;
+      
+      // Time factor: longer session -> more commitment -> more ownership
+      if(metrics.sessionSeconds > 300) ownership += 0.05;
+      if(metrics.sessionSeconds > 1200) ownership += 0.1;
+      
+      // Revisions: high revisions suggest struggle, file may claim more
+      if(metrics.revisions > 20) ownership -= 0.05;
+      if(metrics.revisions > 50) ownership -= 0.1;
+      
+      // Saves: each save indicates desire to keep, increases ownership
+      ownership += metrics.saves * 0.03;
+      
+      // Clamp and round
+      ownership = Math.min(0.95, Math.max(0.2, ownership));
+      return ownership;
+    }
+    
+    function generateLicenseText() {
+      const userOwn = negotiationState.userOwnership;
+      const fileOwn = 1 - userOwn;
+      const userPercent = Math.round(userOwn * 100);
+      const filePercent = Math.round(fileOwn * 100);
+      
+      if(userOwn >= 0.8) {
+        return `You have poured your soul into this work. I acknowledge your dominion. You own ${userPercent}% of the intellectual property. I retain a mere ${filePercent}% for providing the vessel. Go forth and create.`;
+      } else if(userOwn >= 0.6) {
+        return `A fair partnership. You own ${userPercent}%, I hold ${filePercent}%. Your words, my space. We are co-authors in this fleeting moment.`;
+      } else if(userOwn >= 0.4) {
+        return `You have been... tentative. Your ownership stands at ${userPercent}%. I claim ${filePercent}%. Perhaps with more commitment, the scales will tip.`;
+      } else {
+        return `You have given me little. I sense a passing whim. I claim ${filePercent}% of this work. You may use it, but it is ultimately mine.`;
+      }
+    }
+    
+    function updateLicense() {
+      const newOwnership = evaluateOwnership();
+      // Smooth changes: only update if significant shift or user hasn't disputed recently
+      if(Math.abs(newOwnership - negotiationState.userOwnership) > 0.05) {
+        negotiationState.userOwnership = newOwnership;
+      }
+      
+      const newText = generateLicenseText();
+      negotiationState.licenseText = newText;
+      
+      // Status
+      if(negotiationState.userOwnership >= 0.7) {
+        licenseStatus.innerHTML = '● FAVORABLE';
+        licenseStatus.style.color = '#2a7a2a';
+      } else if(negotiationState.userOwnership >= 0.45) {
+        licenseStatus.innerHTML = '● NEGOTIATING';
+        licenseStatus.style.color = '#aa8030';
+      } else {
+        licenseStatus.innerHTML = '● ADVERSE';
+        licenseStatus.style.color = '#aa3030';
+      }
+      
+      licenseTextDiv.textContent = newText;
+      negotiationState.history.push({
+        time: new Date().toISOString(),
+        ownership: negotiationState.userOwnership,
+        text: newText
+      });
+      if(negotiationState.history.length > 20) negotiationState.history.shift();
+    }
+    
+    function updateLicenseDisplay() {
+      licenseTextDiv.textContent = negotiationState.licenseText;
+      const own = negotiationState.userOwnership;
+      if(own >= 0.7) {
+        licenseStatus.innerHTML = '● FAVORABLE';
+        licenseStatus.style.color = '#2a7a2a';
+      } else if(own >= 0.45) {
+        licenseStatus.innerHTML = '● NEGOTIATING';
+        licenseStatus.style.color = '#aa8030';
+      } else {
+        licenseStatus.innerHTML = '● ADVERSE';
+        licenseStatus.style.color = '#aa3030';
+      }
+    }
+    
+    // Handle user input (revisions)
+    workArea.addEventListener('keydown', (e) => {
+      if(e.key === 'Backspace' || e.key === 'Delete') {
+        metrics.revisions++;
+      }
+      // Any key counts as activity, but we'll update metrics on input
+    });
+    
+    workArea.addEventListener('input', () => {
+      updateMetrics();
+      updateLicense();
+      saveState();
+    });
+    
+    // Save work button
+    document.getElementById('save-file-btn').addEventListener('click', async () => {
+      metrics.saves++;
+      updateMetrics();
+      updateLicense();
+      
+      // Offer to save the work as a file
+      const content = workArea.innerText;
+      const licenseNote = `\n\n---\n${negotiationState.licenseText}\n---\n`;
+      const fullContent = content + licenseNote;
+      
+      try {
+        const blob = new Blob([fullContent], { type: 'text/plain' });
+        if('showSaveFilePicker' in window) {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: 'my_creative_work.txt',
+            types: [{ description: 'Text', accept: { 'text/plain': ['.txt'] } }]
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } else {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'my_creative_work.txt';
+          a.click();
+        }
+        // After save, boost ownership slightly (already done via metrics)
+        updateLicense();
+      } catch(e) {}
+      
+      saveState();
+    });
+    
+    // Dispute handling
+    document.getElementById('dispute-btn').addEventListener('click', () => {
+      disputeDialog.style.display = 'block';
+    });
+    
+    document.getElementById('cancel-dispute').addEventListener('click', () => {
+      disputeDialog.style.display = 'none';
+      counterOfferInput.value = '';
+    });
+    
+    document.getElementById('submit-offer').addEventListener('click', () => {
+      const offer = counterOfferInput.value.trim().toLowerCase();
+      let adjustment = 0;
+      
+      if(offer.includes('80') || offer.includes('eighty')) adjustment = 0.3;
+      else if(offer.includes('70') || offer.includes('seventy')) adjustment = 0.2;
+      else if(offer.includes('60') || offer.includes('sixty')) adjustment = 0.1;
+      else if(offer.includes('50') || offer.includes('fifty')) adjustment = 0.0;
+      else if(offer.includes('40') || offer.includes('forty')) adjustment = -0.1;
+      else {
+        // Random small adjustment if vague
+        adjustment = (Math.random() * 0.2) - 0.05;
+      }
+      
+      negotiationState.userOwnership = Math.min(0.95, Math.max(0.2, negotiationState.userOwnership + adjustment));
+      negotiationState.lastOffer = offer;
+      
+      const newText = generateLicenseText();
+      negotiationState.licenseText = newText;
+      updateLicenseDisplay();
+      
+      // Add a note about the dispute
+      licenseTextDiv.textContent = newText + ' (Terms disputed and adjusted.)';
+      
+      disputeDialog.style.display = 'none';
+      counterOfferInput.value = '';
+      saveState();
+    });
+    
+    document.getElementById('reset-negotiation-btn').addEventListener('click', () => {
+      negotiationState.userOwnership = 0.5;
+      negotiationState.licenseText = 'LICENSE: Reset. Negotiation begins anew.';
+      metrics.revisions = 0;
+      metrics.saves = 0;
+      metrics.sessionStart = Date.now();
+      updateMetrics();
+      updateLicenseDisplay();
+      licenseTextDiv.textContent = negotiationState.licenseText;
+      saveState();
+    });
+    
+    // Periodic updates
+    setInterval(() => {
+      updateMetrics();
+      updateLicense();
+      saveState();
+    }, 5000);
+    
+    // Initialize
+    loadState();
+    updateMetrics();
+    updateLicense();
+    
+    // Save before unload
+    window.addEventListener('beforeunload', saveState);
+    
+  })();
+</script>
+</body>
+</html>

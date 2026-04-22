@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>gaslight.html — you're not imagining it</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      transition: all 0.2s ease-out;
+    }
+    body {
+      background: #1e1a2f;
+      font-family: 'Segoe UI', 'Courier New', monospace;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      transition: background 0.5s;
+    }
+    .container {
+      max-width: 700px;
+      width: 100%;
+      background: #2d2438;
+      border-radius: 2rem;
+      padding: 2rem;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      text-align: center;
+      transition: all 0.3s;
+    }
+    h1 {
+      color: #e0d4ff;
+      font-weight: 300;
+      letter-spacing: 2px;
+      transition: letter-spacing 0.5s;
+    }
+    .counter-panel {
+      background: #1e162c;
+      border-radius: 2rem;
+      padding: 1rem;
+      margin: 1.5rem 0;
+    }
+    .counter {
+      font-size: 4rem;
+      font-weight: bold;
+      color: #b9a6ff;
+      font-family: monospace;
+      transition: font-size 0.2s, color 0.3s;
+    }
+    button {
+      background: #3c2a5e;
+      border: none;
+      color: white;
+      padding: 10px 24px;
+      border-radius: 60px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 8px;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #5e3a8c;
+      transform: scale(0.98);
+    }
+    .note {
+      font-size: 0.8rem;
+      color: #8e7bb3;
+      margin-top: 2rem;
+      transition: color 0.5s, font-size 0.3s;
+    }
+    .secret-btn {
+      background: #2a1e3a;
+      color: #5e4b7a;
+      font-size: 0.7rem;
+      padding: 4px 12px;
+      margin-top: 20px;
+    }
+    .confess-panel {
+      background: #0f0b16;
+      border-radius: 1rem;
+      padding: 1rem;
+      margin-top: 1.5rem;
+      text-align: left;
+      font-family: monospace;
+      font-size: 0.7rem;
+      display: none;
+    }
+    hr {
+      border-color: #3c2a5e;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container" id="app">
+  <h1 id="titleText">Welcome, friend.</h1>
+  <div class="counter-panel">
+    <div class="counter" id="counter">0</div>
+    <button id="incrementBtn">+1</button>
+    <button id="resetBtn">reset</button>
+  </div>
+  <div class="note" id="noteText">
+    This is a simple counter. Nothing strange.
+  </div>
+  <button id="confessBtn" class="secret-btn" style="opacity:0.3;">💬 confess</button>
+  <div id="confessLog" class="confess-panel"></div>
+</div>
+
+<script>
+  // --------------------------------------------------------------
+  // gaslight.html - a single file that slowly changes itself.
+  // Every few seconds, a tiny, nearly invisible mutation occurs.
+  // After many changes, click "confess" to see everything.
+  // --------------------------------------------------------------
+  
+  // State
+  let counter = 0;
+  let changeLog = []; // store all gaslighting events
+  
+  // DOM elements
+  const container = document.getElementById('app');
+  const titleEl = document.getElementById('titleText');
+  const counterEl = document.getElementById('counter');
+  const noteEl = document.getElementById('noteText');
+  const incrementBtn = document.getElementById('incrementBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const confessBtn = document.getElementById('confessBtn');
+  const confessPanel = document.getElementById('confessLog');
+  
+  // Helper: log a gaslighting event
+  function logChange(description) {
+    changeLog.push({ time: new Date().toLocaleTimeString(), desc: description });
+    // keep last 50
+    if (changeLog.length > 50) changeLog.shift();
+  }
+  
+  // Update counter display
+  function updateCounter() {
+    counterEl.innerText = counter;
+  }
+  
+  incrementBtn.onclick = () => {
+    counter++;
+    updateCounter();
+  };
+  resetBtn.onclick = () => {
+    counter = 0;
+    updateCounter();
+  };
+  
+  // --- GASLIGHTING ENGINE ---
+  // Subtle, spaced-out mutations
+  
+  const mutations = [
+    () => {
+      // Slightly shift button padding
+      const pad = 8 + Math.floor(Math.random() * 4);
+      incrementBtn.style.padding = `${pad}px ${pad*2}px`;
+      logChange(`Increment button padding changed to ${pad}px ${pad*2}px`);
+    },
+    () => {
+      // Change a word in the note
+      let words = ["simple", "ordinary", "regular", "standard", "common", "typical"];
+      let current = noteEl.innerText.split(' ')[1];
+      let newWord = words[Math.floor(Math.random() * words.length)];
+      noteEl.innerText = noteEl.innerText.replace(/\b\w+\b/, newWord);
+      logChange(`Note description changed: "${newWord}"`);
+    },
+    () => {
+      // Shift container border radius slightly
+      let rad = 1.5 + Math.random() * 0.8;
+      container.style.borderRadius = `${rad}rem`;
+      logChange(`Container border radius → ${rad.toFixed(2)}rem`);
+    },
+    () => {
+      // Change background color by a tiny amount
+      let r = 30 + Math.floor(Math.random() * 5);
+      let g = 20 + Math.floor(Math.random() * 5);
+      let b = 40 + Math.floor(Math.random() * 5);
+      document.body.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      logChange(`Background color shifted to rgb(${r},${g},${b})`);
+    },
+    () => {
+      // Move increment button by 2px left or right
+      let currentLeft = incrementBtn.style.marginLeft ? parseInt(incrementBtn.style.marginLeft) : 0;
+      let shift = (Math.random() > 0.5 ? 2 : -2);
+      incrementBtn.style.marginLeft = (currentLeft + shift) + 'px';
+      logChange(`Increment button moved ${shift}px horizontally`);
+    },
+    () => {
+      // Change font size of counter slightly
+      let currentSize = parseFloat(getComputedStyle(counterEl).fontSize);
+      let newSize = currentSize + (Math.random() > 0.5 ? 1 : -1);
+      newSize = Math.min(80, Math.max(30, newSize));
+      counterEl.style.fontSize = `${newSize}px`;
+      logChange(`Counter font size changed to ${newSize}px`);
+    },
+    () => {
+      // Alter title text subtly (add/remove punctuation or change case)
+      let title = titleEl.innerText;
+      if (title.endsWith('.')) {
+        titleEl.innerText = title.slice(0, -1);
+        logChange(`Title period removed`);
+      } else {
+        titleEl.innerText = title + '.';
+        logChange(`Title period added`);
+      }
+    },
+    () => {
+      // Swap the positions of the two buttons? No, too drastic. Instead, change button text case.
+      let txt = incrementBtn.innerText;
+      if (txt === '+1') incrementBtn.innerText = '+1 ';
+      else if (txt === '+1 ') incrementBtn.innerText = '+1';
+      else incrementBtn.innerText = '+1';
+      logChange(`Increment button text spacing altered`);
+    },
+    () => {
+      // Change shadow on container
+      let blur = 20 + Math.floor(Math.random() * 10);
+      container.style.boxShadow = `0 ${Math.floor(Math.random()*30)}px ${blur}px rgba(0,0,0,0.4)`;
+      logChange(`Box shadow changed`);
+    },
+    () => {
+      // Slightly modify the reset button color
+      let r = 60 + Math.floor(Math.random() * 20);
+      let g = 40 + Math.floor(Math.random() * 20);
+      let b = 80 + Math.floor(Math.random() * 20);
+      resetBtn.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      logChange(`Reset button color shifted`);
+    }
+  ];
+  
+  // Apply a random mutation every 7–15 seconds
+  let intervalId;
+  function startGaslighting() {
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(() => {
+      if (changeLog.length < 100) { // safety
+        let mutation = mutations[Math.floor(Math.random() * mutations.length)];
+        mutation();
+        // occasionally also change the secret button opacity to make it more visible over time
+        if (changeLog.length > 10) {
+          let newOpacity = Math.min(0.9, 0.3 + (changeLog.length / 100));
+          confessBtn.style.opacity = newOpacity;
+        }
+      }
+    }, 7000 + Math.random() * 8000); // between 7 and 15 seconds
+  }
+  
+  // Confess button reveals all changes
+  confessBtn.onclick = () => {
+    if (confessPanel.style.display === 'none' || confessPanel.style.display === '') {
+      // Build log HTML
+      let html = `<strong>🧾 CONFESSION LOG — every change you didn't notice:</strong><br><hr>`;
+      if (changeLog.length === 0) {
+        html += "<i>Nothing yet. Wait a while...</i>";
+      } else {
+        html += changeLog.map(entry => `<div>[${entry.time}] ${entry.desc}</div>`).join('');
+      }
+      confessPanel.innerHTML = html;
+      confessPanel.style.display = 'block';
+      logChange("User clicked CONFESS — revealed the gaslighting log.");
+      // Also, after confession, make the button fully visible and change its text
+      confessBtn.style.opacity = '1';
+      confessBtn.innerText = '🙏 confessed';
+    } else {
+      confessPanel.style.display = 'none';
+      confessBtn.innerText = '💬 confess';
+    }
+  };
+  
+  // Additional subtle effect: the counter value might occasionally flicker? No, that would break function. Instead, change the note's font size slowly.
+  let noteFontStep = 0;
+  setInterval(() => {
+    if (changeLog.length > 5 && noteFontStep < 10) {
+      let current = parseFloat(getComputedStyle(noteEl).fontSize);
+      let newSize = current + (noteFontStep % 2 === 0 ? 0.5 : -0.5);
+      newSize = Math.min(20, Math.max(10, newSize));
+      noteEl.style.fontSize = `${newSize}px`;
+      noteFontStep++;
+      logChange(`Note font size changed to ${newSize.toFixed(1)}px`);
+    }
+  }, 30000);
+  
+  // Start the gaslighting
+  startGaslighting();
+  
+  // Initial log entry
+  logChange("GASLIGHT.HTML initialized. The slow warping begins.");
+  
+  // Small easter egg: after 20 changes, the title becomes slightly different
+  let titleChangeCount = 0;
+  const titleObserver = setInterval(() => {
+    if (changeLog.length > 15 && titleChangeCount === 0) {
+      titleEl.innerText = "Welcome, friend?";
+      logChange(`Title punctuation changed to question mark.`);
+      titleChangeCount++;
+    } else if (changeLog.length > 30 && titleChangeCount === 1) {
+      titleEl.innerText = "Welcome... friend?";
+      logChange(`Title ellipsis added.`);
+      titleChangeCount++;
+    }
+  }, 1000);
+  
+  // On page unload, nothing, but we keep it alive.
+  console.log("Gaslight active. Trust your senses?");
+</script>
+</body>
+</html>

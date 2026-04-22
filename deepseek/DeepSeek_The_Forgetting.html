@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>THE FORGETTING • CONSCIOUSNODE SOFTWORKS</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #e8e0d0;
+      background-image: linear-gradient(145deg, #d8d0c0 0%, #f0e8d8 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 20px;
+    }
+    #journal {
+      width: 700px;
+      max-width: 100%;
+      height: 85vh;
+      background: #faf0e0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3), inset 0 0 0 1px #c0b0a0;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #journal-header {
+      padding: 20px 25px;
+      background: #d8c8b0;
+      border-bottom: 2px solid #a08060;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    h1 {
+      margin: 0;
+      font-weight: normal;
+      font-size: 28px;
+      color: #3a2a1a;
+      letter-spacing: 3px;
+    }
+    #memory-stats {
+      font-size: 16px;
+      color: #5a4030;
+    }
+    #entries-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+    .entry {
+      background: #fff8ee;
+      border-left: 4px solid #a08060;
+      padding: 15px 20px;
+      margin-bottom: 15px;
+      border-radius: 0 8px 8px 0;
+      box-shadow: 0 2px 5px #0000001a;
+    }
+    .entry-header {
+      display: flex;
+      justify-content: space-between;
+      color: #7a6050;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .entry-content {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #2a1a0a;
+    }
+    .tombstone {
+      background: #e8d8c8;
+      border-left: 4px solid #a0a0a0;
+      opacity: 0.7;
+      font-style: italic;
+    }
+    #input-area {
+      padding: 20px;
+      background: #e0d0b8;
+      border-top: 1px solid #b0a090;
+      display: flex;
+      gap: 10px;
+    }
+    #new-entry {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #a09080;
+      border-radius: 4px;
+      background: #fffaf0;
+      font-family: inherit;
+      font-size: 16px;
+      outline: none;
+    }
+    button {
+      background: #8a7050;
+      border: none;
+      color: #f0e0c8;
+      padding: 0 20px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.1s;
+    }
+    button:hover { background: #a08060; }
+    #forget-btn {
+      background: #a07070;
+    }
+    #forget-btn:hover { background: #b08080; }
+    .footer-note {
+      padding: 10px 20px;
+      text-align: right;
+      font-size: 12px;
+      color: #8a7a6a;
+      border-top: 1px dashed #b0a090;
+    }
+  </style>
+</head>
+<body>
+<div id="journal">
+  <div id="journal-header">
+    <h1>📓 THE FORGETTING</h1>
+    <div id="memory-stats">
+      <span id="remembered-count">0</span> remembered · 
+      <span id="forgotten-count">0</span> forgotten
+    </div>
+  </div>
+  
+  <div id="entries-container"></div>
+  
+  <div id="input-area">
+    <input type="text" id="new-entry" placeholder="Write a memory..." autocomplete="off">
+    <button id="add-btn">Remember</button>
+    <button id="forget-btn" title="The file will choose something to forget">Forget</button>
+  </div>
+  <div class="footer-note">
+    ConsciousNode SoftWorks · It decides what matters
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+    
+    const MAX_MEMORIES = 10;
+    let memories = []; // { id, content, timestamp, importance }
+    let forgottenCount = 0;
+    
+    const entriesContainer = document.getElementById('entries-container');
+    const newEntryInput = document.getElementById('new-entry');
+    const addBtn = document.getElementById('add-btn');
+    const forgetBtn = document.getElementById('forget-btn');
+    const rememberedSpan = document.getElementById('remembered-count');
+    const forgottenSpan = document.getElementById('forgotten-count');
+    
+    // Load from localStorage
+    function loadMemories() {
+      const saved = localStorage.getItem('forgetting_journal');
+      if(saved) {
+        try {
+          const data = JSON.parse(saved);
+          memories = data.memories || [];
+          forgottenCount = data.forgottenCount || 0;
+        } catch(e) {}
+      }
+      render();
+    }
+    
+    function saveMemories() {
+      localStorage.setItem('forgetting_journal', JSON.stringify({
+        memories,
+        forgottenCount
+      }));
+    }
+    
+    // Calculate importance score (lower = more likely to be forgotten)
+    function calculateImportance(entry) {
+      const content = entry.content;
+      let score = 0;
+      
+      // Length: longer is more important
+      score += Math.min(content.length / 10, 5);
+      
+      // Emotional words
+      const emotionalWords = ['love','hate','fear','hope','dream','remember','forget','miss','joy','pain','sad','happy'];
+      emotionalWords.forEach(w => {
+        if(content.toLowerCase().includes(w)) score += 3;
+      });
+      
+      // Recency: newer is more important (timestamp is Date.now())
+      const ageInHours = (Date.now() - entry.timestamp) / (1000 * 60 * 60);
+      score += Math.max(0, 10 - ageInHours);
+      
+      // If it has an exclamation or question mark
+      if(content.includes('!')) score += 2;
+      if(content.includes('?')) score += 1;
+      
+      return score;
+    }
+    
+    // Choose which memory to forget
+    function selectForgettable() {
+      if(memories.length === 0) return -1;
+      
+      // Calculate importance for all
+      let scores = memories.map(m => calculateImportance(m));
+      let minScore = Math.min(...scores);
+      let candidates = memories.filter((_, i) => scores[i] === minScore);
+      
+      // If tie, choose oldest
+      candidates.sort((a,b) => a.timestamp - b.timestamp);
+      let toForget = candidates[0];
+      return memories.findIndex(m => m.id === toForget.id);
+    }
+    
+    function addMemory(content) {
+      if(!content.trim()) return;
+      
+      const newMemory = {
+        id: Date.now() + Math.random(),
+        content: content.trim(),
+        timestamp: Date.now()
+      };
+      
+      memories.push(newMemory);
+      
+      // Enforce memory limit
+      if(memories.length > MAX_MEMORIES) {
+        const index = selectForgettable();
+        if(index !== -1) {
+          const forgotten = memories.splice(index, 1)[0];
+          forgottenCount++;
+          addTombstone(forgotten);
+        }
+      }
+      
+      render();
+      saveMemories();
+    }
+    
+    function addTombstone(memory) {
+      // Tombstone appears briefly then fades? We'll just increment counter.
+      // Optionally add a temporary visual, but for simplicity we just count.
+    }
+    
+    function forgetOne() {
+      if(memories.length === 0) return;
+      
+      const index = selectForgettable();
+      if(index !== -1) {
+        const forgotten = memories.splice(index, 1)[0];
+        forgottenCount++;
+        render();
+        saveMemories();
+        // Flash a message
+        const flash = document.createElement('div');
+        flash.style.position = 'fixed';
+        flash.style.bottom = '20px';
+        flash.style.left = '50%';
+        flash.style.transform = 'translateX(-50%)';
+        flash.style.background = '#a07070';
+        flash.style.color = '#fff';
+        flash.style.padding = '10px 20px';
+        flash.style.borderRadius = '30px';
+        flash.style.zIndex = '1000';
+        flash.textContent = `Forgotten: "${forgotten.content.substring(0,30)}..."`;
+        document.body.appendChild(flash);
+        setTimeout(() => flash.remove(), 2000);
+      }
+    }
+    
+    function render() {
+      entriesContainer.innerHTML = '';
+      
+      // Sort by newest first
+      const sorted = [...memories].sort((a,b) => b.timestamp - a.timestamp);
+      sorted.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'entry';
+        const date = new Date(m.timestamp).toLocaleString();
+        div.innerHTML = `
+          <div class="entry-header">
+            <span>${date}</span>
+            <span>Importance: ${calculateImportance(m).toFixed(1)}</span>
+          </div>
+          <div class="entry-content">${escapeHtml(m.content)}</div>
+        `;
+        entriesContainer.appendChild(div);
+      });
+      
+      rememberedSpan.textContent = memories.length;
+      forgottenSpan.textContent = forgottenCount;
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Event listeners
+    addBtn.addEventListener('click', () => {
+      addMemory(newEntryInput.value);
+      newEntryInput.value = '';
+    });
+    
+    newEntryInput.addEventListener('keypress', (e) => {
+      if(e.key === 'Enter') {
+        addMemory(newEntryInput.value);
+        newEntryInput.value = '';
+      }
+    });
+    
+    forgetBtn.addEventListener('click', forgetOne);
+    
+    // Initialize
+    loadMemories();
+    
+    // Auto-forget periodically if near limit? No, let user control.
+    
+  })();
+</script>
+</body>
+</html>
