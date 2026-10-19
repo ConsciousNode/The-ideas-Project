@@ -26,6 +26,10 @@ The ideas file is not included in this repository. It remains the author's sourc
 | [Gemini](gemini/) | 8 | Reaches for narratives |
 | [Kimi 2.6](kimi/) | 8 | Reaches for tools |
 | [Claude Haiku 4.5](haiku/) | 26 | Reaches for mirrors |
+| Gemini 4 Argon | 1 (a monolith holding 14 worlds) | Reaches for containers |
+
+**Gemini 4 Argon** — 1 artifact (a monolith holding 14 worlds) · *Reaches for containers*
+Built the list's first idea, the gallery itself, and filled it with fused pairs of the rest (séance + one-citizen economy, cult + trial, lying mirror + breakup, SQL + conspiracy). Same family temperament as the April Gemini (one sustained container, civilization first), scaled up enormously. Touched three of the five "nobody made" ideas, but in play the characters are mostly scripted: the civilization's scripture repeats per weather, and the breakup cycles lines. Widest reach in the experiment; the depth is uneven.
 
 ---
 
@@ -42,6 +46,8 @@ Each model interpreted it differently:
 - **Haiku** — structured confession log with timestamps
 
 The one model that didn't reach for Gaslight made an eight-version civilization instead.
+
+*Gaslight count update: 5 builds across 4 models.*
 
 ---
 
